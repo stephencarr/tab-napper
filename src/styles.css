@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ADHD-friendly base styles */
+@layer base {
+  * {
+    @apply antialiased;
+  }
+  
+  html {
+    @apply text-calm-700;
+  }
+  
+  body {
+    @apply bg-calm-50 text-calm-700;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+/* Calm, uncluttered component styles */
+@layer components {
+  .calm-card {
+    @apply bg-white border border-calm-200 rounded-lg shadow-sm;
+  }
+  
+  .calm-button {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium 
+           transition-colors focus-visible:outline-none focus-visible:ring-2 
+           focus-visible:ring-calm-400 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .calm-button-primary {
+    @apply calm-button bg-calm-600 text-white hover:bg-calm-700;
+  }
+  
+  .calm-button-secondary {
+    @apply calm-button bg-calm-100 text-calm-900 hover:bg-calm-200;
+  }
+}
