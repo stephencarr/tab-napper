@@ -322,7 +322,10 @@ function ContextualComponent({ className }) {
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
               )
             }
-            onClick={() => handleContextualClick(contextualItem)}
+            onClick={() => {
+              console.log(`[Triage Hub] Contextual item clicked: ${contextualItem.title}`);
+              handleContextualClick(contextualItem);
+            }}
             className="hover:bg-amber-100 border-amber-300 transition-colors cursor-pointer bg-white"
             badge={
               <div className="flex items-center space-x-1 text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded-full">

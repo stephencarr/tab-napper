@@ -261,7 +261,10 @@ function QuickAccessCards({ className, maxItems = 6 }) {
               icon={
                 item.url ? renderFavicon(item.url) : <Star className="h-4 w-4 text-amber-500" />
               }
-              onClick={() => handleQuickAccessClick(item)}
+              onClick={() => {
+                console.log(`[Triage Hub] Quick access item clicked: ${item.title}`);
+                handleQuickAccessClick(item);
+              }}
               className="hover:bg-amber-50 border-amber-200 hover:border-amber-300 transition-colors cursor-pointer"
               badge={
                 item.accessCount > 5 ? (
