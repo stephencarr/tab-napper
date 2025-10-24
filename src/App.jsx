@@ -14,6 +14,7 @@ import RecentlyVisited from './components/RecentlyVisited.jsx';
 import QuickAccessCards from './components/QuickAccessCards.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
+import DevConsole from './components/DevConsole.jsx';
 
 function App() {
   const [appState, setAppState] = useState(null);
@@ -434,6 +435,9 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Development Console - only in development */}
+      <DevConsole isEnabled={true} />
     </div>
   );
 }

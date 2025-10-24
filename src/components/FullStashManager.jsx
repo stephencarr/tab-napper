@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Archive, ArrowRight, Layers, Settings } from 'lucide-react';
+import { loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -7,6 +8,35 @@ import { cn } from '../utils/cn.js';
  * Provides navigation to the full stash management interface
  */
 function FullStashManager({ className, onNavigate }) {
+  const [stashCount, setStashCount] = useState(0);
+  const [categoryCount, setCategoryCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load stash statistics
+  useEffect(() => {
+    loadStashStats();
+  }, []);
+
+  const loadStashStats = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Load stashed tabs
+      const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+      setStashCount(stashedTabs.length);
+      
+      // Calculate unique categories
+      const categories = new Set(stashedTabs.map(item => item.type).filter(Boolean));
+      setCategoryCount(categories.size);
+      
+      console.log(`[Triage Hub] Stash stats loaded: ${stashedTabs.length} items, ${categories.size} categories`);
+      
+    } catch (error) {
+      console.error('[Triage Hub] Error loading stash stats:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const handleClick = () => {
     console.log('[Triage Hub] 📁 Full Stash Manager clicked');
@@ -65,7 +95,9 @@ function FullStashManager({ className, onNavigate }) {
             <Layers className="h-4 w-4 text-calm-500" />
             <span className="text-xs font-medium text-calm-600">Stashed</span>
           </div>
-          <div className="text-lg font-bold text-calm-900">--</div>
+          <div className="text-lg font-bold text-calm-900">
+            {isLoading ? '...' : stashCount}
+          </div>
           <div className="text-xs text-calm-500">items</div>
         </div>
         
@@ -74,7 +106,9 @@ function FullStashManager({ className, onNavigate }) {
             <Settings className="h-4 w-4 text-amber-500" />
             <span className="text-xs font-medium text-amber-600">Categories</span>
           </div>
-          <div className="text-lg font-bold text-amber-900">--</div>
+          <div className="text-lg font-bold text-amber-900">
+            {isLoading ? '...' : categoryCount}
+          </div>
           <div className="text-xs text-amber-500">types</div>
         </div>
       </div>

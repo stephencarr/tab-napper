@@ -27,6 +27,8 @@ function QuickAccessCards({ className, maxItems = 6 }) {
       // Load from chrome.storage.sync
       const quickAccessData = await loadAppState('triageHub_quickAccessCards') || [];
       
+      console.log(`[Triage Hub] Raw quick access data:`, quickAccessData);
+      
       // Sort by access frequency and last accessed time
       const sortedItems = quickAccessData
         .sort((a, b) => {
@@ -39,7 +41,8 @@ function QuickAccessCards({ className, maxItems = 6 }) {
         })
         .slice(0, maxItems);
       
-      console.log(`[Triage Hub] Loaded ${sortedItems.length} quick access items`);
+      console.log(`[Triage Hub] Sorted quick access items:`, sortedItems);
+      console.log(`[Triage Hub] Loading ${sortedItems.length} quick access items`);
       setQuickAccessItems(sortedItems);
       
     } catch (err) {
@@ -105,7 +108,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     }
   };
 
-  // Get favicon URL
+  // Get favicon URL with better error handling
   const getFaviconUrl = (url) => {
     try {
       const domain = new URL(url).hostname;
@@ -113,6 +116,31 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     } catch {
       return null;
     }
+  };
+
+  // Render favicon with fallback
+  const renderFavicon = (url) => {
+    const faviconUrl = getFaviconUrl(url);
+    if (!faviconUrl) {
+      return <Star className="h-4 w-4 text-amber-500" />;
+    }
+
+    return (
+      <img
+        src={faviconUrl}
+        alt=""
+        className="h-4 w-4"
+        onError={(e) => {
+          // Replace with star icon on error
+          const starIcon = document.createElement('div');
+          starIcon.innerHTML = `<svg class="h-4 w-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
+          e.target.replaceWith(starIcon.firstChild);
+        }}
+        onLoad={() => {
+          console.log(`[Triage Hub] Favicon loaded for ${url}`);
+        }}
+      />
+    );
   };
 
   // Get time ago string
@@ -231,18 +259,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
                 </div>
               }
               icon={
-                item.url ? (
-                  <img
-                    src={getFaviconUrl(item.url)}
-                    alt=""
-                    className="h-4 w-4"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Star className="h-4 w-4 text-amber-500" />
-                )
+                item.url ? renderFavicon(item.url) : <Star className="h-4 w-4 text-amber-500" />
               }
               onClick={() => handleQuickAccessClick(item)}
               className="hover:bg-amber-50 border-amber-200 hover:border-amber-300 transition-colors cursor-pointer"

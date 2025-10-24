@@ -37,7 +37,11 @@ function ContextualComponent({ className }) {
       // Get stashed tabs
       const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
       
+      console.log(`[Triage Hub] Contextual matching - Open tabs:`, openTabs);
+      console.log(`[Triage Hub] Contextual matching - Stashed tabs:`, stashedTabs);
+      
       if (openTabs.length === 0 || stashedTabs.length === 0) {
+        console.log(`[Triage Hub] No contextual matches possible - openTabs: ${openTabs.length}, stashedTabs: ${stashedTabs.length}`);
         setContextualItem(null);
         setIsLoading(false);
         return;
@@ -49,8 +53,11 @@ function ContextualComponent({ className }) {
       if (contextualMatch) {
         console.log('[Triage Hub] Found contextual match:', {
           stashedItem: contextualMatch.title,
-          matchingTab: contextualMatch.matchReason
+          matchingTab: contextualMatch.matchReason,
+          score: contextualMatch.contextScore
         });
+      } else {
+        console.log('[Triage Hub] No contextual matches found');
       }
       
       setContextualItem(contextualMatch);
@@ -65,6 +72,8 @@ function ContextualComponent({ className }) {
 
   // Find a relevant stashed item based on currently open tabs
   const findContextualMatch = (openTabs, stashedTabs) => {
+    console.log('[Triage Hub] Starting contextual matching...');
+    
     // Get domains and keywords from open tabs
     const openDomains = new Set();
     const openKeywords = new Set();
@@ -90,9 +99,12 @@ function ContextualComponent({ className }) {
         });
         
       } catch (error) {
-        // Skip invalid URLs
+        console.warn('[Triage Hub] Invalid URL in open tabs:', url);
       }
     });
+    
+    console.log('[Triage Hub] Open domains:', Array.from(openDomains));
+    console.log('[Triage Hub] Open keywords:', Array.from(openKeywords));
     
     // Score stashed items for relevance
     const scoredItems = stashedTabs.map(item => {
@@ -140,7 +152,7 @@ function ContextualComponent({ className }) {
         }
         
       } catch (error) {
-        // Skip items with invalid URLs
+        console.warn('[Triage Hub] Invalid URL in stashed item:', item.url, error);
       }
       
       return {
@@ -150,10 +162,22 @@ function ContextualComponent({ className }) {
       };
     });
     
+    console.log('[Triage Hub] Scored items:', scoredItems.map(item => ({
+      title: item.title,
+      score: item.contextScore,
+      reason: item.matchReason
+    })));
+    
     // Return the highest scoring item if score > 0
     const bestMatch = scoredItems
       .filter(item => item.contextScore > 0)
       .sort((a, b) => b.contextScore - a.contextScore)[0];
+    
+    console.log('[Triage Hub] Best match:', bestMatch ? {
+      title: bestMatch.title,
+      score: bestMatch.contextScore,
+      reason: bestMatch.matchReason
+    } : 'none');
     
     return bestMatch || null;
   };
