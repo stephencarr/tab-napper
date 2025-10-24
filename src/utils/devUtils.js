@@ -38,9 +38,33 @@ async function addSampleData() {
         id: 'stashed-1',
         title: 'React Hooks Best Practices',
         description: 'Comprehensive guide to using React hooks effectively',
-        url: 'https://example.com/react-hooks',
+        url: 'https://react.dev/learn/hooks-overview',
         timestamp: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
         type: 'learning'
+      },
+      {
+        id: 'stashed-2',
+        title: 'Chrome Extension Storage API',
+        description: 'Deep dive into chrome.storage.sync and chrome.storage.local',
+        url: 'https://developer.chrome.com/docs/extensions/reference/storage/',
+        timestamp: Date.now() - 1000 * 60 * 60 * 12, // 12 hours ago
+        type: 'documentation'
+      },
+      {
+        id: 'stashed-3',
+        title: 'MDN JavaScript Reference',
+        description: 'Complete JavaScript language reference',
+        url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference',
+        timestamp: Date.now() - 1000 * 60 * 60 * 8, // 8 hours ago
+        type: 'reference'
+      },
+      {
+        id: 'stashed-4',
+        title: 'VS Code Extension Development',
+        description: 'Building extensions for Visual Studio Code',
+        url: 'https://code.visualstudio.com/api',
+        timestamp: Date.now() - 1000 * 60 * 60 * 6, // 6 hours ago
+        type: 'development'
       }
     ];
 
@@ -48,10 +72,48 @@ async function addSampleData() {
     const sampleQuickAccess = [
       {
         id: 'quick-1',
-        title: 'Daily Standup Notes',
-        description: 'Quick access to today\'s standup meeting notes',
-        url: 'https://example.com/standup',
-        type: 'meeting'
+        title: 'GitHub - Main Repository',
+        description: 'Primary development repository',
+        url: 'https://github.com/stephencarr/tab-napper',
+        type: 'development',
+        accessCount: 15,
+        lastAccessed: Date.now() - 1000 * 60 * 45 // 45 minutes ago
+      },
+      {
+        id: 'quick-2',
+        title: 'MDN Web API Documentation',
+        description: 'Essential web development reference',
+        url: 'https://developer.mozilla.org/en-US/docs/Web/API',
+        type: 'documentation',
+        accessCount: 8,
+        lastAccessed: Date.now() - 1000 * 60 * 60 * 2 // 2 hours ago
+      },
+      {
+        id: 'quick-3',
+        title: 'React Documentation',
+        description: 'Official React documentation and guides',
+        url: 'https://react.dev',
+        type: 'documentation',
+        accessCount: 12,
+        lastAccessed: Date.now() - 1000 * 60 * 30 // 30 minutes ago
+      },
+      {
+        id: 'quick-4',
+        title: 'Chrome Extension Developer Guide',
+        description: 'Complete guide to Chrome extension development',
+        url: 'https://developer.chrome.com/docs/extensions/',
+        type: 'documentation',
+        accessCount: 6,
+        lastAccessed: Date.now() - 1000 * 60 * 60 * 4 // 4 hours ago
+      },
+      {
+        id: 'quick-5',
+        title: 'VS Code Settings Sync',
+        description: 'Sync VS Code settings across devices',
+        url: 'https://code.visualstudio.com/docs/editor/settings-sync',
+        type: 'tool',
+        accessCount: 3,
+        lastAccessed: Date.now() - 1000 * 60 * 60 * 6 // 6 hours ago
       }
     ];
 

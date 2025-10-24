@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Triage Hub",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "ADHD-friendly tab management and reminder system that replaces your New Tab Page",
   "permissions": [
     "tabs",

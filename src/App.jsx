@@ -11,6 +11,9 @@ import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
 import SearchResults from './components/SearchResults.jsx';
 import RecentlyVisited from './components/RecentlyVisited.jsx';
+import QuickAccessCards from './components/QuickAccessCards.jsx';
+import ContextualComponent from './components/ContextualComponent.jsx';
+import FullStashManager from './components/FullStashManager.jsx';
 
 function App() {
   const [appState, setAppState] = useState(null);
@@ -325,14 +328,20 @@ function App() {
               
               {/* Quick Access Cards */}
               <div className="calm-card p-6">
-                <ListContainer
-                  title="Quick Access"
-                  items={appState.quickAccessCards}
-                  emptyMessage="No quick access cards yet"
-                  emptyDescription="Quick access cards will appear here for easy navigation to your most important items."
-                  icon={CheckCircle}
-                  onItemClick={(item) => console.log('Quick access clicked:', item)}
-                />
+                <QuickAccessCards maxItems={6} />
+              </div>
+
+              {/* Contextual Component */}
+              <div className="calm-card p-6">
+                <ContextualComponent />
+              </div>
+
+              {/* Full Stash Manager */}
+              <div className="calm-card p-6">
+                <FullStashManager onNavigate={(destination) => {
+                  console.log('[Triage Hub] Navigation requested to:', destination);
+                  // TODO: Implement navigation handling
+                }} />
               </div>
 
               {/* Trash */}

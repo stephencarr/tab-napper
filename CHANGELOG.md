@@ -11,6 +11,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Analog Fidget Control UX for reminders
 - Advanced triage actions and workflows
 
+## [0.3.0] - 2024-10-24
+
+### Added - Ticket 6: Right Column Quick Access and Contextual Features
+- **Quick Access Cards Component**: Displays frequently accessed items from chrome.storage.sync with access count tracking
+  - Real-time access count and last accessed time updates
+  - Smart sorting by frequency and recency
+  - Favicon integration and domain display
+  - Click tracking with automatic frequency updates
+  - "Frequently Used" badges for items with 5+ accesses
+- **Contextual Component**: Intelligent stashed item suggestions based on current browsing context
+  - Domain matching between open tabs and stashed items
+  - Keyword matching for related content discovery
+  - Smart scoring algorithm for relevance ranking
+  - Dismissible suggestions with show/hide toggle
+  - Visual match reason explanations ("Same domain", "Related domain", "keyword matches")
+  - Automatic refresh every 30 seconds for real-time context awareness
+- **Full Stash Manager Button**: Professional navigation component for future stash management
+  - Gradient button design with hover effects and subtle animations
+  - Quick stats display placeholders for stashed items and categories
+  - Expandable architecture for future modal or dedicated page integration
+- **Enhanced Sample Data**: Comprehensive test data including quick access items with realistic access patterns
+
+### Enhanced
+- **Right Column Layout**: Complete redesign with contextual intelligence and quick access
+- **Storage Integration**: Proper chrome.storage.sync usage for quick access cards (encrypted)
+- **ADHD-Friendly Design**: Maintained calm color palette and consistent visual hierarchy
+- **Development Tools**: Updated sample data generation for comprehensive testing
+
+### Technical
+- **Component Architecture**: Three new specialized components for right column functionality
+- **Storage Pipeline**: Validated encrypted sync storage for quick access cards
+- **Context Matching**: Advanced algorithm for tab-to-stash relevance scoring
+- **Performance**: Optimized contextual checking with 30-second intervals
+
 ## [0.2.0] - 2024-10-24
 
 ### Added
