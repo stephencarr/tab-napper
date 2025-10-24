@@ -47,10 +47,17 @@ async function findDuplicateInStashed(url) {
 async function removeDuplicateFromStashed(duplicateItem) {
   try {
     const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+    const originalCount = stashedTabs.length;
+    
     const updatedStashed = stashedTabs.filter(tab => tab.id !== duplicateItem.id);
+    const newCount = updatedStashed.length;
     
     await saveAppState('triageHub_stashedTabs', updatedStashed);
-    console.log('[Triage Hub] Removed duplicate from stashed tabs:', duplicateItem.title);
+    
+    console.log(`[Triage Hub] 🗑️  Removed duplicate from stashed tabs:`);
+    console.log(`[Triage Hub] 📰 Title: "${duplicateItem.title}"`);
+    console.log(`[Triage Hub] 🆔 ID: ${duplicateItem.id}`);
+    console.log(`[Triage Hub] 📊 Stashed count: ${originalCount} → ${newCount}`);
     
     return true;
   } catch (error) {
@@ -98,17 +105,26 @@ async function addToTriageInbox(item) {
  */
 async function captureClosedTab(tabInfo) {
   try {
-    console.log('[Triage Hub] Capturing closed tab:', tabInfo);
+    console.log('[Triage Hub] 🎯 STARTING TAB CAPTURE:', tabInfo.title);
+    console.log('[Triage Hub] 📍 URL:', tabInfo.url);
     
     // Step 1: Check for duplicates in stashed tabs
     const duplicate = await findDuplicateInStashed(tabInfo.url);
     
     if (duplicate) {
-      console.log('[Triage Hub] Found duplicate in stashed tabs, removing:', duplicate.title);
+      console.log('[Triage Hub] 🔄 DUPLICATE FOUND in stashed tabs!');
+      console.log('[Triage Hub] 🗑️  Removing old version:', duplicate.title);
+      console.log('[Triage Hub] 🆔 Old item ID:', duplicate.id);
+      
       await removeDuplicateFromStashed(duplicate);
+      
+      console.log('[Triage Hub] ✅ DEDUPLICATION COMPLETE - Old version removed');
+    } else {
+      console.log('[Triage Hub] ℹ️  No duplicates found in stashed tabs');
     }
     
     // Step 2: Add to triage inbox
+    console.log('[Triage Hub] 📥 Adding to triage inbox...');
     const inboxItem = await addToTriageInbox({
       title: tabInfo.title,
       description: `Captured from ${new URL(tabInfo.url).hostname}`,
@@ -117,11 +133,19 @@ async function captureClosedTab(tabInfo) {
       type: 'captured-tab'
     });
     
-    console.log('[Triage Hub] Tab capture complete');
+    console.log('[Triage Hub] ✅ TAB CAPTURE COMPLETE');
+    console.log('[Triage Hub] 🆔 New inbox item ID:', inboxItem.id);
+    
+    if (duplicate) {
+      console.log('[Triage Hub] 📊 SUMMARY: Removed 1 duplicate, added 1 new item');
+    } else {
+      console.log('[Triage Hub] 📊 SUMMARY: No duplicates found, added 1 new item');
+    }
+    
     return inboxItem;
     
   } catch (error) {
-    console.error('[Triage Hub] Error in capture process:', error);
+    console.error('[Triage Hub] ❌ ERROR in capture process:', error);
     throw error;
   }
 }

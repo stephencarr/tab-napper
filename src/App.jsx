@@ -133,23 +133,67 @@ function App() {
   // Simulate tab capture for testing
   const handleSimulateCapture = async () => {
     try {
+      // Use a fixed set of URLs that might duplicate
       const testUrls = [
         'https://developer.mozilla.org/en-US/docs/Web/API',
         'https://react.dev/learn',
-        'https://tailwindcss.com/docs',
-        'https://github.com/microsoft/vscode'
+        'https://tailwindcss.com/docs'
       ];
       
-      const randomUrl = testUrls[Math.floor(Math.random() * testUrls.length)];
-      const randomTitle = `Test Tab ${Math.floor(Math.random() * 1000)}`;
+      // Cycle through URLs to increase chance of duplicates
+      const urlIndex = appState.inbox.length % testUrls.length;
+      const testUrl = testUrls[urlIndex];
+      const testTitle = `Test Tab ${urlIndex + 1} - ${new Date().toLocaleTimeString()}`;
       
-      await simulateTabCapture(randomUrl, randomTitle);
+      console.log(`[Triage Hub] Simulating capture of: ${testUrl}`);
+      
+      const capturedItem = await simulateTabCapture(testUrl, testTitle);
       
       // Reload app state to show new capture
       const newData = await loadAllAppData();
       setAppState(newData);
+      
+      // Show user feedback
+      console.log(`[Triage Hub] Captured: ${capturedItem.title}`);
+      
     } catch (err) {
       console.error('[Triage Hub] Error simulating capture:', err);
+    }
+  };
+
+  // Add items to stashed tabs to test deduplication
+  const handleSetupDedupeTest = async () => {
+    try {
+      const testStashedItems = [
+        {
+          id: 'stashed-test-1',
+          title: 'MDN Web API Documentation (OLD VERSION)',
+          description: 'This should be removed when we capture the same URL',
+          url: 'https://developer.mozilla.org/en-US/docs/Web/API',
+          timestamp: Date.now() - 1000 * 60 * 60, // 1 hour ago
+          type: 'learning'
+        },
+        {
+          id: 'stashed-test-2', 
+          title: 'React Learning Guide (OLD VERSION)',
+          description: 'This should be removed when we capture the same URL',
+          url: 'https://react.dev/learn',
+          timestamp: Date.now() - 1000 * 60 * 60 * 2, // 2 hours ago
+          type: 'learning'
+        }
+      ];
+      
+      await saveAppState('triageHub_stashedTabs', testStashedItems);
+      
+      // Reload app state
+      const newData = await loadAllAppData();
+      setAppState(newData);
+      
+      console.log('[Triage Hub] Added test items to stashed tabs for deduplication testing');
+      console.log('Now click "Simulate Tab Capture" to see deduplication in action!');
+      
+    } catch (err) {
+      console.error('[Triage Hub] Error setting up dedupe test:', err);
     }
   };
 
@@ -309,6 +353,12 @@ function App() {
                 >
                   <TestTube className="h-3 w-3" />
                   <span>Add Sample Data</span>
+                </button>
+                <button
+                  onClick={handleSetupDedupeTest}
+                  className="calm-button-primary px-3 py-1 text-xs"
+                >
+                  Setup Dedupe Test
                 </button>
                 <button
                   onClick={handleSimulateCapture}
