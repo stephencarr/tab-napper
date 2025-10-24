@@ -17,10 +17,15 @@ function UniversalSearch({
 }) {
   const inputRef = useRef(null);
 
-  // Auto-focus on mount
+  // Auto-focus on mount with delay to ensure DOM is ready
   useEffect(() => {
     if (autoFocus && inputRef.current) {
-      inputRef.current.focus();
+      // Small delay to ensure the component is fully mounted
+      const focusTimeout = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      
+      return () => clearTimeout(focusTimeout);
     }
   }, [autoFocus]);
 

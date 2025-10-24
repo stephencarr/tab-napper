@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, FileText, Globe, Clock } from 'lucide-react';
+import { Search, FileText, Globe, Clock, History } from 'lucide-react';
 import ListContainer from './ListContainer.jsx';
 import ListItem from './ListItem.jsx';
 
@@ -29,6 +29,8 @@ function SearchResults({
       case 'inbox': return FileText;
       case 'stashedTabs': return Globe;
       case 'quickAccessCards': return Clock;
+      case 'recentHistory': return History;
+      case 'trash': return FileText;
       default: return FileText;
     }
   };
@@ -39,6 +41,7 @@ function SearchResults({
       case 'inbox': return 'Inbox';
       case 'stashedTabs': return 'Stashed Tabs';
       case 'quickAccessCards': return 'Quick Access';
+      case 'recentHistory': return 'Recent History';
       case 'trash': return 'Trash';
       default: return 'Other';
     }

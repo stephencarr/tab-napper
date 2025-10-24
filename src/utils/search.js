@@ -1,9 +1,10 @@
 /**
- * Search utilities for Triage Hub
- * Provides unified search across all data sources
+ * Search utilities for Tab Napper
+ * Provides unified search across all data sources including history
  */
 
 import { loadAppState } from './storage.js';
+import { getRecentHistoryWithStatus } from './history.js';
 
 /**
  * Search within a single text field
@@ -43,12 +44,13 @@ async function searchAllData(searchTerm) {
   }
   
   try {
-    // Load all data sources
-    const [inbox, stashedTabs, quickAccessCards, trash] = await Promise.all([
+    // Load all data sources including browsing history
+    const [inbox, stashedTabs, quickAccessCards, trash, recentHistory] = await Promise.all([
       loadAppState('triageHub_inbox'),
       loadAppState('triageHub_stashedTabs'),
       loadAppState('triageHub_quickAccessCards'),
-      loadAppState('triageHub_trash')
+      loadAppState('triageHub_trash'),
+      getRecentHistoryWithStatus(50) // Get more history items for search
     ]);
     
     const results = [];
@@ -105,14 +107,34 @@ async function searchAllData(searchTerm) {
       });
     }
     
+    // Search recent browsing history
+    if (recentHistory && recentHistory.length > 0) {
+      console.log(`[Tab Napper] Searching ${recentHistory.length} recent history items for "${searchTerm}"`);
+      recentHistory.forEach(item => {
+        if (searchInItem(item, searchTerm)) {
+          console.log(`[Tab Napper] Found history match: "${item.title}"`);
+          results.push({
+            ...item,
+            source: 'recentHistory',
+            relevance: calculateRelevance(item, searchTerm)
+          });
+        }
+      });
+    } else {
+      console.log(`[Tab Napper] No recent history available for search`);
+    }
+    
     // Sort by relevance (higher is better)
     results.sort((a, b) => b.relevance - a.relevance);
     
-    console.log(`[Triage Hub] Search for "${searchTerm}" returned ${results.length} results`);
+    console.log(`[Tab Napper] Search for "${searchTerm}" returned ${results.length} results from all sources`);
+    if (results.length > 0) {
+      console.log(`[Tab Napper] Top result: "${results[0].title}" (score: ${results[0].relevance}, source: ${results[0].source})`);
+    }
     return results;
     
   } catch (error) {
-    console.error('[Triage Hub] Error searching data:', error);
+    console.error('[Tab Napper] Error searching data:', error);
     return [];
   }
 }

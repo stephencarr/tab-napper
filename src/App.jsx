@@ -271,6 +271,7 @@ function App() {
             onChange={handleSearchChange}
             onClear={handleSearchClear}
             placeholder="Search titles, content, URLs, and all your saved items..."
+            autoFocus={true}
           />
         </div>
       </div>
