@@ -5,6 +5,7 @@ import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData } from './utils/devUtils.js';
 import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
+import { getFormattedVersion } from './utils/version.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -244,7 +245,12 @@ function App() {
                 <div className="w-1 h-1 bg-white rounded-full"></div>
               </div>
             </div>
-            <h1 className="text-xl font-semibold text-calm-800">Triage Hub</h1>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-xl font-semibold text-calm-800">Triage Hub</h1>
+              <span className="text-xs text-calm-400 bg-calm-100 px-2 py-1 rounded-full">
+                {getFormattedVersion()}
+              </span>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <CheckCircle className="h-4 w-4 text-green-500" />
