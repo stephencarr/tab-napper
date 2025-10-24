@@ -9,6 +9,7 @@ import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
 import SearchResults from './components/SearchResults.jsx';
+import RecentlyVisited from './components/RecentlyVisited.jsx';
 
 function App() {
   const [appState, setAppState] = useState(null);
@@ -282,6 +283,11 @@ function App() {
             
             {/* Left Column - Context (60% width = 3/5 cols) */}
             <div className="lg:col-span-3 space-y-8">
+              
+              {/* Recently Visited History */}
+              <div className="calm-card p-6">
+                <RecentlyVisited maxItems={20} />
+              </div>
               
               {/* Triage Inbox */}
               <div className="calm-card p-6">
