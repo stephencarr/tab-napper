@@ -250,7 +250,7 @@ function App() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-calm-800">Triage Hub</h1>
+              <h1 className="text-xl font-semibold text-calm-800">Tab Napper</h1>
               <span className="text-xs text-calm-400 bg-calm-100 px-2 py-1 rounded-full">
                 {getFormattedVersion()}
               </span>
@@ -270,7 +270,7 @@ function App() {
             value={searchTerm}
             onChange={handleSearchChange}
             onClear={handleSearchClear}
-            placeholder="Search all your tabs, notes, and items..."
+            placeholder="Search titles, content, URLs, and all your saved items..."
           />
         </div>
       </div>

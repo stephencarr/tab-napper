@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Triage Hub will be documented in this file.
+All notable changes to Tab Napper will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -11,7 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Analog Fidget Control UX for reminders
 - Advanced triage actions and workflows
 
-## [0.3.0] - 2024-10-24
+## [0.4.0] - 2025-10-24
+
+### Added - Enhanced Omni Search and Rebranding
+- **Enhanced Universal Search**: Comprehensive search across all content fields
+  - Searches page titles, descriptions, URLs, body content, summaries, and notes
+  - Improved relevance scoring with weighted field importance
+  - Body/summary content gets high relevance weight (8 points)
+  - URL domain matching with bonus scoring
+  - Enhanced sample data with rich content for testing
+- **Application Rebranding**: Changed name from "Triage Hub" to "Tab Napper"
+  - Updated manifest.json, UI headers, and documentation
+  - Maintained consistent ADHD-friendly design principles
+  - Updated search placeholder to reflect enhanced capabilities
+
+### Enhanced
+- **Search Algorithm**: Multi-field content search with intelligent scoring
+  - Title matches: 10-30 points (highest priority)
+  - Body/Summary/Content: 6-8 points (high priority for content)
+  - Descriptions: 5 points (medium priority)
+  - URLs and domains: 3-5 points (useful but lower priority)
+  - Notes: 4 points (valuable supplementary content)
+- **Sample Data**: Added rich content examples with body, summary, content, and text fields
+- **User Experience**: More descriptive search placeholder text
+
+### Technical
+- **Search Engine**: Enhanced field coverage and relevance calculation
+- **Version Management**: Updated to semantic versioning 0.4.0
+- **Content Architecture**: Support for multiple content field types
+
+## [0.3.0] - 2025-10-24
 
 ### Added - Ticket 6: Right Column Quick Access and Contextual Features
 - **Quick Access Cards Component**: Displays frequently accessed items from chrome.storage.sync with access count tracking

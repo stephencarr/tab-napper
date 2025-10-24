@@ -14,7 +14,7 @@ function searchInText(text, searchTerm) {
 }
 
 /**
- * Search within an item (title, description, url)
+ * Search within an item (title, description, url, body, summary, etc.)
  */
 function searchInItem(item, searchTerm) {
   if (!searchTerm) return true;
@@ -23,7 +23,12 @@ function searchInItem(item, searchTerm) {
     item.title || '',
     item.description || '',
     item.url || '',
-    item.name || ''
+    item.name || '',
+    item.body || '',
+    item.summary || '',
+    item.content || '',
+    item.text || '',
+    item.notes || ''
   ];
   
   return fields.some(field => searchInText(field, searchTerm));
@@ -119,7 +124,7 @@ function calculateRelevance(item, searchTerm) {
   let score = 0;
   const term = searchTerm.toLowerCase();
   
-  // Title matches are most important
+  // Title matches are most important (highest weight)
   if (item.title && item.title.toLowerCase().includes(term)) {
     score += 10;
     // Exact title match gets bonus
@@ -132,14 +137,42 @@ function calculateRelevance(item, searchTerm) {
     }
   }
   
-  // Description matches
+  // Body/Summary content matches (high weight for content)
+  if (item.body && item.body.toLowerCase().includes(term)) {
+    score += 8;
+  }
+  if (item.summary && item.summary.toLowerCase().includes(term)) {
+    score += 8;
+  }
+  if (item.content && item.content.toLowerCase().includes(term)) {
+    score += 8;
+  }
+  if (item.text && item.text.toLowerCase().includes(term)) {
+    score += 6;
+  }
+  
+  // Description matches (medium weight)
   if (item.description && item.description.toLowerCase().includes(term)) {
     score += 5;
   }
   
-  // URL matches
+  // URL matches (lower weight, but still valuable)
   if (item.url && item.url.toLowerCase().includes(term)) {
     score += 3;
+    // Domain matches get bonus
+    try {
+      const url = new URL(item.url);
+      if (url.hostname.toLowerCase().includes(term)) {
+        score += 2;
+      }
+    } catch {
+      // Invalid URL, skip domain bonus
+    }
+  }
+  
+  // Notes and other text fields
+  if (item.notes && item.notes.toLowerCase().includes(term)) {
+    score += 4;
   }
   
   // Recent items get slight boost
