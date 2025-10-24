@@ -4,6 +4,7 @@
  */
 
 import { saveAppState } from './storage.js';
+import { getSuggestionStats, clearAllSuggestionData } from './smartSuggestions.js';
 
 /**
  * Add sample data for testing purposes
@@ -51,7 +52,7 @@ async function addSampleData() {
         description: 'Comprehensive guide to using React hooks effectively',
         summary: 'React hooks enable functional components to use state and lifecycle methods. Best practices include using useState for simple state, useEffect for side effects, custom hooks for reusable logic, and proper dependency arrays.',
         url: 'https://react.dev/learn/hooks-overview',
-        timestamp: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
+        timestamp: Date.now() - 1000 * 60 * 60 * 24, // 24 hours ago
         type: 'learning'
       },
       {
@@ -83,7 +84,7 @@ async function addSampleData() {
       }
     ];
 
-    // Sample quick access cards (encrypted in sync storage)
+    // Sample quick access cards
     const sampleQuickAccess = [
       {
         id: 'quick-1',
@@ -146,16 +147,35 @@ async function addSampleData() {
 }
 
 /**
- * Clear all sample data
+ * Clear all sample data for testing purposes
  */
 async function clearSampleData() {
   try {
     console.log('[Triage Hub] Clearing sample data...');
     
+    // Clear all storage buckets
     await saveAppState('triageHub_inbox', []);
     await saveAppState('triageHub_stashedTabs', []);
     await saveAppState('triageHub_trash', []);
     await saveAppState('triageHub_quickAccessCards', []);
+    
+    // Clear mock history from window
+    if (typeof window !== 'undefined') {
+      delete window._mockHistoryData;
+    }
+    
+    // Clear mock history from extension storage
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.remove(['tabNapper_mockHistory']);
+        console.log('[Tab Napper] 🗑️ Cleared mock data from extension storage');
+      }
+    } catch (error) {
+      console.warn('[Tab Napper] Could not clear mock data from storage:', error);
+    }
+
+    // Clear all smart suggestion data
+    await clearAllSuggestionData();
 
     console.log('[Triage Hub] Sample data cleared');
     return true;
@@ -165,13 +185,220 @@ async function clearSampleData() {
   }
 }
 
+/**
+ * Generate realistic browsing history for testing smart suggestions
+ */
+async function generateTestBrowsingHistory() {
+  try {
+    console.log('[Tab Napper] Generating test browsing history for smart suggestions...');
+    
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    // Generate visits for popular developer sites over the last 30 days
+    const testSites = [
+      {
+        url: 'https://stackoverflow.com/questions/tagged/javascript',
+        title: 'javascript - Stack Overflow',
+        dailyVisits: 15, // Very frequent - should score high
+        daysActive: 28,  // Almost daily
+        lastVisit: now - (2 * 60 * 60 * 1000) // 2 hours ago
+      },
+      {
+        url: 'https://github.com/microsoft/vscode',
+        title: 'microsoft/vscode: Visual Studio Code',
+        dailyVisits: 8,
+        daysActive: 20,
+        lastVisit: now - (1 * 60 * 60 * 1000) // 1 hour ago
+      },
+      {
+        url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript',
+        title: 'JavaScript | MDN',
+        dailyVisits: 12,
+        daysActive: 25,
+        lastVisit: now - (30 * 60 * 1000) // 30 minutes ago
+      },
+      {
+        url: 'https://react.dev/learn',
+        title: 'Learn React',
+        dailyVisits: 6,
+        daysActive: 18,
+        lastVisit: now - (4 * 60 * 60 * 1000) // 4 hours ago
+      },
+      {
+        url: 'https://tailwindcss.com/docs',
+        title: 'Tailwind CSS Documentation',
+        dailyVisits: 4,
+        daysActive: 22,
+        lastVisit: now - (1 * oneDay) // 1 day ago
+      },
+      {
+        url: 'https://example.com/old-site',
+        title: 'Old Site - High Count But Ancient',
+        dailyVisits: 50, // High count but old
+        daysActive: 5,
+        lastVisit: now - (20 * oneDay) // 20 days ago - should score low due to recency
+      }
+    ];
+    
+    // Generate mock history entries
+    const mockHistory = [];
+    
+    testSites.forEach((site, siteIndex) => {
+      // Generate visits across multiple days
+      for (let day = 0; day < site.daysActive; day++) {
+        const dayTimestamp = now - (day * oneDay);
+        
+        // Add multiple visits per day (random between 1 and dailyVisits)
+        const visitsThisDay = Math.floor(Math.random() * site.dailyVisits) + 1;
+        
+        for (let visit = 0; visit < visitsThisDay; visit++) {
+          // Random time within the day
+          const randomTime = dayTimestamp - Math.floor(Math.random() * oneDay);
+          
+          mockHistory.push({
+            id: `mock-${siteIndex}-${day}-${visit}`,
+            url: site.url,
+            title: site.title,
+            lastVisitTime: day === 0 && visit === 0 ? site.lastVisit : randomTime,
+            visitCount: 1,
+            typedCount: visit === 0 ? 1 : 0 // First visit of day is typed
+          });
+        }
+      }
+    });
+    
+    // Sort by most recent first
+    mockHistory.sort((a, b) => b.lastVisitTime - a.lastVisitTime);
+    
+    console.log(`[Tab Napper] Generated ${mockHistory.length} mock history entries`);
+    console.log('[Tab Napper] Sites that should score high for suggestions:');
+    testSites.slice(0, 4).forEach(site => {
+      console.log(`  - ${site.title} (${site.daysActive}d active, ${site.dailyVisits} daily visits)`);
+    });
+    
+    // Store in multiple ways for persistence
+    if (typeof window !== 'undefined') {
+      window._mockHistoryData = mockHistory;
+      
+      // Also store in extension storage for persistence
+      try {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.set({ 'tabNapper_mockHistory': mockHistory });
+          console.log('[Tab Napper] 💾 Mock data also stored in extension storage');
+        }
+      } catch (error) {
+        console.warn('[Tab Napper] Could not store in extension storage:', error);
+      }
+      
+      // Clear any cached history data so mock data will be used
+      if (window._clearHistoryCache) {
+        try {
+          window._clearHistoryCache();
+          console.log('[Tab Napper] 🔄 Cleared history cache to use mock data');
+        } catch (error) {
+          console.warn('[Tab Napper] Error clearing cache:', error);
+        }
+      }
+      
+      // Also clear any suggestion caches that might exist
+      if (window._clearSuggestionCache) {
+        try {
+          window._clearSuggestionCache();
+          console.log('[Tab Napper] 🔄 Cleared suggestion cache');
+        } catch (error) {
+          console.warn('[Tab Napper] Error clearing suggestion cache:', error);
+        }
+      }
+      
+      console.log('[Tab Napper] Mock history stored in window._mockHistoryData');
+      console.log(`[Tab Napper] Stored ${mockHistory.length} entries`);
+      console.log('[Tab Napper] Sample entry:', mockHistory[0]);
+      console.log('[Tab Napper] 💡 Now click "Test Smart Suggestions" to see results!');
+      
+      // Verify it was stored correctly
+      if (window._mockHistoryData && window._mockHistoryData.length > 0) {
+        console.log(`[Tab Napper] ✅ Verification: ${window._mockHistoryData.length} entries stored successfully`);
+      } else {
+        console.error('[Tab Napper] ❌ Verification failed: mock data not properly stored');
+      }
+    } else {
+      console.error('[Tab Napper] ❌ Window object not available, cannot store mock data');
+    }
+    
+    return mockHistory;
+    
+  } catch (error) {
+    console.error('[Tab Napper] Error generating test browsing history:', error);
+    
+    // Ensure we don't break the UI - return empty array
+    if (typeof window !== 'undefined') {
+      window._mockHistoryData = [];
+    }
+    
+    return [];
+  }
+}
+
+/**
+ * Test smart suggestions algorithm
+ */
+async function testSmartSuggestions() {
+  try {
+    console.log('[Tab Napper] Testing smart suggestions algorithm...');
+    
+    // First, let's see if we have any history data
+    console.log('[Tab Napper] Checking for mock history data...');
+    console.log('[Tab Napper] window object available:', typeof window !== 'undefined');
+    console.log('[Tab Napper] window._mockHistoryData exists:', typeof window !== 'undefined' && window._mockHistoryData !== undefined);
+    
+    if (typeof window !== 'undefined' && window._mockHistoryData) {
+      console.log(`[Tab Napper] Found ${window._mockHistoryData.length} mock history entries`);
+      console.log('[Tab Napper] Sample entry:', window._mockHistoryData[0]);
+    } else {
+      console.log('[Tab Napper] No mock history data found');
+      console.log('[Tab Napper] 💡 TIP: Run TriageHub_generateTestHistory() first to generate test data');
+    }
+    
+    const stats = await getSuggestionStats();
+    if (stats) {
+      console.log('[Tab Napper] Smart Suggestions Stats:', stats);
+      
+      if (stats.suggestions.length > 0) {
+        console.log('[Tab Napper] Top suggestions:');
+        stats.suggestions.forEach((suggestion, index) => {
+          console.log(`  ${index + 1}. ${suggestion.title}`);
+          console.log(`     Score: ${suggestion.score.toFixed(3)}, Days: ${suggestion.daysVisited}, Recent: ${suggestion.daysSinceRecent}d ago`);
+          console.log(`     Reason: ${suggestion.reason}`);
+        });
+      } else {
+        console.log('[Tab Napper] No suggestions generated.');
+        console.log('[Tab Napper] Debug info:');
+        console.log('  - Total candidates analyzed:', stats.totalCandidates);
+        console.log('  - History items count:', stats.historyItemsCount);
+        console.log('  - Already pinned items count:', stats.alreadyPinnedCount);
+        console.log('  - Analysis window (days):', stats.analysisWindowDays);
+      }
+    } else {
+      console.log('[Tab Napper] Failed to get suggestion stats');
+    }
+    
+  } catch (error) {
+    console.error('[Tab Napper] Error testing smart suggestions:', error);
+  }
+}
+
 // Expose functions globally for easy testing in console
 if (typeof window !== 'undefined') {
   window.TriageHub_addSampleData = addSampleData;
   window.TriageHub_clearSampleData = clearSampleData;
+  window.TriageHub_generateTestHistory = generateTestBrowsingHistory;
+  window.TriageHub_testSmartSuggestions = testSmartSuggestions;
 }
 
 export {
   addSampleData,
-  clearSampleData
+  clearSampleData,
+  generateTestBrowsingHistory,
+  testSmartSuggestions
 };

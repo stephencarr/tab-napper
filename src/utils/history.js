@@ -1,23 +1,73 @@
 /**
- * History utilities for Triage Hub
+ * History utilities for Tab Napper
  * Handles Chrome history API integration and deduplication
  */
 
 import { loadAppState } from './storage.js';
+import { debugLog, debugError } from './debug.js';
+
+// Cache for history data to reduce API calls
+let historyCache = null;
+let historyCacheTime = 0;
+const HISTORY_CACHE_DURATION = 30000; // 30 seconds
 
 /**
  * Fetch recent history from Chrome History API
  */
 async function fetchRecentHistory(maxResults = 20) {
   try {
+    // Check cache first
+    const now = Date.now();
+    if (historyCache && (now - historyCacheTime) < HISTORY_CACHE_DURATION) {
+      debugLog('History', 'Using cached history data');
+      return historyCache.slice(0, maxResults);
+    }
+
+    // Check for mock data first (for testing)
+    if (typeof window !== 'undefined' && window._mockHistoryData) {
+      console.log('[Tab Napper] 🧪 Using mock history data for testing');
+      const mockData = await getMockHistoryData();
+      
+      console.log(`[Tab Napper] 📊 Mock data: ${mockData.length} items, requested: ${maxResults}`);
+      
+      // Cache the mock data
+      historyCache = mockData;
+      historyCacheTime = now;
+      
+      return mockData.slice(0, maxResults);
+    }
+
+    // Only use stored mock data if explicitly enabled via window flag
+    if (typeof window !== 'undefined' && window._enableMockHistory) {
+      const storedMockData = await getMockHistoryData();
+      if (storedMockData && storedMockData.length > 0) {
+        console.log('[Tab Napper] 🧪 Using stored mock history data for testing');
+        console.log(`[Tab Napper] 📊 Stored mock data: ${storedMockData.length} items, requested: ${maxResults}`);
+        
+        // Cache the mock data
+        historyCache = storedMockData;
+        historyCacheTime = now;
+        
+        return storedMockData.slice(0, maxResults);
+      }
+    }
+
     if (typeof chrome !== 'undefined' && chrome.history) {
+      // Determine time window based on request size
+      const isComprehensiveSearch = maxResults > 1000;
+      const timeWindow = isComprehensiveSearch 
+        ? (90 * 24 * 60 * 60 * 1000) // 90 days for comprehensive search
+        : (7 * 24 * 60 * 60 * 1000);  // 7 days for regular fetch
+        
+      console.log(`[Tab Napper] Fetching ${isComprehensiveSearch ? 'comprehensive' : 'recent'} history (${isComprehensiveSearch ? '90 days' : '7 days'})`);
+      
       // Get history from Chrome API
       const historyItems = await new Promise((resolve, reject) => {
         chrome.history.search(
           {
             text: '',
             maxResults: maxResults * 3, // Get more to account for deduplication
-            startTime: Date.now() - (7 * 24 * 60 * 60 * 1000) // Last 7 days
+            startTime: Date.now() - timeWindow
           },
           (results) => {
             if (chrome.runtime.lastError) {
@@ -29,22 +79,32 @@ async function fetchRecentHistory(maxResults = 20) {
         );
       });
 
-      console.log(`[Triage Hub] Fetched ${historyItems.length} history items from Chrome`);
+      // Only log significant amounts to reduce console noise
+      if (historyItems.length > 10) {
+        debugLog('History', `Fetched ${historyItems.length} history items from Chrome`);
+      }
       
       // Deduplicate and limit results
       const deduped = deduplicateHistoryItems(historyItems);
+      
+      // Cache the results
+      historyCache = deduped;
+      historyCacheTime = now;
+      
       const limited = deduped.slice(0, maxResults);
       
-      console.log(`[Triage Hub] After deduplication: ${limited.length} unique items`);
+      if (limited.length !== historyItems.length && limited.length > 5) {
+        debugLog('History', `After deduplication: ${limited.length} unique items`);
+      }
       return limited;
 
     } else {
-      console.log('[Triage Hub] Chrome history API not available, using mock data');
-      return getMockHistoryData();
+      console.log('[Tab Napper] Chrome history API not available, using mock data');
+      return await getMockHistoryData();
     }
   } catch (error) {
     console.error('[Triage Hub] Error fetching history:', error);
-    return getMockHistoryData();
+    return await getMockHistoryData();
   }
 }
 
@@ -123,7 +183,18 @@ async function getCurrentlyOpenTabs() {
         });
       });
       
-      return tabs.map(tab => normalizeUrl(tab.url));
+      // Filter out invalid URLs and normalize valid ones
+      return tabs
+        .filter(tab => tab.url && typeof tab.url === 'string' && tab.url.startsWith('http'))
+        .map(tab => {
+          try {
+            return normalizeUrl(tab.url);
+          } catch (error) {
+            console.warn('[Tab Napper] Invalid URL in open tabs:', tab.url, error);
+            return null;
+          }
+        })
+        .filter(url => url !== null);
     } else {
       console.log('[Triage Hub] Chrome tabs API not available');
       return [];
@@ -179,7 +250,31 @@ async function enrichHistoryWithStatus(historyItems) {
 /**
  * Get mock history data for testing when Chrome API unavailable
  */
-function getMockHistoryData() {
+async function getMockHistoryData() {
+  // Check if we have test data generated by devUtils
+  if (typeof window !== 'undefined' && window._mockHistoryData) {
+    console.log('[Triage Hub] Using generated test history data from window');
+    return window._mockHistoryData;
+  }
+  
+  // Check extension storage for persistent mock data
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const result = await chrome.storage.local.get(['tabNapper_mockHistory']);
+      if (result.tabNapper_mockHistory && result.tabNapper_mockHistory.length > 0) {
+        console.log('[Triage Hub] Using generated test history data from storage');
+        // Also restore to window for faster access
+        if (typeof window !== 'undefined') {
+          window._mockHistoryData = result.tabNapper_mockHistory;
+        }
+        return result.tabNapper_mockHistory;
+      }
+    }
+  } catch (error) {
+    console.warn('[Triage Hub] Could not read mock data from storage:', error);
+  }
+  
+  // Fallback to basic mock data
   const mockItems = [
     {
       id: 'mock-1',
@@ -223,7 +318,7 @@ function getMockHistoryData() {
     }
   ];
   
-  console.log('[Triage Hub] Using mock history data');
+  console.log('[Triage Hub] Using basic mock history data');
   return mockItems;
 }
 
@@ -235,10 +330,10 @@ async function getRecentHistoryWithStatus(maxResults = 20) {
     const historyItems = await fetchRecentHistory(maxResults);
     const enrichedItems = await enrichHistoryWithStatus(historyItems);
     
-    console.log(`[Triage Hub] Retrieved ${enrichedItems.length} history items with status`);
+    debugLog('History', `Retrieved ${enrichedItems.length} history items with status`);
     return enrichedItems;
   } catch (error) {
-    console.error('[Triage Hub] Error getting history with status:', error);
+    debugError('History', 'Error getting history with status:', error);
     return [];
   }
 }
@@ -251,3 +346,11 @@ export {
   enrichHistoryWithStatus,
   normalizeUrl
 };
+
+// Expose cache clearing function for testing
+if (typeof window !== 'undefined') {
+  window._clearHistoryCache = () => {
+    historyCache = null;
+    historyCacheTime = 0;
+  };
+}

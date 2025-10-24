@@ -50,7 +50,7 @@ async function searchAllData(searchTerm) {
       loadAppState('triageHub_stashedTabs'),
       loadAppState('triageHub_quickAccessCards'),
       loadAppState('triageHub_trash'),
-      getRecentHistoryWithStatus(50) // Get more history items for search
+      getRecentHistoryWithStatus(10000) // Get extensive history for comprehensive search
     ]);
     
     const results = [];

@@ -1,9 +1,10 @@
 /**
- * Storage utilities for Triage Hub
+ * Storage utilities for Tab Napper
  * Implements hybrid storage model: sync for critical data, local for bulk data
  */
 
 import { encryptString, decryptString } from './encryption.js';
+import { notifyStorageChange } from './reactiveStorage.js';
 
 // Storage key mapping - determines which keys go to sync vs local storage
 const SYNC_STORAGE_KEYS = new Set([
@@ -17,6 +18,7 @@ const LOCAL_STORAGE_KEYS = new Set([
   'triageHub_stashedTabs',     // StashedTabs (bulk data)
   'triageHub_trash',           // Trash (bulk data)
   'triageHub_notes',           // Notes (bulk data)
+  'triageHub_suggestionMetadata', // Smart suggestion metadata (pinned items, cooldowns)
 ]);
 
 /**
@@ -40,6 +42,12 @@ function getStorageType(key) {
  */
 async function loadAppState(key) {
   try {
+    // Check if Chrome storage is available
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      console.warn(`[Triage Hub] Chrome storage not available for key: ${key}`);
+      return null;
+    }
+    
     const storageType = getStorageType(key);
     const storage = storageType === 'sync' ? chrome.storage.sync : chrome.storage.local;
     
@@ -76,6 +84,12 @@ async function loadAppState(key) {
  */
 async function saveAppState(key, data) {
   try {
+    // Check if Chrome storage is available
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      console.warn(`[Triage Hub] Chrome storage not available for saving key: ${key}`);
+      return false;
+    }
+    
     const storageType = getStorageType(key);
     const storage = storageType === 'sync' ? chrome.storage.sync : chrome.storage.local;
     
@@ -94,9 +108,12 @@ async function saveAppState(key, data) {
     }
     
     await storage.set({ [key]: dataToStore });
-    console.log(`[Triage Hub] Saved ${key} to ${storageType} storage`);
+    console.log(`[Tab Napper] Saved ${key} to ${storageType} storage`);
+    
+    // Notify reactive storage listeners of the change
+    notifyStorageChange(key, data);
   } catch (error) {
-    console.error(`[Triage Hub] Error saving state for ${key}:`, error);
+    console.error(`[Tab Napper] Error saving state for ${key}:`, error);
     throw error;
   }
 }

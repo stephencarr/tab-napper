@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Star, ExternalLink, Clock, RefreshCw } from 'lucide-react';
+import { Star, ExternalLink, Clock, PinOff, Pin } from 'lucide-react';
 import { loadAppState, saveAppState } from '../utils/storage.js';
+import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { navigateToUrl } from '../utils/navigation.js';
+import { unpinItem } from '../utils/smartSuggestions.js';
 import { cn } from '../utils/cn.js';
 import ListItem from './ListItem.jsx';
 
@@ -10,25 +12,12 @@ import ListItem from './ListItem.jsx';
  * Displays frequently accessed items from chrome.storage.sync
  */
 function QuickAccessCards({ className, maxItems = 6 }) {
+  const { data: quickAccessData, isLoading, error } = useReactiveStorage('triageHub_quickAccessCards', []);
   const [quickAccessItems, setQuickAccessItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Load quick access data on component mount
+  // Process and sort quick access data when it changes
   useEffect(() => {
-    loadQuickAccess();
-  }, [maxItems]);
-
-  const loadQuickAccess = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Load from chrome.storage.sync
-      const quickAccessData = await loadAppState('triageHub_quickAccessCards') || [];
-      
-      console.log(`[Triage Hub] Raw quick access data:`, quickAccessData);
-      
+    if (quickAccessData) {
       // Sort by access frequency and last accessed time
       const sortedItems = quickAccessData
         .sort((a, b) => {
@@ -41,21 +30,13 @@ function QuickAccessCards({ className, maxItems = 6 }) {
         })
         .slice(0, maxItems);
       
-      console.log(`[Triage Hub] Sorted quick access items:`, sortedItems);
-      console.log(`[Triage Hub] Loading ${sortedItems.length} quick access items`);
       setQuickAccessItems(sortedItems);
-      
-    } catch (err) {
-      console.error('[Triage Hub] Error loading quick access:', err);
-      setError('Failed to load quick access cards');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [quickAccessData, maxItems]);
 
   // Handle clicking on a quick access item
   const handleQuickAccessClick = async (item) => {
-    console.log('[Triage Hub] ⭐ Quick access item clicked:', {
+    console.log('[Tab Napper] ⭐ Quick access item clicked:', {
       title: item.title,
       url: item.url,
       accessCount: item.accessCount
@@ -66,21 +47,30 @@ function QuickAccessCards({ className, maxItems = 6 }) {
       const result = await navigateToUrl(item.url, item.title);
       
       if (result.action === 'switched') {
-        console.log('[Triage Hub] ✅ Successfully switched to existing tab');
+        console.log('[Tab Napper] ✅ Successfully switched to existing tab');
       } else if (result.action === 'created') {
-        console.log('[Triage Hub] ✅ Successfully opened new tab');
+        console.log('[Tab Napper] ✅ Successfully opened new tab');
       }
       
       // Update access count and last accessed time
       await updateAccessCount(item);
       
-      // Refresh the quick access items
-      setTimeout(() => {
-        loadQuickAccess();
-      }, 500);
-      
     } catch (error) {
-      console.error('[Triage Hub] ❌ Error navigating to quick access URL:', error);
+      console.error('[Tab Napper] ❌ Error navigating to quick access URL:', error);
+    }
+  };
+
+  // Handle unpinning an item
+  const handleUnpinItem = async (item, event) => {
+    event.stopPropagation(); // Prevent triggering the click handler
+    
+    console.log('[Tab Napper] 📌 Unpinning item:', item.title);
+    
+    try {
+      await unpinItem(item.id);
+      console.log('[Tab Napper] ✅ Successfully unpinned item');
+    } catch (error) {
+      console.error('[Tab Napper] ❌ Error unpinning item:', error);
     }
   };
 
@@ -104,7 +94,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
       await saveAppState('triageHub_quickAccessCards', updatedData);
       
     } catch (error) {
-      console.error('[Triage Hub] Error updating access count:', error);
+      console.error('[Tab Napper] Error updating access count:', error);
     }
   };
 
@@ -137,7 +127,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
           e.target.replaceWith(starIcon.firstChild);
         }}
         onLoad={() => {
-          console.log(`[Triage Hub] Favicon loaded for ${url}`);
+          // Favicon loaded successfully - no need to log every favicon
         }}
       />
     );
@@ -161,7 +151,8 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     }
   };
 
-  if (isLoading) {
+  // Only show loading shimmers if we're actually loading and have never loaded data
+  if (isLoading && quickAccessData === null) {
     return (
       <div className={cn('space-y-4', className)}>
         <div className="flex items-center justify-between">
@@ -169,8 +160,8 @@ function QuickAccessCards({ className, maxItems = 6 }) {
             <Star className="h-5 w-5 text-calm-500" />
             <h2 className="text-lg font-medium text-calm-900">Quick Access</h2>
           </div>
-          <div className="animate-spin">
-            <RefreshCw className="h-4 w-4 text-calm-400" />
+          <div className="animate-pulse">
+            <Star className="h-4 w-4 text-calm-400" />
           </div>
         </div>
         <div className="space-y-3">
@@ -192,13 +183,6 @@ function QuickAccessCards({ className, maxItems = 6 }) {
             <Star className="h-5 w-5 text-calm-500" />
             <h2 className="text-lg font-medium text-calm-900">Quick Access</h2>
           </div>
-          <button
-            onClick={loadQuickAccess}
-            className="p-1 text-calm-400 hover:text-calm-600 transition-colors"
-            title="Retry loading"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
         </div>
         <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
           {error}
@@ -219,13 +203,6 @@ function QuickAccessCards({ className, maxItems = 6 }) {
             </span>
           )}
         </div>
-        <button
-          onClick={loadQuickAccess}
-          className="p-1 text-calm-400 hover:text-calm-600 transition-colors"
-          title="Refresh quick access"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
       </div>
 
       {quickAccessItems.length === 0 ? (
@@ -243,29 +220,37 @@ function QuickAccessCards({ className, maxItems = 6 }) {
               key={item.id}
               title={item.title}
               subtitle={
-                <div className="flex items-center justify-between text-xs text-calm-500">
-                  <span className="truncate">
-                    {item.url ? new URL(item.url).hostname : 'Unknown'}
-                  </span>
-                  <div className="flex items-center space-x-2 ml-2">
-                    <span className="flex items-center space-x-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{getTimeAgo(item.lastAccessed)}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-calm-500">
+                    <span className="truncate">
+                      {item.url ? new URL(item.url).hostname : 'Unknown'}
                     </span>
-                    <span className="text-amber-600 font-medium">
-                      {item.accessCount || 0}×
-                    </span>
+                    <div className="flex items-center space-x-2 ml-2">
+                      <span className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{getTimeAgo(item.lastAccessed)}</span>
+                      </span>
+                      <span className="text-amber-600 font-medium">
+                        {item.accessCount || 0}×
+                      </span>
+                    </div>
                   </div>
+                  {item.type === 'smart-suggestion' && (
+                    <div className="text-xs text-emerald-600 flex items-center space-x-1">
+                      <Pin className="h-3 w-3" />
+                      <span>Smart suggestion</span>
+                    </div>
+                  )}
                 </div>
               }
               icon={
                 item.url ? renderFavicon(item.url) : <Star className="h-4 w-4 text-amber-500" />
               }
               onClick={() => {
-                console.log(`[Triage Hub] Quick access item clicked: ${item.title}`);
+                console.log(`[Tab Napper] Quick access item clicked: ${item.title}`);
                 handleQuickAccessClick(item);
               }}
-              className="hover:bg-amber-50 border-amber-200 hover:border-amber-300 transition-colors cursor-pointer"
+              className="hover:bg-amber-50 border-amber-200 hover:border-amber-300 transition-colors cursor-pointer group"
               badge={
                 item.accessCount > 5 ? (
                   <div className="flex items-center space-x-1 text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
@@ -273,6 +258,15 @@ function QuickAccessCards({ className, maxItems = 6 }) {
                     <span>Frequently Used</span>
                   </div>
                 ) : null
+              }
+              actions={
+                <button
+                  onClick={(e) => handleUnpinItem(item, e)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-100 rounded"
+                  title="Unpin from Quick Access"
+                >
+                  <PinOff className="h-4 w-4" />
+                </button>
               }
             />
           ))}

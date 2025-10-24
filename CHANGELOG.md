@@ -8,8 +8,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Analog Fidget Control UX for reminders
-- Advanced triage actions and workflows
+- Advanced triage actions and reminder integrations
+- Enhanced notification systems
+
+## [0.5.0] - 2025-10-24
+
+### Added - Major UX Overhaul: ADHD-Friendly FidgetControl and Unified Card System
+- **ADHD-Friendly FidgetControl Component**: Complete analog fidget interface for tab management
+  - Two-pill system: Action (Remind Me/Follow Up/Review/DELETE NOW) + When (smart contextual timing)
+  - Context-aware timing options based on current time of day
+  - Rapid-clicking friendly with no layout shifts or menu diving
+  - Smart time suggestions: "In 1 hour", "This afternoon", "Tomorrow morning", etc.
+  - DELETE NOW confirmation system with inline cancel button
+  - Fixed minimum widths (Action: 90px, When: 120px) for stable click targets
+
+- **Unified StashCard Component**: Consistent three-zone card layout across all views
+  - Zone 1 (Identity): High-contrast favicon, title, and metadata
+  - Zone 2 (Action Block): Tactile, prominent FidgetControl pills with uniform py-2 height
+  - Zone 3 (Commitment): Subtle, confirmatory preview text
+  - Real favicon integration with graceful fallbacks
+  - Smart time-ago formatting and domain extraction
+  - Category badge support
+
+- **Structured Card Layout System**: Professional container principle implementation
+  - Flex grid with justify-between for clean Identity/Action separation
+  - Control block containment with flex-shrink-0 for no wrapping
+  - Perfect vertical alignment across all card elements
+  - Visual hierarchy with high-contrast identity and tactile action elements
+
+- **Unified Stash Manager Integration**: Consistent experience across dashboard and management views
+  - Same StashCard component used in ListContainer and StashManagerView
+  - Eliminated layout inconsistencies between different contexts
+  - Removed duplicate helper functions and renderers
+
+### Enhanced
+- **Browser History Integration**: Fixed mock data interference
+  - Only uses mock data when explicitly enabled via window._enableMockHistory
+  - Restored real Chrome browser history display by default
+  - Enhanced search functionality with actual browsing data
+
+- **Reactive State Management**: Comprehensive storage monitoring
+  - ALL Chrome storage keys monitored (triageHub_*, tabNapper_*)
+  - Real-time UI updates for tab closures, suggestions, preferences
+  - Verified cross-component state synchronization
+
+### Fixed
+- **Layout Stability**: Eliminated layout shift during rapid clicking
+  - Fixed minimum pill widths prevent text-change resizing
+  - Inline cancel button prevents layout jumps during DELETE confirmation
+  - Consistent button heights maintain stable click areas
+
+- **UX Flow Improvements**: Smooth interaction patterns
+  - Past Time Guard prevents invalid "Today 19 hours away" combinations
+  - Smart day anchor cycling with proper wrap-around
+  - Conditional pill visibility based on action state
+
+### Technical
+- **Component Architecture**: Unified card system with single source of truth
+- **ADHD Design Principles**: Rapid clicking, visual stability, no menu diving
+- **Accessibility**: Clear visual hierarchy and tactile feedback
+- **Performance**: Reduced component duplication and optimized renders
 
 ## [0.4.0] - 2025-10-24
 

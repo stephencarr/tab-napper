@@ -1,7 +1,7 @@
 import React from 'react';
 import { Inbox, FileText } from 'lucide-react';
 import { cn } from '../utils/cn.js';
-import ListItem from './ListItem.jsx';
+import StashCard from './StashCard.jsx';
 
 /**
  * Reusable ListContainer component for displaying lists of items
@@ -15,39 +15,22 @@ function ListContainer({
   icon: Icon,
   className,
   onItemClick,
+  onItemAction, // New prop for FidgetControl actions
   renderItem,
   children,
+  triageButton, // New prop for adding a triage button
+  showFidgetControls = true, // New prop to enable/disable fidget controls
   ...props
 }) {
-  // Default item renderer if none provided
+  // Default item renderer with unified StashCard component
   const defaultRenderItem = (item, index) => (
-    <ListItem 
+    <StashCard
       key={item.id || index}
-      onClick={onItemClick ? () => onItemClick(item, index) : undefined}
-    >
-      <div className="flex items-start space-x-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-calm-800 truncate">
-            {item.title || item.name || 'Untitled'}
-          </p>
-          {item.description && (
-            <p className="text-sm text-calm-600 mt-1 line-clamp-2">
-              {item.description}
-            </p>
-          )}
-          {item.url && (
-            <p className="text-xs text-calm-500 mt-1 truncate">
-              {item.url}
-            </p>
-          )}
-        </div>
-        {item.timestamp && (
-          <div className="text-xs text-calm-400">
-            {new Date(item.timestamp).toLocaleDateString()}
-          </div>
-        )}
-      </div>
-    </ListItem>
+      item={item}
+      onItemClick={onItemClick}
+      onItemAction={onItemAction}
+      showFidgetControls={showFidgetControls}
+    />
   );
 
   const isEmpty = !items || items.length === 0;
@@ -56,13 +39,21 @@ function ListContainer({
     <div className={cn('space-y-4', className)} {...props}>
       {/* Header */}
       {title && (
-        <div className="flex items-center space-x-2">
-          {Icon && <Icon className="h-5 w-5 text-calm-600" />}
-          <h2 className="text-lg font-semibold text-calm-800">{title}</h2>
-          {!isEmpty && (
-            <span className="text-sm text-calm-500 bg-calm-100 px-2 py-1 rounded-full">
-              {items.length}
-            </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {Icon && <Icon className="h-5 w-5 text-calm-600" />}
+            <h2 className="text-lg font-semibold text-calm-800">{title}</h2>
+            {!isEmpty && (
+              <span className="text-sm text-calm-500 bg-calm-100 px-2 py-1 rounded-full">
+                {items.length}
+              </span>
+            )}
+          </div>
+          {/* Triage Button */}
+          {triageButton && !isEmpty && (
+            <div className="flex items-center">
+              {triageButton}
+            </div>
           )}
         </div>
       )}

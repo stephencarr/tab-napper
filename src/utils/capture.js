@@ -1,9 +1,41 @@
 /**
- * Tab capture and deduplication logic for Triage Hub
+ * Tab capture and deduplication logic for Tab Napper
  * Handles universal tab removal with smart deduplication
  */
 
 import { loadAppState, saveAppState } from './storage.js';
+import { debugLog, debugError, debugSuccess } from './debug.js';
+
+// In-memory store for tracking tab information
+let tabTracker = new Map();
+
+/**
+ * Track tab information for capture when closed
+ */
+function trackTab(tab) {
+  if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+    tabTracker.set(tab.id, {
+      id: tab.id,
+      url: tab.url,
+      title: tab.title || 'Untitled',
+      favIconUrl: tab.favIconUrl || null,
+      lastUpdated: Date.now()
+    });
+    debugLog('Capture', `Tracking tab: ${tab.title}`);
+  }
+}
+
+/**
+ * Clean up old tracked tabs (older than 1 hour)
+ */
+function cleanupTabTracker() {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  for (const [tabId, tabInfo] of tabTracker.entries()) {
+    if (tabInfo.lastUpdated < oneHourAgo) {
+      tabTracker.delete(tabId);
+    }
+  }
+}
 
 /**
  * Check if two URLs are effectively the same (ignoring fragments, some params)
@@ -36,7 +68,7 @@ async function findDuplicateInStashed(url) {
       normalizeUrl(tab.url || '') === normalizedUrl
     );
   } catch (error) {
-    console.error('[Triage Hub] Error checking for duplicates:', error);
+    debugError('Capture', 'Error checking for duplicates:', error);
     return null;
   }
 }
@@ -54,14 +86,11 @@ async function removeDuplicateFromStashed(duplicateItem) {
     
     await saveAppState('triageHub_stashedTabs', updatedStashed);
     
-    console.log(`[Triage Hub] 🗑️  Removed duplicate from stashed tabs:`);
-    console.log(`[Triage Hub] 📰 Title: "${duplicateItem.title}"`);
-    console.log(`[Triage Hub] 🆔 ID: ${duplicateItem.id}`);
-    console.log(`[Triage Hub] 📊 Stashed count: ${originalCount} → ${newCount}`);
+    debugSuccess('Capture', `Removed duplicate from stashed tabs: "${duplicateItem.title}" (${originalCount} → ${newCount})`);
     
     return true;
   } catch (error) {
-    console.error('[Triage Hub] Error removing duplicate:', error);
+    debugError('Capture', 'Error removing duplicate:', error);
     return false;
   }
 }
@@ -90,11 +119,11 @@ async function addToTriageInbox(item) {
     const updatedInbox = [inboxItem, ...inbox];
     
     await saveAppState('triageHub_inbox', updatedInbox);
-    console.log('[Triage Hub] Added to triage inbox:', inboxItem.title);
+    debugSuccess('Capture', `Added to triage inbox: ${inboxItem.title}`);
     
     return inboxItem;
   } catch (error) {
-    console.error('[Triage Hub] Error adding to inbox:', error);
+    debugError('Capture', 'Error adding to inbox:', error);
     throw error;
   }
 }
@@ -105,26 +134,22 @@ async function addToTriageInbox(item) {
  */
 async function captureClosedTab(tabInfo) {
   try {
-    console.log('[Triage Hub] 🎯 STARTING TAB CAPTURE:', tabInfo.title);
-    console.log('[Triage Hub] 📍 URL:', tabInfo.url);
+    debugLog('Capture', `🎯 STARTING TAB CAPTURE: ${tabInfo.title}`);
+    debugLog('Capture', `📍 URL: ${tabInfo.url}`);
     
     // Step 1: Check for duplicates in stashed tabs
     const duplicate = await findDuplicateInStashed(tabInfo.url);
     
     if (duplicate) {
-      console.log('[Triage Hub] 🔄 DUPLICATE FOUND in stashed tabs!');
-      console.log('[Triage Hub] 🗑️  Removing old version:', duplicate.title);
-      console.log('[Triage Hub] 🆔 Old item ID:', duplicate.id);
-      
+      debugLog('Capture', `🔄 DUPLICATE FOUND in stashed tabs: ${duplicate.title}`);
       await removeDuplicateFromStashed(duplicate);
-      
-      console.log('[Triage Hub] ✅ DEDUPLICATION COMPLETE - Old version removed');
+      debugSuccess('Capture', '✅ DEDUPLICATION COMPLETE - Old version removed');
     } else {
-      console.log('[Triage Hub] ℹ️  No duplicates found in stashed tabs');
+      debugLog('Capture', 'ℹ️  No duplicates found in stashed tabs');
     }
     
     // Step 2: Add to triage inbox
-    console.log('[Triage Hub] 📥 Adding to triage inbox...');
+    debugLog('Capture', '📥 Adding to triage inbox...');
     const inboxItem = await addToTriageInbox({
       title: tabInfo.title,
       description: `Captured from ${new URL(tabInfo.url).hostname}`,
@@ -133,19 +158,18 @@ async function captureClosedTab(tabInfo) {
       type: 'captured-tab'
     });
     
-    console.log('[Triage Hub] ✅ TAB CAPTURE COMPLETE');
-    console.log('[Triage Hub] 🆔 New inbox item ID:', inboxItem.id);
+    debugSuccess('Capture', `✅ TAB CAPTURE COMPLETE - New inbox item: ${inboxItem.id}`);
     
     if (duplicate) {
-      console.log('[Triage Hub] 📊 SUMMARY: Removed 1 duplicate, added 1 new item');
+      debugLog('Capture', '📊 SUMMARY: Removed 1 duplicate, added 1 new item');
     } else {
-      console.log('[Triage Hub] 📊 SUMMARY: No duplicates found, added 1 new item');
+      debugLog('Capture', '📊 SUMMARY: No duplicates found, added 1 new item');
     }
     
     return inboxItem;
     
   } catch (error) {
-    console.error('[Triage Hub] ❌ ERROR in capture process:', error);
+    debugError('Capture', '❌ ERROR in capture process:', error);
     throw error;
   }
 }
@@ -169,27 +193,91 @@ async function simulateTabCapture(url, title) {
  */
 function setupTabCaptureListeners() {
   if (typeof chrome !== 'undefined' && chrome.tabs) {
-    // Listen for tab removal
-    chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-      try {
-        // We can't get tab info after it's removed, so this would need
-        // to be paired with onUpdated listener to track tab info
-        console.log('[Triage Hub] Tab removed:', tabId);
-      } catch (error) {
-        console.error('[Triage Hub] Error in tab removal listener:', error);
+    
+    // Track all existing tabs on startup
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => trackTab(tab));
+      debugLog('Capture', `Tracking ${tabs.length} existing tabs`);
+    });
+    
+    // Track new tabs when created
+    chrome.tabs.onCreated.addListener((tab) => {
+      trackTab(tab);
+    });
+    
+    // Update tracked tab info when tabs change
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+      if (changeInfo.url || changeInfo.title) {
+        trackTab(tab);
       }
     });
     
-    console.log('[Triage Hub] Tab capture listeners set up');
+    // Handle tab activation to update tracking
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+      try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        trackTab(tab);
+      } catch (error) {
+        // Tab might not exist anymore, ignore
+      }
+    });
+    
+    // CRITICAL: Handle tab removal with capture
+    chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+      try {
+        const trackedTab = tabTracker.get(tabId);
+        
+        if (trackedTab && trackedTab.url) {
+          // Skip chrome:// and extension pages
+          if (trackedTab.url.startsWith('chrome://') || 
+              trackedTab.url.startsWith('chrome-extension://') ||
+              trackedTab.url.startsWith('moz-extension://') ||
+              trackedTab.url === 'about:blank') {
+            debugLog('Capture', `Skipping system tab: ${trackedTab.url}`);
+            tabTracker.delete(tabId);
+            return;
+          }
+          
+          debugLog('Capture', `🚫 Tab closed: ${trackedTab.title} (${trackedTab.url})`);
+          
+          // Capture the closed tab
+          await captureClosedTab(trackedTab);
+          
+        } else {
+          debugLog('Capture', `Tab ${tabId} closed but not tracked`);
+        }
+        
+        // Clean up tracking
+        tabTracker.delete(tabId);
+        
+      } catch (error) {
+        debugError('Capture', 'Error in tab removal listener:', error);
+      }
+    });
+    
+    // Clean up old tracked tabs periodically
+    setInterval(cleanupTabTracker, 5 * 60 * 1000); // Every 5 minutes
+    
+    debugLog('Capture', 'Tab capture listeners set up successfully');
+    console.log('[Tab Napper] 🎯 Universal tab capture system is ACTIVE');
+    
   } else {
-    console.log('[Triage Hub] Chrome APIs not available, tab capture disabled');
+    debugLog('Capture', 'Chrome APIs not available, tab capture disabled');
   }
 }
 
-// Expose functions globally for testing
+// Expose functions globally for testing and debugging
 if (typeof window !== 'undefined') {
-  window.TriageHub_captureTab = simulateTabCapture;
-  window.TriageHub_setupCapture = setupTabCaptureListeners;
+  window.tabNapperCapture = {
+    simulate: simulateTabCapture,
+    setup: setupTabCaptureListeners,
+    getTracked: () => Array.from(tabTracker.values()),
+    clearTracked: () => tabTracker.clear(),
+    captureUrl: async (url, title) => {
+      const mockTab = { url, title: title || url, favIconUrl: null };
+      return await captureClosedTab(mockTab);
+    }
+  };
 }
 
 export {
@@ -198,5 +286,7 @@ export {
   setupTabCaptureListeners,
   findDuplicateInStashed,
   addToTriageInbox,
-  normalizeUrl
+  normalizeUrl,
+  trackTab,
+  cleanupTabTracker
 };

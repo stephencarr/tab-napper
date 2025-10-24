@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Eye, EyeOff, ExternalLink, X } from 'lucide-react';
-import { loadAppState } from '../utils/storage.js';
 import { getCurrentlyOpenTabs } from '../utils/history.js';
 import { navigateToUrl } from '../utils/navigation.js';
+import { useReactiveStorage } from '../utils/reactiveStorage.js';
+import { debugLog, debugError } from '../utils/debug.js';
 import { cn } from '../utils/cn.js';
 import ListItem from './ListItem.jsx';
 
@@ -15,16 +16,19 @@ function ContextualComponent({ className }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Watch for changes in stashed tabs to update contextual matches
+  const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
 
-  // Load contextual data on component mount and periodically
+  // Load contextual data on component mount and when stashed tabs change
   useEffect(() => {
     loadContextualMatch();
     
-    // Check for contextual matches every 30 seconds
-    const interval = setInterval(loadContextualMatch, 30000);
+    // Check for contextual matches less frequently to reduce noise
+    const interval = setInterval(loadContextualMatch, 120000); // Every 2 minutes instead of 30 seconds
     
     return () => clearInterval(interval);
-  }, []);
+  }, [stashedTabs]); // Add stashedTabs as dependency
 
   const loadContextualMatch = async () => {
     try {
@@ -34,36 +38,31 @@ function ContextualComponent({ className }) {
       // Get currently open tabs
       const openTabs = await getCurrentlyOpenTabs();
       
-      // Get stashed tabs
-      const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+      // Use reactive stashed tabs data
+      const currentStashedTabs = stashedTabs || [];
       
-      console.log(`[Triage Hub] Contextual matching - Open tabs:`, openTabs);
-      console.log(`[Triage Hub] Contextual matching - Stashed tabs:`, stashedTabs);
+      debugLog('Contextual', `Matching - Open tabs: ${openTabs.length}, Stashed tabs: ${currentStashedTabs.length}`);
       
-      if (openTabs.length === 0 || stashedTabs.length === 0) {
-        console.log(`[Triage Hub] No contextual matches possible - openTabs: ${openTabs.length}, stashedTabs: ${stashedTabs.length}`);
+      if (openTabs.length === 0 || currentStashedTabs.length === 0) {
+        debugLog('Contextual', `No contextual matches possible - openTabs: ${openTabs.length}, stashedTabs: ${currentStashedTabs.length}`);
         setContextualItem(null);
         setIsLoading(false);
         return;
       }
       
       // Find contextual matches based on domain or keywords
-      const contextualMatch = findContextualMatch(openTabs, stashedTabs);
+      const contextualMatch = findContextualMatch(openTabs, currentStashedTabs);
       
       if (contextualMatch) {
-        console.log('[Triage Hub] Found contextual match:', {
-          stashedItem: contextualMatch.title,
-          matchingTab: contextualMatch.matchReason,
-          score: contextualMatch.contextScore
-        });
+        debugLog('Contextual', `Found match: ${contextualMatch.title} (${contextualMatch.matchReason}, score: ${contextualMatch.contextScore})`);
       } else {
-        console.log('[Triage Hub] No contextual matches found');
+        debugLog('Contextual', 'No contextual matches found');
       }
       
       setContextualItem(contextualMatch);
       
     } catch (err) {
-      console.error('[Triage Hub] Error loading contextual match:', err);
+      debugError('Contextual', 'Error loading contextual match:', err);
       setError('Failed to load contextual suggestions');
     } finally {
       setIsLoading(false);
@@ -72,7 +71,7 @@ function ContextualComponent({ className }) {
 
   // Find a relevant stashed item based on currently open tabs
   const findContextualMatch = (openTabs, stashedTabs) => {
-    console.log('[Triage Hub] Starting contextual matching...');
+    debugLog('Contextual', 'Starting contextual matching...');
     
     // Get domains and keywords from open tabs
     const openDomains = new Set();
@@ -99,12 +98,11 @@ function ContextualComponent({ className }) {
         });
         
       } catch (error) {
-        console.warn('[Triage Hub] Invalid URL in open tabs:', url);
+        console.warn('[Tab Napper] Invalid URL in open tabs:', url);
       }
     });
     
-    console.log('[Triage Hub] Open domains:', Array.from(openDomains));
-    console.log('[Triage Hub] Open keywords:', Array.from(openKeywords));
+    debugLog('Contextual', `Open domains: ${openDomains.size}, Open keywords: ${openKeywords.size}`);
     
     // Score stashed items for relevance
     const scoredItems = stashedTabs.map(item => {
@@ -152,7 +150,7 @@ function ContextualComponent({ className }) {
         }
         
       } catch (error) {
-        console.warn('[Triage Hub] Invalid URL in stashed item:', item.url, error);
+        console.warn('[Tab Napper] Invalid URL in stashed item:', item.url, error);
       }
       
       return {
@@ -162,29 +160,23 @@ function ContextualComponent({ className }) {
       };
     });
     
-    console.log('[Triage Hub] Scored items:', scoredItems.map(item => ({
-      title: item.title,
-      score: item.contextScore,
-      reason: item.matchReason
-    })));
+    debugLog('Contextual', `Scored ${scoredItems.length} items for contextual matching`);
     
     // Return the highest scoring item if score > 0
     const bestMatch = scoredItems
       .filter(item => item.contextScore > 0)
       .sort((a, b) => b.contextScore - a.contextScore)[0];
     
-    console.log('[Triage Hub] Best match:', bestMatch ? {
-      title: bestMatch.title,
-      score: bestMatch.contextScore,
-      reason: bestMatch.matchReason
-    } : 'none');
+    if (bestMatch) {
+      debugLog('Contextual', `Best match: ${bestMatch.title} (score: ${bestMatch.contextScore})`);
+    }
     
     return bestMatch || null;
   };
 
   // Handle clicking on the contextual item
   const handleContextualClick = async (item) => {
-    console.log('[Triage Hub] 🎯 Contextual item clicked:', {
+    console.log('[Tab Napper] 🎯 Contextual item clicked:', {
       title: item.title,
       url: item.url,
       matchReason: item.matchReason
@@ -194,13 +186,13 @@ function ContextualComponent({ className }) {
       const result = await navigateToUrl(item.url, item.title);
       
       if (result.action === 'switched') {
-        console.log('[Triage Hub] ✅ Successfully switched to existing tab');
+        console.log('[Tab Napper] ✅ Successfully switched to existing tab');
       } else if (result.action === 'created') {
-        console.log('[Triage Hub] ✅ Successfully opened new tab');
+        console.log('[Tab Napper] ✅ Successfully opened new tab');
       }
       
     } catch (error) {
-      console.error('[Triage Hub] ❌ Error navigating to contextual URL:', error);
+      console.error('[Tab Napper] ❌ Error navigating to contextual URL:', error);
     }
   };
 
@@ -323,7 +315,7 @@ function ContextualComponent({ className }) {
               )
             }
             onClick={() => {
-              console.log(`[Triage Hub] Contextual item clicked: ${contextualItem.title}`);
+              console.log(`[Tab Napper] Contextual item clicked: ${contextualItem.title}`);
               handleContextualClick(contextualItem);
             }}
             className="hover:bg-amber-100 border-amber-300 transition-colors cursor-pointer bg-white"

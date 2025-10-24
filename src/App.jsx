@@ -2,24 +2,29 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
 import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
-import { addSampleData, clearSampleData } from './utils/devUtils.js';
+import { addSampleData, clearSampleData, generateTestBrowsingHistory, testSmartSuggestions } from './utils/devUtils.js';
 import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
+import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
 import SearchResults from './components/SearchResults.jsx';
 import RecentlyVisited from './components/RecentlyVisited.jsx';
 import QuickAccessCards from './components/QuickAccessCards.jsx';
+import SmartSuggestions from './components/SmartSuggestions.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
+import StashManagerView from './components/StashManagerView.jsx';
 import DevConsole from './components/DevConsole.jsx';
 
 function App() {
   const [appState, setAppState] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentView, setCurrentView] = useState('main'); // 'main' or 'stash-manager'
+  const [stashManagerFilter, setStashManagerFilter] = useState('stashed');
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,8 +37,10 @@ function App() {
     []
   );
 
-  // Initialize the application and test direct state reading
+  // Initialize the application with reactive store
   useEffect(() => {
+    let unsubscribe = null;
+    
     async function initializeApp() {
       try {
         console.log('[Triage Hub] Initializing application...');
@@ -42,9 +49,15 @@ function App() {
         await getOrCreateEncryptionKey();
         console.log('[Triage Hub] Encryption key ready');
         
-        // Load all application data via loadAllAppData
-        const data = await loadAllAppData();
-        console.log('[Triage Hub] Application data loaded:', data);
+        // Initialize reactive store and load data
+        const data = await initializeReactiveStore();
+        console.log('[Triage Hub] Reactive store initialized with data:', data);
+        
+        // Subscribe to state changes for automatic UI updates
+        unsubscribe = subscribeToStateChanges((newState) => {
+          console.log('[Triage Hub] State change detected, updating UI:', newState);
+          setAppState(newState);
+        });
         
         // Test direct state reading for individual keys
         console.log('[Triage Hub] Testing direct state reading...');
@@ -69,6 +82,13 @@ function App() {
     }
 
     initializeApp();
+    
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Handle search term changes
@@ -90,7 +110,7 @@ function App() {
     try {
       const storageKey = `triageHub_${key}`;
       await saveAppState(storageKey, value);
-      setAppState(prev => ({ ...prev, [key]: value }));
+      // Note: Reactive store will automatically update React state
     } catch (err) {
       console.error(`[Triage Hub] Error updating ${key}:`, err);
       setError(`Failed to save ${key}`);
@@ -101,9 +121,8 @@ function App() {
   const handleAddSampleData = async () => {
     try {
       await addSampleData();
-      // Reload app state to show new data
-      const newData = await loadAllAppData();
-      setAppState(newData);
+      // Trigger reactive state refresh
+      await refreshStateFromStorage();
     } catch (err) {
       console.error('[Triage Hub] Error adding sample data:', err);
     }
@@ -113,9 +132,8 @@ function App() {
   const handleClearData = async () => {
     try {
       await clearSampleData();
-      // Reload app state to show cleared data
-      const newData = await loadAllAppData();
-      setAppState(newData);
+      // Trigger reactive state refresh
+      await refreshStateFromStorage();
     } catch (err) {
       console.error('[Triage Hub] Error clearing data:', err);
     }
@@ -134,6 +152,64 @@ function App() {
   const handleSearchResultClick = (item) => {
     console.log('[Triage Hub] Search result clicked:', item);
     // TODO: Navigate to item or show details
+  };
+
+  const handleTriageInbox = () => {
+    console.log('[Tab Napper] Navigating to inbox triage view...');
+    setCurrentView('stash-manager');
+    setStashManagerFilter('inbox');
+  };
+
+  const handleNavigateBack = () => {
+    setCurrentView('main');
+  };
+
+  // Handle FidgetControl actions
+  const handleItemAction = async (action, item) => {
+    try {
+      console.log('[Triage Hub] FidgetControl action:', action, 'for item:', item);
+      
+      switch (action) {
+        case 'delete':
+          // Move item to trash
+          const currentInbox = appState.inbox || [];
+          const currentStashed = appState.stashedTabs || [];
+          const currentTrash = appState.trash || [];
+          
+          // Remove from inbox or stashed
+          const updatedInbox = currentInbox.filter(i => i.id !== item.id);
+          const updatedStashed = currentStashed.filter(i => i.id !== item.id);
+          
+          // Add to trash with deletion timestamp
+          const trashedItem = {
+            ...item,
+            deletedAt: Date.now(),
+            originalLocation: currentInbox.includes(item) ? 'inbox' : 'stashed'
+          };
+          const updatedTrash = [...currentTrash, trashedItem];
+          
+          // Update storage
+          await updateAppState('inbox', updatedInbox);
+          await updateAppState('stashedTabs', updatedStashed);
+          await updateAppState('trash', updatedTrash);
+          
+          console.log('[Triage Hub] Item moved to trash:', item.title);
+          break;
+          
+        case 'remind':
+        case 'follow-up':
+        case 'review':
+          // For now, just log the scheduled action
+          // TODO: Implement reminder/scheduling system
+          console.log('[Triage Hub] Scheduled action:', action, 'for item:', item.title);
+          break;
+          
+        default:
+          console.warn('[Triage Hub] Unknown FidgetControl action:', action);
+      }
+    } catch (error) {
+      console.error('[Triage Hub] Error handling FidgetControl action:', error);
+    }
   };
 
   // Simulate tab capture for testing
@@ -155,15 +231,33 @@ function App() {
       
       const capturedItem = await simulateTabCapture(testUrl, testTitle);
       
-      // Reload app state to show new capture
-      const newData = await loadAllAppData();
-      setAppState(newData);
+      // Trigger reactive state refresh
+      await refreshStateFromStorage();
       
       // Show user feedback
       console.log(`[Triage Hub] Captured: ${capturedItem.title}`);
       
     } catch (err) {
       console.error('[Triage Hub] Error simulating capture:', err);
+    }
+  };
+
+  // Handle generating test browsing history
+  const handleGenerateTestHistory = async () => {
+    try {
+      await generateTestBrowsingHistory();
+      console.log('[Tab Napper] Test browsing history generated!');
+    } catch (error) {
+      console.error('[Tab Napper] Error generating test history:', error);
+    }
+  };
+
+  // Handle testing smart suggestions
+  const handleTestSuggestions = async () => {
+    try {
+      await testSmartSuggestions();
+    } catch (error) {
+      console.error('[Tab Napper] Error testing suggestions:', error);
     }
   };
 
@@ -191,9 +285,8 @@ function App() {
       
       await saveAppState('triageHub_stashedTabs', testStashedItems);
       
-      // Reload app state
-      const newData = await loadAllAppData();
-      setAppState(newData);
+      // Trigger reactive state refresh
+      await refreshStateFromStorage();
       
       console.log('[Triage Hub] Added test items to stashed tabs for deduplication testing');
       console.log('Now click "Simulate Tab Capture" to see deduplication in action!');
@@ -233,6 +326,20 @@ function App() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Routing logic
+  if (currentView === 'stash-manager') {
+    return (
+      <StashManagerView
+        onNavigateBack={handleNavigateBack}
+        initialFilter={stashManagerFilter}
+        inboxData={appState?.inbox || []}
+        stashedTabs={appState?.stashedTabs || []}
+        trashData={appState?.trash || []}
+        onItemAction={handleItemAction}
+      />
     );
   }
 
@@ -309,6 +416,16 @@ function App() {
                   emptyDescription="Closed tabs and new items will appear here for you to triage and organize."
                   icon={Inbox}
                   onItemClick={(item) => console.log('Inbox item clicked:', item)}
+                  onItemAction={handleItemAction}
+                  triageButton={
+                    <button
+                      onClick={handleTriageInbox}
+                      className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-calm-600 text-white rounded-md hover:bg-calm-700 transition-colors"
+                    >
+                      <Inbox className="h-4 w-4" />
+                      <span>Triage {appState.inbox.length} Items</span>
+                    </button>
+                  }
                 />
               </div>
 
@@ -321,6 +438,7 @@ function App() {
                   emptyDescription="Tabs you've decided to keep for later will be organized here."
                   icon={Archive}
                   onItemClick={(item) => console.log('Stashed tab clicked:', item)}
+                  onItemAction={handleItemAction}
                 />
               </div>
             </div>
@@ -333,6 +451,15 @@ function App() {
                 <QuickAccessCards maxItems={6} />
               </div>
 
+              {/* Smart Suggestions */}
+              <div className="calm-card p-6">
+                <SmartSuggestions 
+                  onSuggestionPinned={(pinnedItem) => {
+                    console.log('[Tab Napper] Suggestion pinned:', pinnedItem.title);
+                  }}
+                />
+              </div>
+
               {/* Contextual Component */}
               <ContextualCardWrapper />
 
@@ -340,7 +467,8 @@ function App() {
               <div className="calm-card p-6">
                 <FullStashManager onNavigate={(destination) => {
                   console.log('[Triage Hub] Navigation requested to:', destination);
-                  // TODO: Implement navigation handling
+                  setCurrentView('stash-manager');
+                  setStashManagerFilter('stashed');
                 }} />
               </div>
 
@@ -380,6 +508,18 @@ function App() {
                   className="calm-button-primary px-3 py-1 text-xs"
                 >
                   Setup Dedupe Test
+                </button>
+                <button
+                  onClick={handleGenerateTestHistory}
+                  className="calm-button-secondary px-3 py-1 text-xs"
+                >
+                  Generate Test History
+                </button>
+                <button
+                  onClick={handleTestSuggestions}
+                  className="calm-button-secondary px-3 py-1 text-xs"
+                >
+                  Test Smart Suggestions
                 </button>
                 <button
                   onClick={handleSimulateCapture}

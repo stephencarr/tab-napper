@@ -12,6 +12,7 @@ function ListItem({
   subtitle,
   icon,
   badge,
+  actions,
   onClick, 
   className,
   isSelected = false,
@@ -72,11 +73,10 @@ function ListItem({
           <h3 className="text-sm font-medium text-calm-800 truncate">
             {title}
           </h3>
-          {badge && (
-            <div className="flex-shrink-0 ml-2">
-              {badge}
-            </div>
-          )}
+          <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+            {badge && badge}
+            {actions && actions}
+          </div>
         </div>
         
         {subtitle && (

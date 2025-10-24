@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Square, Pin, ExternalLink, RefreshCw } from 'lucide-react';
+import { Clock, Square, Pin, ExternalLink } from 'lucide-react';
 import { getRecentHistoryWithStatus } from '../utils/history.js';
 import { navigateToUrl } from '../utils/navigation.js';
+import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { cn } from '../utils/cn.js';
 import ListItem from './ListItem.jsx';
 
@@ -13,11 +14,14 @@ function RecentlyVisited({ className, maxItems = 20 }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Watch for changes in stashed tabs to update history status
+  const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
 
-  // Load history on component mount
+  // Load history on component mount and when stashed tabs change
   useEffect(() => {
     loadHistory();
-  }, [maxItems]);
+  }, [maxItems, stashedTabs]); // Add stashedTabs as dependency
 
   const loadHistory = async () => {
     try {
@@ -28,7 +32,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
       setHistoryItems(items);
       
     } catch (err) {
-      console.error('[Triage Hub] Error loading history:', err);
+      console.error('[Tab Napper] Error loading history:', err);
       setError('Failed to load browsing history');
     } finally {
       setIsLoading(false);
@@ -37,7 +41,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {
-    console.log('[Triage Hub] 🖱️ History item clicked:', {
+    console.log('[Tab Napper] 🖱️ History item clicked:', {
       title: item.title,
       url: item.url,
       isCurrentlyOpen: item.isCurrentlyOpen,
@@ -48,11 +52,11 @@ function RecentlyVisited({ className, maxItems = 20 }) {
       const result = await navigateToUrl(item.url, item.title);
       
       if (result.action === 'switched') {
-        console.log('[Triage Hub] ✅ Successfully switched to existing tab');
+        console.log('[Tab Napper] ✅ Successfully switched to existing tab');
       } else if (result.action === 'created') {
-        console.log('[Triage Hub] ✅ Successfully opened new tab');
+        console.log('[Tab Napper] ✅ Successfully opened new tab');
       } else {
-        console.log('[Triage Hub] ✅ Opened in external window/fallback');
+        console.log('[Tab Napper] ✅ Opened in external window/fallback');
       }
       
       // Refresh the history to update open status
@@ -61,7 +65,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
       }, 500);
       
     } catch (error) {
-      console.error('[Triage Hub] ❌ Error navigating to URL:', error);
+      console.error('[Tab Napper] ❌ Error navigating to URL:', error);
     }
   };
 
@@ -93,7 +97,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && historyItems.length === 0) {
     return (
       <div className={cn('space-y-4', className)}>
         <div className="flex items-center justify-between">
@@ -101,7 +105,9 @@ function RecentlyVisited({ className, maxItems = 20 }) {
             <Clock className="h-5 w-5 text-calm-600" />
             <h2 className="text-lg font-semibold text-calm-800">Recently Visited</h2>
           </div>
-          <RefreshCw className="h-4 w-4 animate-spin text-calm-400" />
+          <div className="animate-pulse">
+            <Clock className="h-4 w-4 text-calm-400" />
+          </div>
         </div>
         
         <div className="space-y-3">
@@ -124,23 +130,10 @@ function RecentlyVisited({ className, maxItems = 20 }) {
             <Clock className="h-5 w-5 text-calm-600" />
             <h2 className="text-lg font-semibold text-calm-800">Recently Visited</h2>
           </div>
-          <button
-            onClick={loadHistory}
-            className="text-calm-600 hover:text-calm-800 transition-colors"
-            title="Retry loading history"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
         </div>
         
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700 text-sm">{error}</p>
-          <button
-            onClick={loadHistory}
-            className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
-          >
-            Try again
-          </button>
         </div>
       </div>
     );
@@ -178,13 +171,6 @@ function RecentlyVisited({ className, maxItems = 20 }) {
             {historyItems.length}
           </span>
         </div>
-        <button
-          onClick={loadHistory}
-          className="text-calm-600 hover:text-calm-800 transition-colors"
-          title="Refresh history"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
       </div>
 
       {/* History List */}
