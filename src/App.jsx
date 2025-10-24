@@ -334,9 +334,7 @@ function App() {
               </div>
 
               {/* Contextual Component */}
-              <div className="calm-card p-6">
-                <ContextualComponent />
-              </div>
+              <ContextualCardWrapper />
 
               {/* Full Stash Manager */}
               <div className="calm-card p-6">
@@ -439,6 +437,41 @@ function App() {
 
       {/* Development Console - only in development */}
       <DevConsole isEnabled={true} />
+    </div>
+  );
+}
+
+// Simple wrapper that conditionally renders the contextual card
+function ContextualCardWrapper() {
+  const [hasContent, setHasContent] = useState(false);
+  
+  // Use effect to check for contextual content periodically
+  useEffect(() => {
+    const checkContextual = async () => {
+      try {
+        // This is a simplified check - in a real implementation you'd want to
+        // share state or use a context, but for now we'll just check if there's potential content
+        const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+        setHasContent(stashedTabs.length > 0);
+      } catch (error) {
+        setHasContent(false);
+      }
+    };
+    
+    checkContextual();
+    const interval = setInterval(checkContextual, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Don't render the card at all if there's no potential for contextual content
+  if (!hasContent) {
+    return null;
+  }
+  
+  return (
+    <div className="calm-card p-6">
+      <ContextualComponent />
     </div>
   );
 }
