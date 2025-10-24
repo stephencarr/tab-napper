@@ -15,6 +15,7 @@ function ListItem({
 }) {
   const baseClasses = [
     'group',
+    'w-full',              // Ensure full width
     'p-4',
     'bg-white',
     'border',
@@ -22,7 +23,8 @@ function ListItem({
     'rounded-lg',
     'transition-all',
     'duration-200',
-    'ease-in-out'
+    'ease-in-out',
+    'text-left'            // Ensure left alignment for buttons
   ];
 
   const interactiveClasses = onClick ? [

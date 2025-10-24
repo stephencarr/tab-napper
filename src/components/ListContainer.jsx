@@ -68,7 +68,7 @@ function ListContainer({
       )}
 
       {/* Content */}
-      <div className="space-y-3">
+      <div className="space-y-3 w-full">
         {isEmpty ? (
           /* Empty State */
           <div className="text-center py-12 px-6">

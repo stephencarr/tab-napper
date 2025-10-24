@@ -1,0 +1,183 @@
+/**
+ * Search utilities for Triage Hub
+ * Provides unified search across all data sources
+ */
+
+import { loadAppState } from './storage.js';
+
+/**
+ * Search within a single text field
+ */
+function searchInText(text, searchTerm) {
+  if (!text || !searchTerm) return false;
+  return text.toLowerCase().includes(searchTerm.toLowerCase());
+}
+
+/**
+ * Search within an item (title, description, url)
+ */
+function searchInItem(item, searchTerm) {
+  if (!searchTerm) return true;
+  
+  const fields = [
+    item.title || '',
+    item.description || '',
+    item.url || '',
+    item.name || ''
+  ];
+  
+  return fields.some(field => searchInText(field, searchTerm));
+}
+
+/**
+ * Search across all data sources
+ */
+async function searchAllData(searchTerm) {
+  if (!searchTerm || searchTerm.trim().length === 0) {
+    return [];
+  }
+  
+  try {
+    // Load all data sources
+    const [inbox, stashedTabs, quickAccessCards, trash] = await Promise.all([
+      loadAppState('triageHub_inbox'),
+      loadAppState('triageHub_stashedTabs'),
+      loadAppState('triageHub_quickAccessCards'),
+      loadAppState('triageHub_trash')
+    ]);
+    
+    const results = [];
+    
+    // Search inbox
+    if (inbox) {
+      inbox.forEach(item => {
+        if (searchInItem(item, searchTerm)) {
+          results.push({
+            ...item,
+            source: 'inbox',
+            relevance: calculateRelevance(item, searchTerm)
+          });
+        }
+      });
+    }
+    
+    // Search stashed tabs
+    if (stashedTabs) {
+      stashedTabs.forEach(item => {
+        if (searchInItem(item, searchTerm)) {
+          results.push({
+            ...item,
+            source: 'stashedTabs',
+            relevance: calculateRelevance(item, searchTerm)
+          });
+        }
+      });
+    }
+    
+    // Search quick access cards
+    if (quickAccessCards) {
+      quickAccessCards.forEach(item => {
+        if (searchInItem(item, searchTerm)) {
+          results.push({
+            ...item,
+            source: 'quickAccessCards',
+            relevance: calculateRelevance(item, searchTerm)
+          });
+        }
+      });
+    }
+    
+    // Search trash
+    if (trash) {
+      trash.forEach(item => {
+        if (searchInItem(item, searchTerm)) {
+          results.push({
+            ...item,
+            source: 'trash',
+            relevance: calculateRelevance(item, searchTerm)
+          });
+        }
+      });
+    }
+    
+    // Sort by relevance (higher is better)
+    results.sort((a, b) => b.relevance - a.relevance);
+    
+    console.log(`[Triage Hub] Search for "${searchTerm}" returned ${results.length} results`);
+    return results;
+    
+  } catch (error) {
+    console.error('[Triage Hub] Error searching data:', error);
+    return [];
+  }
+}
+
+/**
+ * Calculate relevance score for search results
+ */
+function calculateRelevance(item, searchTerm) {
+  let score = 0;
+  const term = searchTerm.toLowerCase();
+  
+  // Title matches are most important
+  if (item.title && item.title.toLowerCase().includes(term)) {
+    score += 10;
+    // Exact title match gets bonus
+    if (item.title.toLowerCase() === term) {
+      score += 20;
+    }
+    // Title starts with term gets bonus
+    if (item.title.toLowerCase().startsWith(term)) {
+      score += 5;
+    }
+  }
+  
+  // Description matches
+  if (item.description && item.description.toLowerCase().includes(term)) {
+    score += 5;
+  }
+  
+  // URL matches
+  if (item.url && item.url.toLowerCase().includes(term)) {
+    score += 3;
+  }
+  
+  // Recent items get slight boost
+  if (item.timestamp) {
+    const daysSinceCreated = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
+    if (daysSinceCreated < 1) score += 2;
+    else if (daysSinceCreated < 7) score += 1;
+  }
+  
+  // Source priority (inbox > stashed > quick access > trash)
+  switch (item.source) {
+    case 'inbox': score += 3; break;
+    case 'stashedTabs': score += 2; break;
+    case 'quickAccessCards': score += 1; break;
+    case 'trash': score -= 1; break;
+  }
+  
+  return score;
+}
+
+/**
+ * Debounced search function
+ */
+function createDebouncedSearch(delay = 300) {
+  let timeoutId = null;
+  
+  return function(searchTerm, callback) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(async () => {
+      const results = await searchAllData(searchTerm);
+      callback(results);
+    }, delay);
+  };
+}
+
+export {
+  searchAllData,
+  searchInItem,
+  calculateRelevance,
+  createDebouncedSearch
+};
