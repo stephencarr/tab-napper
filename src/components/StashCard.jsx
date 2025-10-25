@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText, RotateCcw } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
-import { navigateToUrl } from '../utils/navigation.js';
+import { navigateToUrl, openNoteEditor } from '../utils/navigation.js';
 
 /**
  * Unified StashCard Component
@@ -71,9 +71,11 @@ function StashCard({
     
     if (isNote) {
       // Open note editor
-      console.log('[Tab Napper] Opening note:', item.title);
-      if (onItemClick) {
-        onItemClick(item);
+      console.log('[Tab Napper] Opening note:', item.title, item.id);
+      try {
+        await openNoteEditor(item.id);
+      } catch (error) {
+        console.error('[Tab Napper] Error opening note:', error);
       }
     } else if (item.url) {
       // Open URL in new tab
