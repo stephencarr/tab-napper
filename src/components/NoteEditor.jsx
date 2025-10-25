@@ -387,15 +387,6 @@ export default function NoteEditor({ noteId }) {
               {isPreview ? <Edit className="h-3 w-3 inline mr-1"/> : <Eye className="h-3 w-3 inline mr-1"/>}
               {isPreview ? 'Edit' : 'Preview'}
             </button>
-            <a
-              href="https://www.markdownguide.org/basic-syntax/"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-calm-600 dark:text-calm-400 hover:text-calm-800 dark:hover:text-calm-200 px-2 py-1 rounded"
-              title="Markdown help"
-            >
-              Markdown Help
-            </a>
             <button
               onClick={() => doSave('manual')}
               className="calm-button-primary px-3 py-1 text-xs flex items-center space-x-1"
@@ -403,6 +394,17 @@ export default function NoteEditor({ noteId }) {
             >
               <Save className="h-3 w-3" />
               <span>{isSaving ? 'Saving…' : 'Save'}</span>
+            </button>
+            <button
+              onClick={async () => {
+                await doSave('manual');
+                window.close();
+              }}
+              className="calm-button-primary px-3 py-1 text-xs flex items-center space-x-1"
+              disabled={isSaving}
+            >
+              <Save className="h-3 w-3" />
+              <span>Save & Close</span>
             </button>
           </div>
         </div>
@@ -459,15 +461,28 @@ export default function NoteEditor({ noteId }) {
               />
             </div>
           ) : (
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onKeyDown={handleEditorKeyDown}
-              placeholder="Start writing…"
-              className="w-full min-h-[300px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 dark:text-calm-200 placeholder-calm-400 dark:placeholder-calm-500 bg-white dark:bg-calm-800"
-              style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
-            />
+            <>
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onKeyDown={handleEditorKeyDown}
+                placeholder="Start writing…"
+                className="w-full min-h-[300px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 dark:text-calm-200 placeholder-calm-400 dark:placeholder-calm-500 bg-white dark:bg-calm-800"
+                style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
+              />
+              <div className="px-4 pb-3 pt-1 border-t border-calm-200 dark:border-calm-700">
+                <a
+                  href="https://www.markdownguide.org/basic-syntax/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-calm-600 dark:text-calm-400 hover:text-calm-800 dark:hover:text-calm-200"
+                  title="Markdown help"
+                >
+                  Markdown Help
+                </a>
+              </div>
+            </>
           )}
         </div>
       </main>
