@@ -151,7 +151,13 @@ function App() {
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
     console.log('[Triage Hub] Search result clicked:', item);
-    // TODO: Navigate to item or show details
+    
+    // If item has a URL, open it in a new tab
+    if (item.url) {
+      chrome.tabs.create({ url: item.url });
+    } else {
+      console.log('[Triage Hub] Item has no URL to open:', item);
+    }
   };
 
   const handleTriageInbox = () => {

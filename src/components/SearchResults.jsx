@@ -13,7 +13,10 @@ function SearchResults({
   onItemClick,
   isLoading = false 
 }) {
-  // Group results by type for better organization
+  // Define the priority order for result segments
+  const segmentOrder = ['inbox', 'stashedTabs', 'quickAccessCards', 'recentHistory', 'trash'];
+  
+  // Group results by type for better organization with priority ordering
   const groupedResults = results.reduce((groups, item) => {
     const type = item.source || 'other';
     if (!groups[type]) {
@@ -22,6 +25,11 @@ function SearchResults({
     groups[type].push(item);
     return groups;
   }, {});
+
+  // Sort segments by priority order, then by item relevance within each segment
+  const orderedSegments = segmentOrder
+    .filter(type => groupedResults[type] && groupedResults[type].length > 0)
+    .map(type => [type, groupedResults[type].sort((a, b) => b.relevance - a.relevance)]);
 
   // Get icon for result type
   const getTypeIcon = (type) => {
@@ -35,15 +43,27 @@ function SearchResults({
     }
   };
 
-  // Get type display name
+  // Get type display name with priority indicators
   const getTypeName = (type) => {
     switch (type) {
       case 'inbox': return 'Inbox';
       case 'stashedTabs': return 'Stashed Tabs';
       case 'quickAccessCards': return 'Quick Access';
-      case 'recentHistory': return 'Recent History';
+      case 'recentHistory': return 'Browser History';
       case 'trash': return 'Trash';
       default: return 'Other';
+    }
+  };
+
+  // Get type color for visual hierarchy
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'inbox': return 'text-blue-600 bg-blue-50';
+      case 'stashedTabs': return 'text-green-600 bg-green-50';
+      case 'quickAccessCards': return 'text-purple-600 bg-purple-50';
+      case 'recentHistory': return 'text-gray-600 bg-gray-50';
+      case 'trash': return 'text-red-600 bg-red-50';
+      default: return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -106,20 +126,38 @@ function SearchResults({
           Found <strong>{results.length}</strong> result{results.length !== 1 ? 's' : ''} for{' '}
           <strong>"{searchTerm}"</strong>
         </p>
+        {results.length > 0 && (
+          <p className="text-xs text-calm-500">
+            Showing: {orderedSegments.map(([type, items]) => 
+              `${getTypeName(type)} (${items.length})`
+            ).join(', ')}
+          </p>
+        )}
       </div>
 
-      {/* Grouped Results */}
-      {Object.entries(groupedResults).map(([type, items]) => {
+      {/* Ordered Segments with Priority */}
+      {orderedSegments.map(([type, items]) => {
         const Icon = getTypeIcon(type);
         const typeName = getTypeName(type);
+        const typeColor = getTypeColor(type);
 
         return (
           <div key={type} className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Icon className="h-4 w-4 text-calm-600" />
-              <h3 className="text-sm font-medium text-calm-700">
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${typeColor}`}>
+              <Icon className="h-4 w-4" />
+              <h3 className="text-sm font-semibold">
                 {typeName} ({items.length})
               </h3>
+              {type === 'inbox' && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  High Priority
+                </span>
+              )}
+              {type === 'stashedTabs' && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                  Saved
+                </span>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -127,7 +165,7 @@ function SearchResults({
                 <ListItem
                   key={`${type}-${item.id || index}`}
                   onClick={() => onItemClick?.(item)}
-                  className="hover:bg-calm-50"
+                  className="hover:bg-calm-50 border-l-4 border-transparent hover:border-calm-300"
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-1 min-w-0">
@@ -145,8 +183,11 @@ function SearchResults({
                         </p>
                       )}
                     </div>
-                    <div className="text-xs text-calm-400 flex-shrink-0">
-                      {typeName}
+                    <div className="text-xs text-calm-400 flex-shrink-0 flex flex-col items-end">
+                      <span>{typeName}</span>
+                      <span className="text-xs text-calm-300">
+                        Score: {item.relevance?.toFixed(1) || 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </ListItem>
@@ -155,6 +196,14 @@ function SearchResults({
           </div>
         );
       })}
+
+      {/* Footer Info */}
+      {results.length > 0 && (
+        <div className="text-xs text-calm-400 text-center pt-4 border-t border-calm-100">
+          Results are ordered by relevance within each category.
+          Inbox and Stashed items appear first for quick access.
+        </div>
+      )}
     </div>
   );
 }

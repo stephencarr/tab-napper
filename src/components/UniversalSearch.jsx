@@ -17,15 +17,13 @@ function UniversalSearch({
 }) {
   const inputRef = useRef(null);
 
-  // Auto-focus on mount with delay to ensure DOM is ready
+  // Simple auto-focus with delay for browser extensions
   useEffect(() => {
     if (autoFocus && inputRef.current) {
-      // Small delay to ensure the component is fully mounted
-      const focusTimeout = setTimeout(() => {
-        inputRef.current?.focus();
+      const timer = setTimeout(() => {
+        inputRef.current.focus();
       }, 100);
-      
-      return () => clearTimeout(focusTimeout);
+      return () => clearTimeout(timer);
     }
   }, [autoFocus]);
 
@@ -60,6 +58,7 @@ function UniversalSearch({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         className={cn(
           // Base styles
           'w-full',

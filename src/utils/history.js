@@ -53,13 +53,38 @@ async function fetchRecentHistory(maxResults = 20) {
     }
 
     if (typeof chrome !== 'undefined' && chrome.history) {
+      // Test Chrome history API availability
+      try {
+        // First, test a small query to verify permissions
+        await new Promise((resolve, reject) => {
+          chrome.history.search(
+            { text: '', maxResults: 1, startTime: Date.now() - 60000 }, // Last minute
+            (results) => {
+              if (chrome.runtime.lastError) {
+                console.warn('[Tab Napper] Chrome history permission issue:', chrome.runtime.lastError);
+                reject(chrome.runtime.lastError);
+              } else {
+                resolve(results);
+              }
+            }
+          );
+        });
+        
+        // If test passed, proceed with full query
+        console.log('[Tab Napper] ✅ Chrome history API available and accessible');
+      } catch (permissionError) {
+        console.error('[Tab Napper] ❌ Chrome history API permission denied:', permissionError);
+        console.log('[Tab Napper] 💡 Browser history search will be unavailable');
+        return await getMockHistoryData();
+      }
+      
       // Determine time window based on request size
       const isComprehensiveSearch = maxResults > 1000;
       const timeWindow = isComprehensiveSearch 
         ? (90 * 24 * 60 * 60 * 1000) // 90 days for comprehensive search
         : (7 * 24 * 60 * 60 * 1000);  // 7 days for regular fetch
         
-      console.log(`[Tab Napper] Fetching ${isComprehensiveSearch ? 'comprehensive' : 'recent'} history (${isComprehensiveSearch ? '90 days' : '7 days'})`);
+      console.log(`[Tab Napper] 📚 Fetching ${isComprehensiveSearch ? 'comprehensive' : 'recent'} history (${isComprehensiveSearch ? '90 days' : '7 days'})`);
       
       // Get history from Chrome API
       const historyItems = await new Promise((resolve, reject) => {
@@ -81,7 +106,7 @@ async function fetchRecentHistory(maxResults = 20) {
 
       // Only log significant amounts to reduce console noise
       if (historyItems.length > 10) {
-        debugLog('History', `Fetched ${historyItems.length} history items from Chrome`);
+        debugLog('History', `✅ Fetched ${historyItems.length} history items from Chrome`);
       }
       
       // Deduplicate and limit results
@@ -99,7 +124,7 @@ async function fetchRecentHistory(maxResults = 20) {
       return limited;
 
     } else {
-      console.log('[Tab Napper] Chrome history API not available, using mock data');
+      console.log('[Tab Napper] ⚠️ Chrome history API not available, using mock data');
       return await getMockHistoryData();
     }
   } catch (error) {

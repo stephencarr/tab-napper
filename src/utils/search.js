@@ -36,7 +36,7 @@ function searchInItem(item, searchTerm) {
 }
 
 /**
- * Search across all data sources
+ * Search across all data sources with proper segmentation
  */
 async function searchAllData(searchTerm) {
   if (!searchTerm || searchTerm.trim().length === 0) {
@@ -44,103 +44,130 @@ async function searchAllData(searchTerm) {
   }
   
   try {
-    // Load all data sources including browsing history
-    const [inbox, stashedTabs, quickAccessCards, trash, recentHistory] = await Promise.all([
+    console.log(`[Tab Napper] 🔍 Starting search for: "${searchTerm}"`);
+    
+    // Load all data sources including extensive browsing history
+    const [inbox, stashedTabs, quickAccessCards, trash] = await Promise.all([
       loadAppState('triageHub_inbox'),
       loadAppState('triageHub_stashedTabs'),
       loadAppState('triageHub_quickAccessCards'),
-      loadAppState('triageHub_trash'),
-      getRecentHistoryWithStatus(10000) // Get extensive history for comprehensive search
+      loadAppState('triageHub_trash')
     ]);
-    
+
+    // Get browsing history separately with better error handling
+    let recentHistory = [];
+    try {
+      console.log(`[Tab Napper] 📚 Fetching browser history for search...`);
+      recentHistory = await getRecentHistoryWithStatus(5000); // Get extensive history for search
+      console.log(`[Tab Napper] ✅ Retrieved ${recentHistory.length} history items`);
+    } catch (historyError) {
+      console.warn('[Tab Napper] ⚠️ Browser history not available:', historyError);
+      // Continue with search even if history fails
+    }
+
     const results = [];
     
-    // Search inbox
-    if (inbox) {
+    // Search inbox (highest priority)
+    if (inbox && inbox.length > 0) {
+      console.log(`[Tab Napper] 🔍 Searching ${inbox.length} inbox items...`);
       inbox.forEach(item => {
         if (searchInItem(item, searchTerm)) {
           results.push({
             ...item,
             source: 'inbox',
-            relevance: calculateRelevance(item, searchTerm)
+            relevance: calculateRelevance(item, searchTerm) + 10 // Inbox items get priority boost
           });
         }
       });
     }
     
-    // Search stashed tabs
-    if (stashedTabs) {
+    // Search stashed tabs (high priority)
+    if (stashedTabs && stashedTabs.length > 0) {
+      console.log(`[Tab Napper] 🔍 Searching ${stashedTabs.length} stashed items...`);
       stashedTabs.forEach(item => {
         if (searchInItem(item, searchTerm)) {
           results.push({
             ...item,
             source: 'stashedTabs',
-            relevance: calculateRelevance(item, searchTerm)
+            relevance: calculateRelevance(item, searchTerm) + 8 // Stashed items get high priority
           });
         }
       });
     }
     
-    // Search quick access cards
-    if (quickAccessCards) {
+    // Search quick access cards (medium priority)
+    if (quickAccessCards && quickAccessCards.length > 0) {
+      console.log(`[Tab Napper] 🔍 Searching ${quickAccessCards.length} quick access items...`);
       quickAccessCards.forEach(item => {
         if (searchInItem(item, searchTerm)) {
           results.push({
             ...item,
             source: 'quickAccessCards',
-            relevance: calculateRelevance(item, searchTerm)
+            relevance: calculateRelevance(item, searchTerm) + 5 // Medium priority
           });
         }
       });
     }
     
-    // Search trash
-    if (trash) {
+    // Search recent browsing history (lower priority but important for discovery)
+    if (recentHistory && recentHistory.length > 0) {
+      console.log(`[Tab Napper] 🔍 Searching ${recentHistory.length} browser history items...`);
+      let historyMatches = 0;
+      recentHistory.forEach(item => {
+        if (searchInItem(item, searchTerm)) {
+          historyMatches++;
+          results.push({
+            ...item,
+            source: 'recentHistory',
+            relevance: calculateRelevance(item, searchTerm) + 2 // History gets base priority
+          });
+        }
+      });
+      console.log(`[Tab Napper] ✅ Found ${historyMatches} matches in browser history`);
+    } else {
+      console.log(`[Tab Napper] ℹ️ No browser history available for search`);
+    }
+    
+    // Search trash (lowest priority)
+    if (trash && trash.length > 0) {
+      console.log(`[Tab Napper] 🔍 Searching ${trash.length} trash items...`);
       trash.forEach(item => {
         if (searchInItem(item, searchTerm)) {
           results.push({
             ...item,
             source: 'trash',
-            relevance: calculateRelevance(item, searchTerm)
+            relevance: calculateRelevance(item, searchTerm) - 2 // Trash gets penalty
           });
         }
       });
     }
     
-    // Search recent browsing history
-    if (recentHistory && recentHistory.length > 0) {
-      console.log(`[Tab Napper] Searching ${recentHistory.length} recent history items for "${searchTerm}"`);
-      recentHistory.forEach(item => {
-        if (searchInItem(item, searchTerm)) {
-          console.log(`[Tab Napper] Found history match: "${item.title}"`);
-          results.push({
-            ...item,
-            source: 'recentHistory',
-            relevance: calculateRelevance(item, searchTerm)
-          });
-        }
-      });
-    } else {
-      console.log(`[Tab Napper] No recent history available for search`);
-    }
-    
-    // Sort by relevance (higher is better)
+    // Sort by relevance (higher is better) - this ensures segmentation
     results.sort((a, b) => b.relevance - a.relevance);
     
-    console.log(`[Tab Napper] Search for "${searchTerm}" returned ${results.length} results from all sources`);
+    console.log(`[Tab Napper] 🎯 Search completed: ${results.length} total results`);
+    
+    // Log result breakdown by source
+    const breakdown = results.reduce((acc, item) => {
+      acc[item.source] = (acc[item.source] || 0) + 1;
+      return acc;
+    }, {});
+    console.log(`[Tab Napper] 📊 Results by source:`, breakdown);
+    
     if (results.length > 0) {
-      console.log(`[Tab Napper] Top result: "${results[0].title}" (score: ${results[0].relevance}, source: ${results[0].source})`);
+      console.log(`[Tab Napper] 🏆 Top result: "${results[0].title}" (score: ${results[0].relevance}, source: ${results[0].source})`);
     }
+    
     return results;
     
   } catch (error) {
-    console.error('[Tab Napper] Error searching data:', error);
+    console.error('[Tab Napper] ❌ Error searching data:', error);
     return [];
   }
 }
 
 /**
- * Calculate relevance score for search results
+ * Calculate relevance score for search results with proper segmentation
  */
 function calculateRelevance(item, searchTerm) {
   let score = 0;
@@ -197,20 +224,15 @@ function calculateRelevance(item, searchTerm) {
     score += 4;
   }
   
-  // Recent items get slight boost
+  // Recent items get slight boost (but not too much to override source priority)
   if (item.timestamp) {
     const daysSinceCreated = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
-    if (daysSinceCreated < 1) score += 2;
-    else if (daysSinceCreated < 7) score += 1;
+    if (daysSinceCreated < 1) score += 1;
+    else if (daysSinceCreated < 7) score += 0.5;
   }
   
-  // Source priority (inbox > stashed > quick access > trash)
-  switch (item.source) {
-    case 'inbox': score += 3; break;
-    case 'stashedTabs': score += 2; break;
-    case 'quickAccessCards': score += 1; break;
-    case 'trash': score -= 1; break;
-  }
+  // Source priority is now handled in the main search function with explicit boosts
+  // Base score here, priority boosts applied in searchAllData()
   
   return score;
 }
