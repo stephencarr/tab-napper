@@ -154,12 +154,11 @@ function App() {
 
     // If item has a URL, open it in a new tab
     if (item.url) {
-      if (typeof chrome !== 'undefined' && chrome.tabs) {
-        chrome.tabs.create({ url: item.url });
-      } else {
-        // Fallback for non-extension environments
-        window.open(item.url, '_blank');
-      }
+      chrome.tabs.create({ url: item.url }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
+        }
+      });
     } else {
       console.log('[Tab Napper] Item has no URL to open:', item);
     }
