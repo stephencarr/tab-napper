@@ -46,10 +46,12 @@ marked.use({ renderer });
 
 export function renderMarkdown(content) {
   try {
-    // marked already escapes where necessary; sanitize output to be safe
-    const raw = marked.parse(content || '');
+    // marked.parse returns a string in sync mode (default)
+    const raw = marked.parse(content || '', { async: false });
+    // Ensure we have a string (marked can return Promise if async)
+    const htmlString = typeof raw === 'string' ? raw : String(raw);
     // Allow class attributes for styling
-    const clean = DOMPurify.sanitize(raw, { ALLOWED_ATTR: ['class', 'href', 'title', 'target', 'rel'] });
+    const clean = DOMPurify.sanitize(htmlString, { ALLOWED_ATTR: ['class', 'href', 'title', 'target', 'rel'] });
     return clean;
   } catch (e) {
     console.error('[markdown] render failed', e);
