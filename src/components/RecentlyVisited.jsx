@@ -9,16 +9,12 @@ import ListItem from './ListItem.jsx';
  * Lightweight history fetch for RecentlyVisited component
  */
 async function getLightweightRecentHistory(maxItems = 50) {
-  console.log('[getLightweightRecentHistory] Called with maxItems:', maxItems);
-  
   if (typeof chrome === 'undefined' || !chrome.history) {
-    console.log('[getLightweightRecentHistory] Chrome history API not available');
     return [];
   }
   
   try {
     const searchBudget = Math.max(50, maxItems * 5);
-    console.log('[getLightweightRecentHistory] Searching with budget:', searchBudget);
     
     const historyItems = await new Promise((resolve, reject) => {
       chrome.history.search(
@@ -32,7 +28,6 @@ async function getLightweightRecentHistory(maxItems = 50) {
             console.error('[getLightweightRecentHistory] Chrome error:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
           } else {
-            console.log('[getLightweightRecentHistory] Raw results:', results?.length);
             resolve(results);
           }
         }
@@ -56,11 +51,8 @@ async function getLightweightRecentHistory(maxItems = 50) {
         description: item.url
       }));
 
-    console.log('[getLightweightRecentHistory] Filtered to:', filtered.length, 'items');
-    
     // Ensure we only return up to requested maxItems
     const sliced = filtered.slice(0, Math.max(0, maxItems));
-    console.log('[getLightweightRecentHistory] Returning:', sliced.length, 'items');
     return sliced;
     
   } catch (error) {
@@ -93,25 +85,15 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   }, []);
 
   const loadHistory = React.useCallback(async () => {
-    console.log('[RecentlyVisited] loadHistory called, mountedRef:', mountedRef.current);
     try {
-      if (!mountedRef.current) {
-        console.log('[RecentlyVisited] Not mounted, bailing out');
-        return;
-      }
-      console.log('[RecentlyVisited] Setting loading state...');
+      if (!mountedRef.current) return;
+      
       setIsLoading(true);
       setError(null);
       
-      console.log('[RecentlyVisited] Fetching history with maxItems:', maxItems);
       const items = await getLightweightRecentHistory(maxItems);
-      console.log('[RecentlyVisited] Fetched items:', items.length);
       
-      if (!mountedRef.current) {
-        console.log('[RecentlyVisited] Component unmounted during fetch, bailing');
-        return;
-      }
-      console.log('[RecentlyVisited] Setting history items...');
+      if (!mountedRef.current) return;
       setHistoryItems(items);
       
     } catch (err) {
@@ -119,24 +101,18 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       if (!mountedRef.current) return;
       setError('Failed to load browsing history');
     } finally {
-      if (!mountedRef.current) {
-        console.log('[RecentlyVisited] Component unmounted in finally, not updating loading state');
-        return;
-      }
-      console.log('[RecentlyVisited] Setting loading to false');
+      if (!mountedRef.current) return;
       setIsLoading(false);
     }
   }, [maxItems]);
 
   // Load history on component mount and when stashed tabs change
   useEffect(() => {
-    console.log('[RecentlyVisited] Effect triggered - maxItems:', maxItems, 'stashedTabsLength:', stashedTabsLength);
     // Debounce rapid triggers so we don't hammer chrome.history.search
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
     debounceRef.current = setTimeout(() => {
-      console.log('[RecentlyVisited] Debounce expired, calling loadHistory');
       loadHistory();
     }, 400);
   }, [maxItems, stashedTabsLength, loadHistory]);
