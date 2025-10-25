@@ -3,6 +3,7 @@ import { Save, FileText, Edit, Eye, Bold as BoldIcon, Italic as ItalicIcon, Code
 import { loadAppState, saveAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 import { useDarkMode } from '../hooks/useDarkMode.js';
+import { renderMarkdown as renderMarkdownLib } from '../utils/markdown.js';
 
 /**
  * NoteEditor Component
@@ -37,49 +38,8 @@ export default function NoteEditor({ noteId }) {
     return clean.length > 80 ? clean.slice(0, 80) + '…' : clean || 'Untitled Note';
   };
 
-  const renderMarkdown = useMemo(() => {
-    const convert = (text) => {
-      try {
-        let html = text
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/^### (.*$)/gm, '<h3 class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">$1</h3>')
-          .replace(/^## (.*$)/gm, '<h2 class="text-lg font-semibold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">$1</h2>')
-          .replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">$1</h1>')
-          .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-calm-900 dark:text-calm-100">$1</strong>')
-          .replace(/\*(.*?)\*/g, '<em class="italic text-calm-800 dark:text-calm-200">$1</em>')
-          .replace(/`(.*?)`/g, '<code class="bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded text-sm font-mono text-calm-900 dark:text-calm-100 border dark:border-calm-600">$1</code>')
-          .replace(/\n\n/g, '</p><p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">')
-          .replace(/\n/g, '<br>');
-        const lines = html.split('<br>');
-        const processed = [];
-        let inList = false;
-        for (const line of lines) {
-          const m = line.match(/^- (.*)$/);
-          if (m) {
-            if (!inList) {
-              processed.push('<ul class="list-disc ml-5 mb-3 text-calm-800 dark:text-calm-200 leading-relaxed space-y-1">');
-              inList = true;
-            }
-            processed.push(`<li class="pl-1">${m[1]}</li>`);
-          } else {
-            if (inList) { processed.push('</ul>'); inList = false; }
-            if (line.trim()) processed.push(line);
-          }
-        }
-        if (inList) processed.push('</ul>');
-        html = processed.join('<br>');
-        if (!html.startsWith('<h') && !html.startsWith('<ul') && !html.startsWith('<p')) {
-          html = `<p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">${html}</p>`;
-        }
-        return html;
-      } catch {
-        return text;
-      }
-    };
-    return convert;
-  }, []);
+  // Markdown rendering using shared robust library
+  const renderMarkdown = (text) => renderMarkdownLib(text || '');
 
   // Load note from storage by ID
   useEffect(() => {
