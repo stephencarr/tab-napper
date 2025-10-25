@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Archive, Trash2, Inbox, Filter } from 'lucide-react';
+import { Archive, Trash2, Inbox } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import StashCard from './StashCard.jsx';
 
 /**
  * Unified Stash Manager View
- * Full-screen management interface for all items with filtering
- * Filter options: All Stashed, Inbox, Trash
+ * Full-screen management interface for all items with tab navigation
+ * Tab options: All Stashed, Inbox, Trash
  */
 function StashManagerView({ 
   onNavigateBack, 
@@ -14,30 +14,32 @@ function StashManagerView({
   inboxData = [],
   stashedTabs = [],
   trashData = [],
-  onItemAction // New prop for handling FidgetControl actions
+  onItemAction
 }) {
-  // Filter state
-  const [activeFilter, setActiveFilter] = useState(initialFilter);
+  // Tab state
+  const [activeTab, setActiveTab] = useState(initialFilter);
 
-  // Set initial filter from prop
+  // Set initial tab from prop
   useEffect(() => {
-    setActiveFilter(initialFilter);
+    setActiveTab(initialFilter);
   }, [initialFilter]);
 
-  // Get current filter data
+  // Get current tab data
   const getCurrentData = () => {
-    switch (activeFilter) {
+    switch (activeTab) {
       case 'inbox':
         return {
           items: inboxData || [],
-          title: 'Inbox Items',
+          title: 'Inbox',
+          description: 'Closed tabs and new items for you to triage and organize',
           emptyMessage: 'Your inbox is empty',
           emptyDescription: 'Closed tabs and new items will appear here for you to triage and organize.'
         };
       case 'trash':
         return {
           items: trashData || [],
-          title: 'Trash Items',
+          title: 'Trash',
+          description: 'Deleted items that can be recovered',
           emptyMessage: 'Trash is empty',
           emptyDescription: 'Deleted items can be recovered from here for a limited time.'
         };
@@ -45,7 +47,8 @@ function StashManagerView({
       default:
         return {
           items: stashedTabs || [],
-          title: 'Stashed Items',
+          title: 'All Stashed',
+          description: 'All your saved and organized items',
           emptyMessage: 'No stashed items yet',
           emptyDescription: 'Items you stash from the triage inbox will appear here for organized management.'
         };
@@ -60,86 +63,98 @@ function StashManagerView({
   };
 
   const handleItemClick = (item) => {
-    console.log(`[Tab Napper] ${activeFilter} item clicked:`, item);
+    console.log(`[Tab Napper] ${activeTab} item clicked:`, item);
     // TODO: Implement item interaction (navigate, edit, move between lists, etc.)
   };
 
+  const tabs = [
+    { id: 'stashed', name: 'All Stashed', icon: Archive, count: counts.stashed },
+    { id: 'inbox', name: 'Inbox', icon: Inbox, count: counts.inbox },
+    { id: 'trash', name: 'Trash', icon: Trash2, count: counts.trash },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Filter Bar */}
-      <div className="flex items-center space-x-2 bg-white dark:bg-calm-800 p-2 rounded-lg border border-calm-200 dark:border-calm-700 w-fit">
-        <button
-          onClick={() => setActiveFilter('stashed')}
-          className={cn(
-            'flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
-            activeFilter === 'stashed'
-              ? 'bg-calm-600 text-white shadow-sm'
-              : 'text-calm-700 hover:text-calm-900 hover:bg-calm-50 dark:text-calm-300 dark:hover:text-calm-100 dark:hover:bg-calm-700'
-          )}
-        >
-          <Archive className="h-4 w-4" />
-          <span>All Stashed ({counts.stashed})</span>
-        </button>
-        
-        <button
-          onClick={() => setActiveFilter('inbox')}
-          className={cn(
-            'flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
-            activeFilter === 'inbox'
-              ? 'bg-calm-600 text-white shadow-sm'
-              : 'text-calm-700 hover:text-calm-900 hover:bg-calm-50 dark:text-calm-300 dark:hover:text-calm-100 dark:hover:bg-calm-700'
-          )}
-        >
-          <Inbox className="h-4 w-4" />
-          <span>Inbox ({counts.inbox})</span>
-        </button>
-        
-        <button
-          onClick={() => setActiveFilter('trash')}
-          className={cn(
-            'flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
-            activeFilter === 'trash'
-              ? 'bg-calm-600 text-white shadow-sm'
-              : 'text-calm-700 hover:text-calm-900 hover:bg-calm-50 dark:text-calm-300 dark:hover:text-calm-100 dark:hover:bg-calm-700'
-          )}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span>View Trash ({counts.trash})</span>
-        </button>
+      {/* Page Heading */}
+      <div className="border-b border-calm-200 dark:border-calm-700 pb-5">
+        <h1 className="text-2xl font-semibold text-calm-900 dark:text-calm-100">
+          {currentData.title}
+        </h1>
+        <p className="mt-2 text-sm text-calm-500 dark:text-calm-400">
+          {currentData.description}
+        </p>
+      </div>
+
+      {/* Tabs with Badges */}
+      <div className="border-b border-calm-200 dark:border-calm-700">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-calm-600 dark:border-calm-400 text-calm-700 dark:text-calm-200'
+                    : 'border-transparent text-calm-500 dark:text-calm-400 hover:border-calm-300 dark:hover:border-calm-600 hover:text-calm-700 dark:hover:text-calm-200'
+                )}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <tab.icon
+                  className={cn(
+                    'mr-2 h-5 w-5',
+                    isActive
+                      ? 'text-calm-600 dark:text-calm-400'
+                      : 'text-calm-400 dark:text-calm-500 group-hover:text-calm-500 dark:group-hover:text-calm-400'
+                  )}
+                  aria-hidden="true"
+                />
+                <span>{tab.name}</span>
+                {tab.count > 0 && (
+                  <span
+                    className={cn(
+                      'ml-3 rounded-full py-0.5 px-2.5 text-xs font-medium',
+                      isActive
+                        ? 'bg-calm-100 dark:bg-calm-700 text-calm-700 dark:text-calm-200'
+                        : 'bg-calm-100 dark:bg-calm-800 text-calm-600 dark:text-calm-400'
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Main Content */}
-      <div className="calm-card">
+      <div>
         {currentData.items.length === 0 ? (
           /* Empty State */
-          <div className="p-12 text-center">
-            {activeFilter === 'inbox' ? (
-              <Inbox className="h-16 w-16 mx-auto text-calm-300 mb-4" />
-            ) : activeFilter === 'trash' ? (
-              <Trash2 className="h-16 w-16 mx-auto text-calm-300 mb-4" />
+          <div className="text-center py-12 px-4">
+            {activeTab === 'inbox' ? (
+              <Inbox className="mx-auto h-12 w-12 text-calm-300 dark:text-calm-600" />
+            ) : activeTab === 'trash' ? (
+              <Trash2 className="mx-auto h-12 w-12 text-calm-300 dark:text-calm-600" />
             ) : (
-              <Archive className="h-16 w-16 mx-auto text-calm-300 mb-4" />
+              <Archive className="mx-auto h-12 w-12 text-calm-300 dark:text-calm-600" />
             )}
-            <h3 className="text-lg font-medium text-calm-700 dark:text-calm-300 mb-2">{currentData.emptyMessage}</h3>
-            <p className="text-calm-500 dark:text-calm-400 max-w-md mx-auto">
+            <h3 className="mt-2 text-sm font-semibold text-calm-900 dark:text-calm-200">
+              {currentData.emptyMessage}
+            </h3>
+            <p className="mt-1 text-sm text-calm-500 dark:text-calm-400">
               {currentData.emptyDescription}
             </p>
           </div>
         ) : (
           /* Items List */
-          <div className="p-6">
-            <div className="sm:flex sm:items-center mb-6">
-              <div className="sm:flex-auto">
-                <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">{currentData.title}</h2>
-                <p className="mt-1 text-sm text-calm-500 dark:text-calm-400">
-                  Sorted by date added
-                </p>
-              </div>
-            </div>
-            
-            <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700 max-h-[70vh] overflow-y-auto">
+          <div>
+            <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
               {currentData.items.map((item, index) => (
-                <li key={item.id || item.url || index} className="-mx-2 px-2">
+                <li key={item.id || item.url || index} className="py-4">
                   <StashCard
                     item={item}
                     onItemClick={() => handleItemClick(item)}
@@ -152,7 +167,7 @@ function StashManagerView({
             
             {currentData.items.length > 10 && (
               <div className="mt-6 text-center text-sm text-calm-500 dark:text-calm-400">
-                Showing all {currentData.items.length} {activeFilter} items
+                Showing all {currentData.items.length} items
               </div>
             )}
           </div>
