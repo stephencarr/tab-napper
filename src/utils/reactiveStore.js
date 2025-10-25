@@ -158,9 +158,7 @@ async function handleStorageChanges(changes, namespace) {
       for (const storageKey of relevantChanges) {
         const stateKey = STORAGE_KEY_MAPPING[storageKey];
         if (stateKey) {
-          // Defensive: Only process if changes[storageKey] exists
           const changeData = changes[storageKey];
-          if (!changeData) continue;
           // Use the new value from changes (already available, no need to read!)
           const newValue = changeData.newValue;
 
