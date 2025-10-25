@@ -11,7 +11,7 @@ import { getSuggestionStats, clearAllSuggestionData } from './smartSuggestions.j
  */
 async function addSampleData() {
   try {
-    console.log('[Triage Hub] Adding sample data for testing...');
+    console.log('[Tab Napper] Adding sample data for testing...');
 
     // Sample inbox items
     const sampleInbox = [
@@ -138,10 +138,10 @@ async function addSampleData() {
     await saveAppState('triageHub_stashedTabs', sampleStashed);
     await saveAppState('triageHub_quickAccessCards', sampleQuickAccess);
 
-    console.log('[Triage Hub] Sample data added successfully');
+    console.log('[Tab Napper] Sample data added successfully');
     return true;
   } catch (error) {
-    console.error('[Triage Hub] Error adding sample data:', error);
+    console.error('[Tab Napper] Error adding sample data:', error);
     return false;
   }
 }
@@ -151,7 +151,7 @@ async function addSampleData() {
  */
 async function clearSampleData() {
   try {
-    console.log('[Triage Hub] Clearing sample data...');
+    console.log('[Tab Napper] Clearing sample data...');
     
     // Clear all storage buckets
     await saveAppState('triageHub_inbox', []);
@@ -177,10 +177,10 @@ async function clearSampleData() {
     // Clear all smart suggestion data
     await clearAllSuggestionData();
 
-    console.log('[Triage Hub] Sample data cleared');
+    console.log('[Tab Napper] Sample data cleared');
     return true;
   } catch (error) {
-    console.error('[Triage Hub] Error clearing sample data:', error);
+    console.error('[Tab Napper] Error clearing sample data:', error);
     return false;
   }
 }

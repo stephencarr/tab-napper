@@ -14,7 +14,7 @@
     "newtab": "triage_hub.html"
   },
   "action": {
-    "default_title": "Triage Hub"
+    "default_title": "Tab Napper"
   },
   "icons": {
     "16": "icons/icon16.svg",

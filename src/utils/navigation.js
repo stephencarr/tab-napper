@@ -1,5 +1,5 @@
 /**
- * Tab navigation utilities for Triage Hub
+ * Tab navigation utilities for Tab Napper
  * Handles opening, switching, and managing browser tabs
  */
 
@@ -8,14 +8,14 @@
  */
 async function navigateToUrl(url, title = null) {
   try {
-    console.log(`[Triage Hub] 🚀 Navigating to: ${url}`);
+    console.log(`[Tab Napper] 🚀 Navigating to: ${url}`);
     
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       // First, try to find if the tab is already open
       const existingTab = await findOpenTab(url);
       
       if (existingTab) {
-        console.log(`[Triage Hub] 🔄 Switching to existing tab: ${existingTab.id}`);
+        console.log(`[Tab Napper] 🔄 Switching to existing tab: ${existingTab.id}`);
         
         // Switch to the existing tab
         await chrome.tabs.update(existingTab.id, { active: true });
@@ -25,7 +25,7 @@ async function navigateToUrl(url, title = null) {
         
         return { action: 'switched', tabId: existingTab.id };
       } else {
-        console.log(`[Triage Hub] 🆕 Opening new tab`);
+        console.log(`[Tab Napper] 🆕 Opening new tab`);
         
         // Create a new tab
         const newTab = await chrome.tabs.create({
@@ -36,12 +36,12 @@ async function navigateToUrl(url, title = null) {
         return { action: 'created', tabId: newTab.id };
       }
     } else {
-      console.log('[Triage Hub] Chrome tabs API not available, opening in new window');
+      console.log('[Tab Napper] Chrome tabs API not available, opening in new window');
       window.open(url, '_blank');
       return { action: 'external', tabId: null };
     }
   } catch (error) {
-    console.error('[Triage Hub] Error navigating to URL:', error);
+    console.error('[Tab Napper] Error navigating to URL:', error);
     // Fallback to window.open
     window.open(url, '_blank');
     return { action: 'fallback', tabId: null };
@@ -70,7 +70,7 @@ async function findOpenTab(targetUrl) {
     }
     return null;
   } catch (error) {
-    console.error('[Triage Hub] Error finding open tab:', error);
+    console.error('[Tab Napper] Error finding open tab:', error);
     return null;
   }
 }
@@ -96,12 +96,12 @@ async function closeTab(tabId) {
   try {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       await chrome.tabs.remove(tabId);
-      console.log(`[Triage Hub] Closed tab: ${tabId}`);
+      console.log(`[Tab Napper] Closed tab: ${tabId}`);
       return true;
     }
     return false;
   } catch (error) {
-    console.error('[Triage Hub] Error closing tab:', error);
+    console.error('[Tab Napper] Error closing tab:', error);
     return false;
   }
 }
@@ -126,7 +126,7 @@ async function getCurrentTab() {
     }
     return null;
   } catch (error) {
-    console.error('[Triage Hub] Error getting current tab:', error);
+    console.error('[Tab Napper] Error getting current tab:', error);
     return null;
   }
 }
