@@ -56,9 +56,11 @@ async function retriageNote(noteId) {
 
     // Add note to beginning of inbox for re-triage
     const updatedInbox = [note, ...inbox];
+    // Remove the note from triageHub_notes
+    const updatedNotes = notes.filter(n => n.id !== noteId);
 
-    // Save updated inbox
-    await chrome.storage.local.set({ triageHub_inbox: updatedInbox });
+    // Save updated inbox and notes
+    await chrome.storage.local.set({ triageHub_inbox: updatedInbox, triageHub_notes: updatedNotes });
 
     console.log('[Tab Napper] ✓ Note re-triaged to inbox:', note.title);
   } catch (error) {
