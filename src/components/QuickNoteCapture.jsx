@@ -1,13 +1,19 @@
 import React, { useState, useRef } from 'react';
-import { Save, Edit, Eye, EyeOff, FileText } from 'lucide-react';
+import { Save, Edit, Eye, FileText } from 'lucide-react';
 import { saveAppState, loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 import { renderMarkdown as renderMarkdownLib } from '../utils/markdown.js';
 
+// Placeholder text for empty note (used in textarea and preview)
+const PLACEHOLDER_MARKDOWN = `Start typing your note here...
+
+Use **bold** and *italic* text, \`inline code\`, # headers, and - lists
+Ctrl+Enter to save • Ctrl+E to preview`;
+
 /**
  * Quick Note Capture Component
  * Simple markdown editor with raw/formatted modes for capturing quick notes
- * Injects notes into the Triage Inbox with isNote: true flag
+ * Injects notes into the Triage Inbox with type: 'note' flag
  */
 function QuickNoteCapture({ className, onNoteSaved }) {
   const [noteContent, setNoteContent] = useState('');
@@ -58,8 +64,10 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       const currentInbox = await loadAppState('triageHub_inbox') || [];
       
       // Create note item
+      const timestamp = Date.now();
+      const noteTitle = generateTitle(noteContent);
       const noteItem = {
-        id: `note-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `note-${crypto.randomUUID()}`,
         title: noteTitle,
         content: noteContent,
         timestamp: timestamp,
@@ -113,7 +121,7 @@ function QuickNoteCapture({ className, onNoteSaved }) {
           <FileText className="h-5 w-5 text-calm-600 dark:text-calm-400" />
           <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">Quick Note</h2>
           {lastSaved && (
-            <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900 px-2 py-1 rounded-full">
+            <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
               Saved {new Date(lastSaved).toLocaleTimeString()}
             </span>
           )}
@@ -138,10 +146,7 @@ function QuickNoteCapture({ className, onNoteSaved }) {
                 className="markdown-content max-w-none text-base leading-relaxed font-normal text-calm-400"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
                 dangerouslySetInnerHTML={{ 
-                  __html: renderMarkdown(`Start typing your note here...
-
-Use **bold** and *italic* text, \`inline code\`, # headers, and - lists
-Ctrl+Enter to save • Ctrl+E to preview`) 
+                  __html: renderMarkdown(PLACEHOLDER_MARKDOWN) 
                 }}
               />
             )}
@@ -154,10 +159,7 @@ Ctrl+Enter to save • Ctrl+E to preview`)
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Start typing your note here...
-
-Use **bold** and *italic* text, `inline code`, # headers, and - lists
-Ctrl+Enter to save • Ctrl+E to preview"
+              placeholder={PLACEHOLDER_MARKDOWN}
               className="w-full min-h-[200px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 dark:text-calm-200 placeholder-calm-400 dark:placeholder-calm-500 bg-white dark:bg-calm-800"
               style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
             />

@@ -73,7 +73,6 @@ export default function NoteEditor({ noteId }) {
             timestamp: now,
             type: 'note',
             source: 'note-editor',
-            isNote: true,
             wordCount: 0
           };
           const existing = (notes || []);
@@ -115,7 +114,6 @@ export default function NoteEditor({ noteId }) {
         description: content,
         content,
         timestamp: item.timestamp || Date.now(),
-        isNote: true,
         type: 'note',
         wordCount: content.trim() ? content.trim().split(/\s+/).length : 0,
         lastEditedAt: Date.now(),
@@ -128,8 +126,8 @@ export default function NoteEditor({ noteId }) {
       const inboxOut = inbox.map((n) => (n.id === noteId ? (inboxUpdated = true, updateItem(n)) : n));
 
       // If not present in notes, add it there as canonical storage
-      const canonical = updateItem({ id: noteId });
-      const finalNotes = notesUpdated ? notesOut : [canonical, ...notesOut];
+      const newNoteEntry = updateItem({ id: noteId });
+      const finalNotes = notesUpdated ? notesOut : [newNoteEntry, ...notesOut];
 
       await Promise.all([
         saveAppState('triageHub_notes', finalNotes),
@@ -307,7 +305,7 @@ export default function NoteEditor({ noteId }) {
       e.preventDefault();
       e.stopPropagation();
       makeList();
-    } else if (e.key === '`' || e.code === 'Backquote') {
+    } else if (e.key === '`') {
       e.preventDefault();
       e.stopPropagation();
       wrapSelection('`', '`');
@@ -351,7 +349,7 @@ export default function NoteEditor({ noteId }) {
             <FileText className="h-5 w-5 text-calm-600 dark:text-calm-400" />
             <span className="text-sm text-calm-500 dark:text-calm-400">Note</span>
             {lastSavedAt && (
-              <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900 px-2 py-1 rounded-full">
+              <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
                 Saved {new Date(lastSavedAt).toLocaleTimeString()}
               </span>
             )}
