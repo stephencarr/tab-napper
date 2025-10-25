@@ -14,7 +14,7 @@ function UniversalSearch({
   className,
   autoFocus = true,
   variant = 'large', // 'large' | 'compact'
-  isLoading = false, // optional shimmer trigger
+  isLoading = false, // optional external trigger (no longer spins; may trigger a one-shot sweep)
   ...props 
 }) {
   const inputRef = useRef(null);
@@ -30,19 +30,18 @@ function UniversalSearch({
     }
   }, [autoFocus]);
 
-  // Shimmer on mount briefly, and whenever external loading is true
+  // One-shot shimmer on mount to draw attention
   useEffect(() => {
     setShimmer(true);
     const t = setTimeout(() => setShimmer(false), 1200);
     return () => clearTimeout(t);
   }, []);
-
+  
+  // Optionally allow a one-shot shimmer when external loading starts
   useEffect(() => {
     if (isLoading) {
       setShimmer(true);
-    } else {
-      // allow a tiny tail after loading stops
-      const t = setTimeout(() => setShimmer(false), 400);
+      const t = setTimeout(() => setShimmer(false), 1000);
       return () => clearTimeout(t);
     }
   }, [isLoading]);
@@ -69,20 +68,22 @@ function UniversalSearch({
 
   return (
     <div className={cn('relative w-full', className)} {...props}>
-      {/* Gradient outline wrapper */}
+      {/* Gradient outline wrapper (static, no spin) */}
       <div
         className={cn(
           'relative p-[2px]',
           size.radius,
-          // Gradient outline inspired by reference: warm orange/yellow
-          'bg-[conic-gradient(from_180deg,rgba(255,98,0,0.9),rgba(255,185,0,0.9),rgba(255,98,0,0.9))]',
-          shimmer ? 'animate-spin' : '',
-          'transition-transform'
+          'bg-[conic-gradient(from_180deg,rgba(255,98,0,0.9),rgba(255,185,0,0.9),rgba(255,98,0,0.9))]'
         )}
-        style={{ animationDuration: shimmer ? '1.2s' : undefined }}
       >
         {/* Inner container */}
         <div className={cn('relative', size.radius, 'bg-white dark:bg-calm-900 shadow-sm')}> 
+          {/* Optional inside shimmer sweep (non-intrusive) */}
+          {shimmer && (
+            <div className="absolute inset-0 rounded-full pointer-events-none overflow-hidden" aria-hidden="true">
+              <div className="absolute inset-0 -translate-x-full bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)] animate-[shimmer-sweep_1.2s_linear_1] rounded-full" />
+            </div>
+          )}
           {/* Search Icon */}
           <div className={cn('absolute inset-y-0 left-0 flex items-center pointer-events-none', size.iconPad)}>
             <Search className="h-5 w-5 text-calm-400 dark:text-calm-500" />
