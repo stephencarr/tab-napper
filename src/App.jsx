@@ -189,28 +189,51 @@ function App() {
       console.log('[Tab Napper] FidgetControl action:', action, 'for item:', item);
       
       switch (action) {
+        case 'restore':
+          // Restore item from trash back to inbox
+          const currentTrash = appState.trash || [];
+          const currentInbox = appState.inbox || [];
+          
+          // Remove from trash
+          const updatedTrash = currentTrash.filter(i => i.id !== item.id);
+          
+          // Add back to inbox (remove trash-specific properties)
+          const restoredItem = {
+            ...item,
+            deletedAt: undefined,
+            originalLocation: undefined
+          };
+          const updatedInbox = [...currentInbox, restoredItem];
+          
+          // Update storage
+          await updateAppState('trash', updatedTrash);
+          await updateAppState('inbox', updatedInbox);
+          
+          console.log('[Tab Napper] Item restored to inbox:', item.title);
+          break;
+          
         case 'delete':
           // Move item to trash
-          const currentInbox = appState.inbox || [];
+          const currentInboxForDelete = appState.inbox || [];
           const currentStashed = appState.stashedTabs || [];
-          const currentTrash = appState.trash || [];
+          const currentTrashForDelete = appState.trash || [];
           
           // Remove from inbox or stashed
-          const updatedInbox = currentInbox.filter(i => i.id !== item.id);
+          const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
           const updatedStashed = currentStashed.filter(i => i.id !== item.id);
           
           // Add to trash with deletion timestamp
           const trashedItem = {
             ...item,
             deletedAt: Date.now(),
-            originalLocation: currentInbox.includes(item) ? 'inbox' : 'stashed'
+            originalLocation: currentInboxForDelete.find(i => i.id === item.id) ? 'inbox' : 'stashed'
           };
-          const updatedTrash = [...currentTrash, trashedItem];
+          const updatedTrashForDelete = [...currentTrashForDelete, trashedItem];
           
           // Update storage
-          await updateAppState('inbox', updatedInbox);
+          await updateAppState('inbox', updatedInboxForDelete);
           await updateAppState('stashedTabs', updatedStashed);
-          await updateAppState('trash', updatedTrash);
+          await updateAppState('trash', updatedTrashForDelete);
           
           console.log('[Tab Napper] Item moved to trash:', item.title);
           break;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, RotateCcw } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
 import { navigateToUrl } from '../utils/navigation.js';
@@ -13,6 +13,7 @@ function StashCard({
   onItemClick,
   onItemAction,
   showFidgetControls = true,
+  isTrashView = false,
   className
 }) {
   // Get favicon or fallback
@@ -151,7 +152,27 @@ function StashCard({
       </div>
 
       {/* Right side: Actions */}
-      {showFidgetControls && (
+      {isTrashView ? (
+        /* Trash view: Show only Restore button */
+        <div 
+          className="flex-shrink-0 ml-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Restoring item from trash:', item.title);
+              if (onItemAction) {
+                onItemAction('restore', item);
+              }
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restore
+          </button>
+        </div>
+      ) : showFidgetControls ? (
+        /* Normal view: Show fidget controls */
         <div 
           className="flex-shrink-0 ml-4"
           onClick={(e) => e.stopPropagation()}
@@ -163,7 +184,7 @@ function StashCard({
             className="w-full"
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

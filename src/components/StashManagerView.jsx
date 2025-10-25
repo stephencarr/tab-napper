@@ -159,7 +159,8 @@ function StashManagerView({
                     item={item}
                     onItemClick={() => handleItemClick(item)}
                     onItemAction={onItemAction}
-                    showFidgetControls={true}
+                    showFidgetControls={activeTab !== 'trash'}
+                    isTrashView={activeTab === 'trash'}
                   />
                 </li>
               ))}
