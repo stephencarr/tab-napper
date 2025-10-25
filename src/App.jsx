@@ -11,6 +11,7 @@ import { openNoteEditor } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
+import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -21,13 +22,16 @@ import SmartSuggestions from './components/SmartSuggestions.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
-import DevConsole from './components/DevConsole.jsx';
-import QuickNoteCapture from './components/QuickNoteCapture.jsx';
+import DevPanel from './components/DevPanel.jsx';
 import Layout from './components/Layout.jsx';
 
 function App() {
   // Initialize dark mode detection
   useDarkMode();
+  
+  // Dev mode state
+  const { isDevMode, toggleDevMode } = useDevMode();
+  const [showDevPanel, setShowDevPanel] = useState(false);
   
   // Use the reactive store hook for guaranteed fresh data
   const appState = useReactiveStore();
@@ -41,6 +45,25 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Set up easter egg for dev mode
+  useEffect(() => {
+    const cleanup = setupDevModeEasterEgg(() => {
+      toggleDevMode();
+      setShowDevPanel(true);
+    });
+    
+    // Expose dev mode toggle globally for console access
+    if (typeof window !== 'undefined') {
+      window.TabNapper_toggleDevMode = () => {
+        toggleDevMode();
+        setShowDevPanel(true);
+        console.log('🎉 Dev Mode:', !isDevMode ? 'ENABLED' : 'DISABLED');
+      };
+    }
+    
+    return cleanup;
+  }, [toggleDevMode, isDevMode]);
 
   // PERFORMANCE: Create debounced search function only once
   // useMemo instead of useCallback because createDebouncedSearch returns a function
@@ -464,17 +487,40 @@ function App() {
   };
 
   return (
-    <Layout
-      currentView={currentView}
-      setCurrentView={setCurrentView}
-      searchTerm={searchTerm}
-      onSearchChange={handleSearchChange}
-      onSearchClear={handleSearchClear}
-      searchLoading={isSearching}
-    >
-      {renderContent()}
-      {!isSearchMode && <DevConsole isEnabled={true} />}
-    </Layout>
+    <>
+      <Layout
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        searchLoading={isSearching}
+      >
+        {renderContent()}
+      </Layout>
+      
+      {/* Dev Panel - Only show when dev mode is enabled */}
+      {isDevMode && (
+        <>
+          <DevPanel 
+            isOpen={showDevPanel}
+            onClose={() => setShowDevPanel(false)}
+          />
+          
+          {/* Floating Dev Mode Toggle */}
+          <button
+            onClick={() => setShowDevPanel(!showDevPanel)}
+            className="fixed bottom-4 left-4 p-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all z-40 group"
+            title="Toggle Developer Panel"
+          >
+            <TestTube className="h-5 w-5" />
+            <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Dev Panel
+            </span>
+          </button>
+        </>
+      )}
+    </>
   );
 }
 
