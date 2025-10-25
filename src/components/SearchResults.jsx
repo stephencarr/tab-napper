@@ -135,67 +135,71 @@ function SearchResults({
         )}
       </div>
 
-      {/* Ordered Segments with Priority */}
-      {orderedSegments.map(([type, items]) => {
-        const Icon = getTypeIcon(type);
-        const typeName = getTypeName(type);
-        const typeColor = getTypeColor(type);
+      {/* Scrollable Results Container */}
+      <div className="max-h-[calc(100vh-16rem)] overflow-y-auto pr-2 space-y-6">
+        {/* Ordered Segments with Priority */}
+        {orderedSegments.map(([type, items]) => {
+          const Icon = getTypeIcon(type);
+          const typeName = getTypeName(type);
+          const typeColor = getTypeColor(type);
 
-        return (
-          <div key={type} className="space-y-3">
-            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${typeColor}`}>
-              <Icon className="h-4 w-4" />
-              <h3 className="text-sm font-semibold">
-                {typeName} ({items.length})
-              </h3>
-              {type === 'inbox' && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                  High Priority
-                </span>
-              )}
-              {type === 'stashedTabs' && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                  Saved
-                </span>
-              )}
-            </div>
+          return (
+            <div key={type} className="space-y-3">
+              <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${typeColor}`}>
+                <Icon className="h-4 w-4" />
+                <h3 className="text-sm font-semibold">
+                  {typeName} ({items.length})
+                </h3>
+                {type === 'inbox' && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                    High Priority
+                  </span>
+                )}
+                {type === 'stashedTabs' && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                    Saved
+                  </span>
+                )}
+              </div>
 
-            <div className="space-y-2">
-              {items.map((item, index) => (
-                <ListItem
-                  key={`${type}-${item.id || index}`}
-                  onClick={() => onItemClick?.(item)}
-                  className="hover:bg-calm-50 dark:hover:bg-calm-800 border-l-4 border-transparent hover:border-calm-300 dark:hover:border-calm-600"
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-calm-800 dark:text-calm-200">
-                        {highlightText(item.title || item.name || 'Untitled', searchTerm)}
-                      </p>
-                      {item.description && (
-                        <p className="text-sm text-calm-600 dark:text-calm-300 mt-1 line-clamp-2">
-                          {highlightText(item.description, searchTerm)}
+              {/* Tailwind UI Stack List */}
+              <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
+                {items.map((item, index) => (
+                  <li
+                    key={`${type}-${item.id || index}`}
+                    onClick={() => onItemClick?.(item)}
+                    className="py-3 hover:bg-calm-50 dark:hover:bg-calm-800/50 transition-colors cursor-pointer rounded-lg px-2 -mx-2 border-l-4 border-transparent hover:border-calm-400 dark:hover:border-calm-500"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-calm-900 dark:text-calm-100">
+                          {highlightText(item.title || item.name || 'Untitled', searchTerm)}
                         </p>
-                      )}
-                      {item.url && (
-                        <p className="text-xs text-calm-500 dark:text-calm-400 mt-1 truncate">
-                          {highlightText(item.url, searchTerm)}
-                        </p>
-                      )}
+                        {item.description && (
+                          <p className="text-sm text-calm-600 dark:text-calm-300 mt-1 line-clamp-2">
+                            {highlightText(item.description, searchTerm)}
+                          </p>
+                        )}
+                        {item.url && (
+                          <p className="text-xs text-calm-500 dark:text-calm-400 mt-1 truncate">
+                            {highlightText(item.url, searchTerm)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-xs text-calm-400 dark:text-calm-500 flex-shrink-0 flex flex-col items-end">
+                        <span>{typeName}</span>
+                        <span className="text-xs text-calm-300 dark:text-calm-600">
+                          Score: {item.relevance?.toFixed(1) || 'N/A'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-xs text-calm-400 dark:text-calm-500 flex-shrink-0 flex flex-col items-end">
-                      <span>{typeName}</span>
-                      <span className="text-xs text-calm-300 dark:text-calm-600">
-                        Score: {item.relevance?.toFixed(1) || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                </ListItem>
-              ))}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {/* Footer Info */}
       {results.length > 0 && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Clock, ExternalLink } from 'lucide-react';
 import { navigateToUrl } from '../utils/navigation.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
@@ -8,22 +8,26 @@ import ListItem from './ListItem.jsx';
 /**
  * Lightweight history fetch for RecentlyVisited component
  */
-async function getLightweightRecentHistory(maxResults = 50) {
+async function getLightweightRecentHistory(maxItems = 50) {
   if (typeof chrome === 'undefined' || !chrome.history) {
-    console.log('[RecentlyVisited] Chrome history API not available');
     return [];
   }
   
   try {
+    // Fetch up to 5x the requested items to account for filtering out excluded patterns
+    // (e.g., chrome://, file://, etc.) and ensure enough valid items remain after filtering.
+    const searchBudget = Math.max(50, maxItems * 5);
+    
     const historyItems = await new Promise((resolve, reject) => {
       chrome.history.search(
         {
           text: '',
-          maxResults: maxResults,
+          maxResults: searchBudget,
           // Removed startTime to get most recent items regardless of date
         },
         (results) => {
           if (chrome.runtime.lastError) {
+            console.error('[getLightweightRecentHistory] Chrome error:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
           } else {
             resolve(results);
@@ -38,7 +42,7 @@ async function getLightweightRecentHistory(maxResults = 50) {
       'data:', 'blob:', 'javascript:'
     ];
     
-    return historyItems
+    const filtered = historyItems
       .filter(item => 
         !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
         item.title && item.title.trim().length > 0
@@ -48,9 +52,13 @@ async function getLightweightRecentHistory(maxResults = 50) {
         id: `history-${item.url}`,
         description: item.url
       }));
+
+    // Ensure we only return up to requested maxItems
+    const sliced = filtered.slice(0, Math.max(0, maxItems));
+    return sliced;
     
   } catch (error) {
-    console.error('[RecentlyVisited] Error fetching lightweight history:', error);
+    console.error('[getLightweightRecentHistory] Error fetching lightweight history:', error);
     return [];
   }
 }
@@ -63,30 +71,53 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const debounceRef = useRef(null);
+  const mountedRef = useRef(true); // Start as true since we're in the component
   
   // Watch for changes in stashed tabs to update history status
   const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
+  const stashedTabsLength = stashedTabs?.length || 0;
 
-  // Load history on component mount and when stashed tabs change
+  // Cleanup on unmount
   useEffect(() => {
-    loadHistory();
-  }, [maxItems, stashedTabs]); // Add stashedTabs as dependency
+    return () => { 
+      mountedRef.current = false;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
-  const loadHistory = async () => {
+  const loadHistory = React.useCallback(async () => {
     try {
+      if (!mountedRef.current) return;
+      
       setIsLoading(true);
       setError(null);
       
       const items = await getLightweightRecentHistory(maxItems);
+      
+      if (!mountedRef.current) return;
       setHistoryItems(items);
       
     } catch (err) {
-      console.error('[Tab Napper] Error loading history:', err);
+      console.error('[RecentlyVisited] Error loading history:', err);
+      if (!mountedRef.current) return;
       setError('Failed to load browsing history');
     } finally {
+      if (!mountedRef.current) return;
       setIsLoading(false);
     }
-  };
+  }, [maxItems]);
+
+  // Load history on component mount and when stashed tabs change
+  useEffect(() => {
+    // Debounce rapid triggers so we don't hammer chrome.history.search
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      loadHistory();
+    }, 400);
+  }, [maxItems, stashedTabsLength, loadHistory]);
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {
@@ -220,13 +251,13 @@ function RecentlyVisited({ className, maxItems = 50 }) {
         </div>
       </div>
 
-      {/* History List */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      {/* History List - Tailwind UI Stack with dividers */}
+      <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
         {historyItems.map((item, index) => (
-          <ListItem
+          <li
             key={item.id || item.url || index}
             onClick={() => handleHistoryItemClick(item)}
-            className="hover:bg-calm-50 dark:hover:bg-calm-800 transition-colors"
+            className="py-3 hover:bg-calm-50 dark:hover:bg-calm-800/50 transition-colors cursor-pointer rounded-lg px-2 -mx-2"
           >
             <div className="flex items-start space-x-3">
               {/* Favicon */}
@@ -247,17 +278,15 @@ function RecentlyVisited({ className, maxItems = 50 }) {
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <p className="text-sm font-medium text-calm-800 dark:text-calm-200 truncate">
-                    {item.title}
-                  </p>
-                </div>
+                <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
+                  {item.title}
+                </p>
                 
-                <p className="text-xs text-calm-500 dark:text-calm-400 truncate mb-1">
+                <p className="text-xs text-calm-500 dark:text-calm-400 truncate mt-1">
                   {item.url}
                 </p>
                 
-                <div className="flex items-center justify-between text-xs text-calm-400 dark:text-calm-500">
+                <div className="flex items-center justify-between text-xs text-calm-400 dark:text-calm-500 mt-1">
                   <span>{getTimeAgo(item.lastVisitTime)}</span>
                   {item.visitCount > 1 && (
                     <span>{item.visitCount} visits</span>
@@ -265,14 +294,14 @@ function RecentlyVisited({ className, maxItems = 50 }) {
                 </div>
               </div>
             </div>
-          </ListItem>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {/* Simple footer */}
-      <div className="border-t border-calm-200 dark:border-calm-700 pt-3">
+      <div className="border-t border-calm-200 dark:border-calm-700 pt-3 mt-4">
         <div className="flex items-center justify-center text-xs text-calm-500 dark:text-calm-400">
-          <span>Last 50 items</span>
+          <span>Last {maxItems} items</span>
         </div>
       </div>
     </div>

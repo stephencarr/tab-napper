@@ -23,6 +23,14 @@
   }
 }
 
+/* Utilities & animations */
+@layer utilities {
+  @keyframes shimmer-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+}
+
 /* Calm, uncluttered component styles */
 @layer components {
   .calm-card {

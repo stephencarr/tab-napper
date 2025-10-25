@@ -6,7 +6,7 @@ import { cn } from '../utils/cn.js';
  * FidgetControl - ADHD-Friendly Fidget Control Logic and UI Component
  * 
  * A tactile, low-friction interface for scheduling and managing stashed items.
- * Features two intuitive "pills" that cycle through logical, contextual states.
+ * Features button group design with action/timing pills and execute button.
  */
 function FidgetControl({ item, onAction, className }) {
   // Control states - simplified to just action and when
@@ -116,67 +116,76 @@ function FidgetControl({ item, onAction, className }) {
   }, [actionState, whenState, deleteConfirmation]);
 
   return (
-    <div className={cn("flex flex-col space-y-3", className)}>
-      {/* Zone 2: Action Block - The Fidget Pills with strict uniformity */}
-      <div className="flex items-center space-x-2">
-        {/* Action Pill with inline cancel - uniform height py-2 */}
-        <div className="flex items-center space-x-1">
+    <div className={cn("flex flex-col space-y-2", className)}>
+      {/* Action Group: Button Group Pattern */}
+      <div className="flex items-center justify-end space-x-2">
+        {/* Fidget Pills Button Group */}
+        <div className="inline-flex rounded-md shadow-sm" role="group">
+          {/* Action Pill */}
           <button
             onClick={cycleAction}
             className={cn(
-              "py-2 px-3 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 select-none text-center min-w-[90px]",
+              "relative inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
+              // The z-10 ensures the delete button appears above adjacent buttons when in confirmation state,
+              // since these buttons are siblings in a flex container and may have overlapping effects (e.g., focus ring).
               actionState === 'DELETE NOW' 
                 ? deleteConfirmation
-                  ? "bg-red-600 text-white shadow-lg ring-2 ring-red-300 animate-pulse"
-                  : "bg-red-500 text-white hover:bg-red-600"
-                : "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:hover:bg-blue-900/80"
+                  ? "border-red-600 bg-red-600 text-white hover:bg-red-700 z-10"
+                  : "border-red-500 bg-red-500 text-white hover:bg-red-600"
+                : "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
             title="Click to cycle through actions"
           >
-            {actionState === 'DELETE NOW' && deleteConfirmation ? 'CONFIRM DELETE' : actionState}
+            {actionState === 'DELETE NOW' && deleteConfirmation ? '⚠ CONFIRM' : actionState}
           </button>
           
-          {/* Inline Cancel button - matching height */}
-          {actionState === 'DELETE NOW' && deleteConfirmation && (
-            <button
-              onClick={() => {
-                setDeleteConfirmation(false);
-                setActionState('Remind Me');
-              }}
-              className="w-8 h-8 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white transition-all duration-200 text-xs flex items-center justify-center"
-              title="Cancel delete"
-            >
-              ✕
-            </button>
-          )}
+          {/* When Pill */}
+          <button
+            onClick={actionState === 'DELETE NOW' && deleteConfirmation ? undefined : cycleWhen}
+            className={cn(
+              "relative -ml-px inline-flex items-center px-3 py-1.5 text-xs font-medium border transition-colors",
+              actionState === 'DELETE NOW' && deleteConfirmation
+                ? "border-calm-300 dark:border-calm-600 bg-calm-100 dark:bg-calm-700 text-calm-400 dark:text-calm-500 cursor-not-allowed"
+                : "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
+            )}
+            title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Cancel delete first' : 'Click to cycle through timing options'}
+            disabled={actionState === 'DELETE NOW' && deleteConfirmation}
+          >
+            {whenState}
+          </button>
+
+          {/* Execute Button */}
+          <button
+            onClick={handleExecute}
+            className={cn(
+              "relative -ml-px inline-flex items-center justify-center w-8 py-1.5 rounded-r-md border transition-colors",
+              actionState === 'DELETE NOW' && deleteConfirmation
+                ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
+                : "border-calm-300 dark:border-calm-600 bg-emerald-500 dark:bg-emerald-600 text-white hover:bg-emerald-600 dark:hover:bg-emerald-700"
+            )}
+            title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Confirm deletion' : 'Execute action'}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* When Pill - uniform height py-2 */}
-        <button
-          onClick={actionState === 'DELETE NOW' && deleteConfirmation ? undefined : cycleWhen}
-          className={cn(
-            "py-2 px-3 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 select-none text-center min-w-[120px]",
-            "bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80",
-            actionState === 'DELETE NOW' && deleteConfirmation && "opacity-50 cursor-not-allowed"
-          )}
-          title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Cancel delete first' : 'Click to cycle through timing options'}
-          disabled={actionState === 'DELETE NOW' && deleteConfirmation}
-        >
-          {whenState}
-        </button>
-
-        {/* Execute Button - uniform height */}
-        <button
-          onClick={handleExecute}
-          className="w-8 h-8 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-200 dark:hover:bg-green-900/80 transition-all duration-200 flex items-center justify-center"
-          title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Confirm deletion' : 'Execute action'}
-        >
-          <ChevronRight size={14} />
-        </button>
+        {/* Cancel button for delete confirmation */}
+        {actionState === 'DELETE NOW' && deleteConfirmation && (
+          <button
+            onClick={() => {
+              setDeleteConfirmation(false);
+              setActionState('Remind Me');
+            }}
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+            title="Cancel delete"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
-      {/* Zone 3: Commitment - Date and Time Preview (subtle & confirmatory) */}
-      <div className="text-xs text-gray-500 dark:text-calm-400 leading-relaxed">
+      {/* Preview Text */}
+      <div className="text-xs text-right text-calm-500 dark:text-calm-400">
         {getPreviewText()}
       </div>
     </div>

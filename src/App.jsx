@@ -3,12 +3,13 @@ import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } f
 import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData, generateTestBrowsingHistory, testSmartSuggestions } from './utils/devUtils.js';
-import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js';
+import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
-import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
+import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
+import { useReactiveStore } from './hooks/useReactiveStore.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -21,15 +22,18 @@ import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
 import DevConsole from './components/DevConsole.jsx';
 import QuickNoteCapture from './components/QuickNoteCapture.jsx';
+import Layout from './components/Layout.jsx';
 
 function App() {
   // Initialize dark mode detection
   useDarkMode();
   
-  const [appState, setAppState] = useState(null);
+  // Use the reactive store hook for guaranteed fresh data
+  const appState = useReactiveStore();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentView, setCurrentView] = useState('main'); // 'main' or 'stash-manager'
+  const [currentView, setCurrentView] = useState('Dashboard'); // Sidebar-driven views
   const [stashManagerFilter, setStashManagerFilter] = useState('stashed');
   
   // Search state
@@ -46,35 +50,17 @@ function App() {
 
   // Initialize the application with reactive store
   useEffect(() => {
-    let unsubscribe = null;
-    
     async function initializeApp() {
       try {
-        console.log('[Tab Napper] Initializing application...');
-        
         // Initialize E2EE key (will create if doesn't exist)
         await getOrCreateEncryptionKey();
-        console.log('[Tab Napper] Encryption key ready');
         
         // Initialize reactive store and load data
         const data = await initializeReactiveStore();
-        console.log('[Tab Napper] Reactive store initialized with', {
-          inbox: data.inbox?.length ?? 'undefined',
-          stashedTabs: data.stashedTabs?.length ?? 'undefined',
-          trash: data.trash?.length ?? 'undefined',
-          quickAccessCards: data.quickAccessCards?.length ?? 'undefined'
-        });
-        
-        // Subscribe to state changes for automatic UI updates
-        unsubscribe = subscribeToStateChanges((newState) => {
-          console.log('[Tab Napper] State change detected, updating UI');
-          setAppState(newState);
-        });
 
         // Set up tab capture listeners
         setupTabCaptureListeners();
         
-        setAppState(data);
         setIsLoading(false);
       } catch (err) {
         console.error('[Tab Napper] Initialization error:', err);
@@ -84,13 +70,6 @@ function App() {
     }
 
     initializeApp();
-    
-    // Cleanup subscription on unmount
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
   }, []);
 
   // Handle search term changes
@@ -123,8 +102,7 @@ function App() {
   const handleAddSampleData = async () => {
     try {
       await addSampleData();
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
+      // Chrome storage listener will automatically update the reactive store
     } catch (err) {
       console.error('[Tab Napper] Error adding sample data:', err);
     }
@@ -134,26 +112,23 @@ function App() {
   const handleClearData = async () => {
     try {
       await clearSampleData();
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
+      // Chrome storage listener will automatically update the reactive store
     } catch (err) {
       console.error('[Tab Napper] Error clearing data:', err);
     }
   };
 
-  // Handle search
-  const handleSearchChange = (value) => {
+  // Handle search (stabilized with useCallback to reduce rerenders downstream)
+  const handleSearchChange = React.useCallback((value) => {
     setSearchTerm(value);
-  };
+  }, [setSearchTerm]);
 
-  const handleSearchClear = () => {
+  const handleSearchClear = React.useCallback(() => {
     setSearchTerm('');
-  };
+  }, []);
 
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
-    console.log('[Tab Napper] Search result clicked:', item);
-
     // Notes: open in internal editor
     if (item.isNote || item.type === 'note') {
       openNoteEditor(item.id);
@@ -167,13 +142,10 @@ function App() {
           console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
         }
       });
-    } else {
-      console.log('[Tab Napper] Item has no URL to open:', item);
     }
   };
 
   const handleTriageInbox = () => {
-    console.log('[Tab Napper] Navigating to inbox triage view...');
     setCurrentView('stash-manager');
     setStashManagerFilter('inbox');
   };
@@ -185,33 +157,55 @@ function App() {
   // Handle FidgetControl actions
   const handleItemAction = async (action, item) => {
     try {
-      console.log('[Tab Napper] FidgetControl action:', action, 'for item:', item);
       
       switch (action) {
+        case 'restore':
+          // Restore item from trash back to inbox using the proper capture API
+          
+          // Step 1: Remove from trash
+          const currentTrash = await loadAppState('triageHub_trash', []);
+          const updatedTrash = currentTrash.filter(i => i.id !== item.id);
+          await saveAppState('triageHub_trash', updatedTrash);
+          
+          // Step 2: Add to inbox using the proper API with deduplication
+          // This will handle deduplication across all collections and add to top
+          const restoredItem = {
+            ...item,
+            description: item.description || `Restored from trash`,
+          };
+          
+          await addToTriageInbox(restoredItem);
+          
+          // Chrome storage listener will automatically update the reactive store
+          break;
+          
         case 'delete':
           // Move item to trash
-          const currentInbox = appState.inbox || [];
-          const currentStashed = appState.stashedTabs || [];
-          const currentTrash = appState.trash || [];
+          
+          const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
+          const currentStashed = await loadAppState('triageHub_stashedTabs', []);
+          const currentTrashForDelete = await loadAppState('triageHub_trash', []);
+          
           
           // Remove from inbox or stashed
-          const updatedInbox = currentInbox.filter(i => i.id !== item.id);
+          const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
           const updatedStashed = currentStashed.filter(i => i.id !== item.id);
+          
           
           // Add to trash with deletion timestamp
           const trashedItem = {
             ...item,
             deletedAt: Date.now(),
-            originalLocation: currentInbox.includes(item) ? 'inbox' : 'stashed'
+            originalLocation: currentInboxForDelete.find(i => i.id === item.id) ? 'inbox' : 'stashed'
           };
-          const updatedTrash = [...currentTrash, trashedItem];
+          const updatedTrashForDelete = [...currentTrashForDelete, trashedItem];
+          
           
           // Update storage
-          await updateAppState('inbox', updatedInbox);
-          await updateAppState('stashedTabs', updatedStashed);
-          await updateAppState('trash', updatedTrash);
+          await saveAppState('triageHub_inbox', updatedInboxForDelete);
+          await saveAppState('triageHub_stashedTabs', updatedStashed);
+          await saveAppState('triageHub_trash', updatedTrashForDelete);
           
-          console.log('[Tab Napper] Item moved to trash:', item.title);
           break;
           
         case 'remind':
@@ -219,7 +213,6 @@ function App() {
         case 'review':
           // For now, just log the scheduled action
           // TODO: Implement reminder/scheduling system
-          console.log('[Tab Napper] Scheduled action:', action, 'for item:', item.title);
           break;
           
         default:
@@ -245,15 +238,9 @@ function App() {
       const testUrl = testUrls[urlIndex];
       const testTitle = `Test Tab ${urlIndex + 1} - ${new Date().toLocaleTimeString()}`;
       
-      console.log(`[Tab Napper] Simulating capture of: ${testUrl}`);
-
       const capturedItem = await simulateTabCapture(testUrl, testTitle);
 
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
-
-      // Show user feedback
-      console.log(`[Tab Napper] Captured: ${capturedItem.title}`);
+      // Chrome storage listener will automatically update the reactive store
 
     } catch (err) {
       console.error('[Tab Napper] Error simulating capture:', err);
@@ -264,7 +251,6 @@ function App() {
   const handleGenerateTestHistory = async () => {
     try {
       await generateTestBrowsingHistory();
-      console.log('[Tab Napper] Test browsing history generated!');
     } catch (error) {
       console.error('[Tab Napper] Error generating test history:', error);
     }
@@ -303,11 +289,7 @@ function App() {
       
       await saveAppState('triageHub_stashedTabs', testStashedItems);
       
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
-      
-      console.log('[Tab Napper] Added test items to stashed tabs for deduplication testing');
-      console.log('Now click "Simulate Tab Capture" to see deduplication in action!');
+      // Chrome storage listener will automatically update the reactive store
 
     } catch (err) {
       console.error('[Tab Napper] Error setting up dedupe test:', err);
@@ -348,290 +330,109 @@ function App() {
   }
 
   // Routing logic
-  if (currentView === 'stash-manager') {
-    return (
-      <StashManagerView
-        onNavigateBack={handleNavigateBack}
-        initialFilter={stashManagerFilter}
-        inboxData={appState?.inbox || []}
-        stashedTabs={appState?.stashedTabs || []}
-        trashData={appState?.trash || []}
-        onItemAction={handleItemAction}
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-calm-50 dark:bg-calm-900 transition-colors">
-      {/* Header */}
-      <header className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-calm-600 dark:bg-calm-500 rounded-lg flex items-center justify-center">
-              <div className="grid grid-cols-1 gap-1">
-                <div className="w-1 h-1 bg-white rounded-full"></div>
-                <div className="w-1 h-1 bg-white rounded-full"></div>
-                <div className="w-1 h-1 bg-white rounded-full"></div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-1">
-              <span className="font-medium text-calm-800 dark:text-calm-200">Tab Napper</span>
-              <span className="text-xs text-calm-400 dark:text-calm-500 bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded-full">
-                v{getFormattedVersion()}
-              </span>
-            </div>
+  const renderDashboard = () => (
+    <div className="space-y-6">
+      {/* Widgets Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column */}
+        <div className="space-y-6">
+          <div className="calm-card p-6">
+            <QuickNoteCapture onNoteSaved={() => {}} />
           </div>
-          <div className="flex items-center space-x-2">
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              className="text-xs text-calm-500 hover:text-calm-700 dark:text-calm-400 dark:hover:text-calm-200 px-2 py-1 rounded"
-              title="Toggle dark mode"
-            >
-              🌙
-            </button>
-            <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
-            <span className="text-sm text-calm-600 dark:text-calm-400">Encrypted & Private</span>
+          <div className="calm-card p-6">
+            <RecentlyVisited maxItems={10} />
           </div>
         </div>
-      </header>
 
-      {/* Universal Search Bar */}
-      <div className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-6">
-        <div className="max-w-7xl mx-auto">
-          <UniversalSearch
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onClear={handleSearchClear}
-            placeholder="Search titles, content, URLs, and all your saved items..."
-            autoFocus={true}
-          />
+        {/* Right column */}
+        <div className="space-y-6">
+          <div className="calm-card p-6">
+            <QuickAccessCards maxItems={6} />
+          </div>
         </div>
       </div>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {isSearchMode ? (
-          /* Search Results View */
-          <div className="w-full">
-            <SearchResults
-              searchTerm={searchTerm}
-              results={searchResults}
-              isLoading={isSearching}
-              onItemClick={handleSearchResultClick}
-            />
-          </div>
-        ) : (
-          /* Normal Layout: Left Column (60%) + Right Column (40%) */
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            
-            {/* Left Column - Context (60% width = 3/5 cols) */}
-            <div className="lg:col-span-3 space-y-8">
-              
-              {/* Recently Visited History */}
-              <div className="calm-card p-6">
-                <RecentlyVisited maxItems={50} />
-              </div>
-              
-              {/* Triage Inbox */}
-              <div className="calm-card p-6">
-                <ListContainer
-                  title="Triage Inbox"
-                  items={appState.inbox}
-                  emptyMessage="Your inbox is empty"
-                  emptyDescription="Closed tabs and new items will appear here for you to triage and organize."
-                  icon={Inbox}
-                  onItemClick={(item) => {
-                    if (item.isNote || item.type === 'note') {
-                      openNoteEditor(item.id);
-                    } else if (item.url) {
-                      chrome.tabs.create({ url: item.url });
-                    }
-                  }}
-                  onItemAction={handleItemAction}
-                  triageButton={
-                    <button
-                      onClick={handleTriageInbox}
-                      className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-calm-600 text-white rounded-md hover:bg-calm-700 transition-colors"
-                    >
-                      <Inbox className="h-4 w-4" />
-                      <span>Triage {appState.inbox.length} Items</span>
-                    </button>
-                  }
-                />
-              </div>
-
-              {/* Stashed Tabs */}
-              <div className="calm-card p-6">
-                <ListContainer
-                  title="Stashed Tabs"
-                  items={appState.stashedTabs}
-                  emptyMessage="No stashed tabs"
-                  emptyDescription="Tabs you've decided to keep for later will be organized here."
-                  icon={Archive}
-                  onItemClick={(item) => {
-                    if (item.isNote || item.type === 'note') {
-                      openNoteEditor(item.id);
-                    } else if (item.url) {
-                      chrome.tabs.create({ url: item.url });
-                    }
-                  }}
-                  onItemAction={handleItemAction}
-                />
-              </div>
-            </div>
-
-            {/* Right Column - Action (40% width = 2/5 cols) */}
-            <div className="lg:col-span-2 space-y-8">
-              
-              {/* Quick Note Capture */}
-              <div className="calm-card p-6">
-                <QuickNoteCapture 
-                  onNoteSaved={(note) => {
-                    console.log('[Tab Napper] Note saved to inbox:', note.title);
-                    // The reactive store handles UI updates automatically when storage changes
-                  }}
-                />
-              </div>
-              
-              {/* Quick Access Cards */}
-              <div className="calm-card p-6">
-                <QuickAccessCards maxItems={6} />
-              </div>
-
-              {/* Smart Suggestions */}
-              <div className="calm-card p-6">
-                <SmartSuggestions 
-                  onSuggestionPinned={(pinnedItem) => {
-                    console.log('[Tab Napper] Suggestion pinned:', pinnedItem.title);
-                  }}
-                />
-              </div>
-
-              {/* Contextual Component */}
-              <ContextualCardWrapper />
-
-              {/* Full Stash Manager */}
-              <div className="calm-card p-6">
-                <FullStashManager onNavigate={(destination) => {
-                  console.log('[Tab Napper] Navigation requested to:', destination);
-                  setCurrentView('stash-manager');
-                  setStashManagerFilter('stashed');
-                }} />
-              </div>
-
-              {/* Trash */}
-              <div className="calm-card p-6">
-                <ListContainer
-                  title="Trash"
-                  items={appState.trash}
-                  emptyMessage="Trash is empty"
-                  emptyDescription="Deleted items can be recovered from here for a limited time."
-                  icon={Trash2}
-                  onItemClick={(item) => {
-                    if (item.isNote || item.type === 'note') {
-                      openNoteEditor(item.id);
-                    } else if (item.url) {
-                      chrome.tabs.create({ url: item.url });
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Development Tools Panel */}
-        {!isSearchMode && (
-          <div className="mt-8 calm-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-calm-800 flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span>Development & Testing</span>
-              </h3>
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleAddSampleData}
-                  className="calm-button-secondary px-3 py-1 text-xs flex items-center space-x-1"
-                >
-                  <TestTube className="h-3 w-3" />
-                  <span>Add Sample Data</span>
-                </button>
-                <button
-                  onClick={handleSetupDedupeTest}
-                  className="calm-button-primary px-3 py-1 text-xs"
-                >
-                  Setup Dedupe Test
-                </button>
-                <button
-                  onClick={handleGenerateTestHistory}
-                  className="calm-button-secondary px-3 py-1 text-xs"
-                >
-                  Generate Test History
-                </button>
-                <button
-                  onClick={handleTestSuggestions}
-                  className="calm-button-secondary px-3 py-1 text-xs"
-                >
-                  Test Smart Suggestions
-                </button>
-                <button
-                  onClick={handleSimulateCapture}
-                  className="calm-button-secondary px-3 py-1 text-xs"
-                >
-                  Simulate Tab Capture
-                </button>
-                <button
-                  onClick={handleClearData}
-                  className="calm-button-secondary px-3 py-1 text-xs"
-                >
-                  Clear Data
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div className="bg-calm-50 p-3 rounded-lg">
-                <span className="font-medium text-calm-700 block">Inbox Items</span>
-                <span className="text-calm-600">{appState.inbox.length} items</span>
-                <div className="text-xs text-calm-500 mt-1">
-                  ✓ Local storage, unencrypted
-                </div>
-              </div>
-              <div className="bg-calm-50 p-3 rounded-lg">
-                <span className="font-medium text-calm-700 block">Stashed Tabs</span>
-                <span className="text-calm-600">{appState.stashedTabs.length} items</span>
-                <div className="text-xs text-calm-500 mt-1">
-                  ✓ Local storage, unencrypted
-                </div>
-              </div>
-              <div className="bg-calm-50 p-3 rounded-lg">
-                <span className="font-medium text-calm-700 block">Trash Items</span>
-                <span className="text-calm-600">{appState.trash.length} items</span>
-                <div className="text-xs text-calm-500 mt-1">
-                  ✓ Local storage, unencrypted
-                </div>
-              </div>
-              <div className="bg-calm-50 p-3 rounded-lg">
-                <span className="font-medium text-calm-700 block">Quick Access</span>
-                <span className="text-calm-600">{appState.quickAccessCards.length} cards</span>
-                <div className="text-xs text-calm-500 mt-1">
-                  ✓ Sync storage, encrypted
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                <strong>✓ Full Pipeline Verified:</strong> Search functionality, capture logic with deduplication, 
-                responsive layout (60/40 split), and universal search with real-time results all working correctly.
-              </p>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Development Console - only in development */}
-      <DevConsole isEnabled={true} />
     </div>
+  );
+
+  const renderContent = () => {
+    if (isSearchMode) {
+      return (
+        <SearchResults
+          searchTerm={searchTerm}
+          results={searchResults}
+          isLoading={isSearching}
+          onItemClick={handleSearchResultClick}
+        />
+      );
+    }
+    
+    // Handler for tab changes within StashManagerView
+    const handleTabChange = (tabId) => {
+      
+      // Map tab IDs to view names
+      const tabToViewMap = {
+        'stashed': 'All Stashed',
+        'inbox': 'Inbox',
+        'trash': 'Trash'
+      };
+      const newView = tabToViewMap[tabId];
+      if (newView) {
+        setCurrentView(newView);
+      }
+    };
+    
+    switch (currentView) {
+      case 'All Stashed':
+        return (
+          <StashManagerView
+            initialFilter="stashed"
+            inboxData={appState?.inbox || []}
+            stashedTabs={appState?.stashedTabs || []}
+            trashData={appState?.trash || []}
+            onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
+          />
+        );
+      case 'Inbox':
+        return (
+          <StashManagerView
+            initialFilter="inbox"
+            inboxData={appState?.inbox || []}
+            stashedTabs={appState?.stashedTabs || []}
+            trashData={appState?.trash || []}
+            onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
+          />
+        );
+      case 'Trash':
+        return (
+          <StashManagerView
+            initialFilter="trash"
+            inboxData={appState?.inbox || []}
+            stashedTabs={appState?.stashedTabs || []}
+            trashData={appState?.trash || []}
+            onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
+          />
+        );
+      case 'Dashboard':
+      default:
+        return renderDashboard();
+    }
+  };
+
+  return (
+    <Layout
+      currentView={currentView}
+      setCurrentView={setCurrentView}
+      searchTerm={searchTerm}
+      onSearchChange={handleSearchChange}
+      onSearchClear={handleSearchClear}
+      searchLoading={isSearching}
+    >
+      {renderContent()}
+      {!isSearchMode && <DevConsole isEnabled={true} />}
+    </Layout>
   );
 }
 

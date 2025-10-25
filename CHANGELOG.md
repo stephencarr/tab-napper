@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - retriageNote now looks up notes in both triageHub_notes and triageHub_inbox (covers Quick Note Capture)
    - Removed unused isNoteTab helper for maintainability
 
+### Changed
+- Tailwind app shell header refinement
+  - Compact global search in header with reduced height for a cleaner look
+  - Removed large view title from header to reduce visual noise
+
 ### Planned
 - Advanced filtering for search results
 - Full keyboard navigation support

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
@@ -13,9 +13,12 @@ function UniversalSearch({
   placeholder = "Search all your tabs, notes, and items...",
   className,
   autoFocus = true,
+  variant = 'large', // 'large' | 'compact'
+  isLoading = false, // optional external trigger to display loading shimmer animation
   ...props 
 }) {
   const inputRef = useRef(null);
+  const [shimmer, setShimmer] = useState(false);
 
   // Simple auto-focus with delay for browser extensions
   useEffect(() => {
@@ -26,6 +29,22 @@ function UniversalSearch({
       return () => clearTimeout(timer);
     }
   }, [autoFocus]);
+
+  // One-shot shimmer on mount to draw attention
+  useEffect(() => {
+    setShimmer(true);
+    const t = setTimeout(() => setShimmer(false), 1200);
+    return () => clearTimeout(t);
+  }, []);
+  
+  // Optionally allow a one-shot shimmer when external loading starts
+  useEffect(() => {
+    if (isLoading) {
+      setShimmer(true);
+      const t = setTimeout(() => setShimmer(false), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading]);
 
   const handleClear = () => {
     if (onClear) {
@@ -43,79 +62,86 @@ function UniversalSearch({
     }
   };
 
+  const size = variant === 'compact' 
+    ? { iconPad: 'pl-3', inputPad: 'pl-10 pr-10', py: 'py-2', text: 'text-sm', radius: 'rounded-full' }
+    : { iconPad: 'pl-4', inputPad: 'pl-12 pr-12', py: 'py-4', text: 'text-lg', radius: 'rounded-full' };
+
   return (
     <div className={cn('relative w-full', className)} {...props}>
-      {/* Search Icon */}
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <Search className="h-5 w-5 text-calm-400 dark:text-calm-500" />
-      </div>
-
-      {/* Search Input */}
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
+      {/* Gradient outline wrapper (static, no spin) */}
+      <div
         className={cn(
-          // Base styles
-          'w-full',
-          'pl-12 pr-12',
-          'py-4',
-          'text-lg',
-          'bg-white dark:bg-calm-800',
-          'border',
-          'border-calm-200 dark:border-calm-700',
-          'rounded-xl',
-          'shadow-sm',
-          
-          // Focus styles
-          'focus:outline-none',
-          'focus:ring-2',
-          'focus:ring-calm-400 dark:focus:ring-calm-500',
-          'focus:border-calm-400 dark:focus:border-calm-500',
-          
-          // Hover styles
-          'hover:border-calm-300 dark:hover:border-calm-600',
-          
-          // Transition
-          'transition-all',
-          'duration-200',
-          
-          // Typography
-          'placeholder:text-calm-400 dark:placeholder:text-calm-500',
-          'text-calm-800 dark:text-calm-200'
+          'relative p-[2px]',
+          size.radius,
+          'bg-[conic-gradient(from_180deg,rgba(255,98,0,0.9),rgba(255,185,0,0.9),rgba(255,98,0,0.9))]'
         )}
-      />
-
-      {/* Clear Button */}
-      {value && (
-        <button
-          onClick={handleClear}
-          className={cn(
-            'absolute inset-y-0 right-0 pr-4 flex items-center',
-            'text-calm-400 dark:text-calm-500 hover:text-calm-600 dark:hover:text-calm-300',
-            'transition-colors duration-200',
-            'focus:outline-none focus:text-calm-600 dark:focus:text-calm-300'
+      >
+        {/* Inner container */}
+        <div className={cn('relative', size.radius, 'bg-white dark:bg-calm-900 shadow-sm')}> 
+          {/* Optional inside shimmer sweep (non-intrusive) */}
+          {shimmer && (
+            <div className="absolute inset-0 rounded-full pointer-events-none overflow-hidden" aria-hidden="true">
+              <div className="absolute inset-0 -translate-x-full bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)] dark:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] animate-[shimmer-sweep_1.2s_linear_1] rounded-full" />
+            </div>
           )}
-          aria-label="Clear search"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      )}
+          {/* Search Icon */}
+          <div className={cn('absolute inset-y-0 left-0 flex items-center pointer-events-none', size.iconPad)}>
+            <Search className="h-5 w-5 text-calm-400 dark:text-calm-500" />
+          </div>
 
-      {/* Search hint */}
-      {!value && (
-        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-          <span className="text-xs text-calm-400 dark:text-calm-500 hidden sm:inline">
-            Press ESC to clear
-          </span>
+          {/* Search Input */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            className={cn(
+              'w-full',
+              size.inputPad,
+              size.py,
+              size.text,
+              'bg-transparent',
+              size.radius,
+              // Remove default borders; rely on gradient shell
+              'border-0 focus:outline-none',
+              
+              // Typography
+              'placeholder:text-calm-400 dark:placeholder:text-calm-500',
+              'text-calm-800 dark:text-calm-200'
+            )}
+          />
+
+          {/* Clear Button */}
+          {value && (
+            <button
+              onClick={handleClear}
+              className={cn(
+                'absolute inset-y-0 right-0 pr-4 flex items-center',
+                'text-calm-400 dark:text-calm-500 hover:text-calm-600 dark:hover:text-calm-300',
+                'transition-colors duration-200',
+                'focus:outline-none focus:text-calm-600 dark:focus:text-calm-300'
+              )}
+              aria-label="Clear search"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+
+          {/* Search hint */}
+          {!value && (
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+              <span className="text-xs text-calm-400 dark:text-calm-500 hidden sm:inline">
+                Press ESC to clear
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-export default UniversalSearch;
+export default React.memo(UniversalSearch);

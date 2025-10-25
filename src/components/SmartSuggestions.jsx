@@ -3,7 +3,6 @@ import { Lightbulb, Plus, X, TrendingUp, Calendar, Clock, Pin, PinOff } from 'lu
 import { generateSmartSuggestions, pinSuggestion, getSuggestionStats } from '../utils/smartSuggestions.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { cn } from '../utils/cn.js';
-import ListItem from './ListItem.jsx';
 
 /**
  * Smart Suggestions Component
@@ -221,25 +220,29 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
   return (
     <div className={cn("space-y-4", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Lightbulb className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-          <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">Smart Suggestions</h2>
-          {suggestions.length > 0 && (
-            <span className="text-sm text-emerald-600 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-1 rounded-full">
-              {suggestions.length}
-            </span>
-          )}
+      <div className="sm:flex sm:items-center sm:justify-between">
+        <div className="sm:flex-auto">
+          <div className="flex items-center space-x-2">
+            <Lightbulb className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">Smart Suggestions</h2>
+            {suggestions.length > 0 && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-1 rounded-full">
+                {suggestions.length}
+              </span>
+            )}
+          </div>
         </div>
         
         {/* Debug stats toggle */}
         {stats && (
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="text-xs text-calm-500 dark:text-calm-400 hover:text-calm-700 dark:hover:text-calm-200 transition-colors"
-          >
-            {showStats ? 'Hide' : 'Show'} Stats
-          </button>
+          <div className="mt-3 sm:mt-0 sm:ml-4">
+            <button
+              onClick={() => setShowStats(!showStats)}
+              className="text-xs text-calm-500 dark:text-calm-400 hover:text-calm-700 dark:hover:text-calm-200 transition-colors"
+            >
+              {showStats ? 'Hide' : 'Show'} Stats
+            </button>
+          </div>
         )}
       </div>
 
@@ -273,56 +276,70 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
           {suggestions.map((suggestion) => (
-            <ListItem
+            <li
               key={suggestion.url}
-              title={suggestion.title}
-              subtitle={
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
+              onClick={() => handleSuggestionClick(suggestion)}
+              className="py-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors cursor-pointer rounded-lg px-2 -mx-2 group"
+            >
+              <div className="flex items-center space-x-3">
+                {/* Icon */}
+                <div className="flex-shrink-0">
+                  {suggestion.favicon ? (
+                    <img
+                      src={suggestion.favicon}
+                      alt=""
+                      className="h-5 w-5"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Lightbulb className="h-5 w-5 text-emerald-500" />
+                  )}
+                </div>
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
+                    {suggestion.title}
+                  </p>
+                  <div className="mt-1 flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
                     <span className="truncate">
                       {suggestion.domain}
                     </span>
-                    <div className="flex items-center space-x-2 ml-2">
+                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
                       <span className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
                         <span>{getTimeAgo(suggestion.lastVisitTime)}</span>
                       </span>
                     </div>
                   </div>
-                  {renderSuggestionReason(suggestion)}
+                  <div className="text-xs text-calm-600 dark:text-calm-400 mt-1 flex items-center space-x-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-500" />
+                    <span>{suggestion.suggestionReason}</span>
+                  </div>
                 </div>
-              }
-              icon={
-                suggestion.favicon ? (
-                  <img
-                    src={suggestion.favicon}
-                    alt=""
-                    className="h-4 w-4"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Lightbulb className="h-4 w-4 text-emerald-500" />
-                )
-              }
-              onClick={() => handleSuggestionClick(suggestion)}
-              className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-800 transition-colors cursor-pointer group"
-              badge={renderMetricsBadge(suggestion)}
-              actions={
-                <button
-                  onClick={(e) => handlePinSuggestion(suggestion, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded"
-                  title="Pin to Quick Access"
-                >
-                  <Pin className="h-4 w-4" />
-                </button>
-              }
-            />
+
+                {/* Badge & Actions */}
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1 text-xs text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 px-2 py-1 rounded-full">
+                    <Calendar className="h-3 w-3" />
+                    <span>{suggestion.metrics.uniqueDaysVisited}d</span>
+                  </div>
+                  <button
+                    onClick={(e) => handlePinSuggestion(suggestion, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded"
+                    title="Pin to Quick Access"
+                  >
+                    <Pin className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {/* Refresh button */}

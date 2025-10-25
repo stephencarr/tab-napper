@@ -1,18 +1,19 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, RotateCcw } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
+import { navigateToUrl, openNoteEditor } from '../utils/navigation.js';
 
 /**
  * Unified StashCard Component
- * Structured card layout with three distinct zones for consistent display
- * across dashboard and stash manager views
+ * Structured card layout with proper Tailwind UI list styling
  */
 function StashCard({ 
   item,
   onItemClick,
   onItemAction,
   showFidgetControls = true,
+  isTrashView = false,
   className
 }) {
   // Get favicon or fallback
@@ -24,7 +25,7 @@ function StashCard({
         <img 
           src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
           alt=""
-          className="w-4 h-4 flex-shrink-0"
+          className="w-5 h-5 flex-shrink-0"
           onError={(e) => {
             e.target.style.display = 'none';
           }}
@@ -61,86 +62,148 @@ function StashCard({
     }
   };
 
+  // Handle navigation
+  const handleNavigate = async (e) => {
+    // Don't navigate if clicking on action buttons
+    if (
+      e &&
+      (e.defaultPrevented ||
+        e.target.tagName === 'BUTTON' ||
+        (e.target.closest('button') && e.target.closest('button') !== e.currentTarget))
+    ) {
+      return;
+    }
+    
+    if (isNote) {
+      // Open note editor
+      console.log('[Tab Napper] Opening note:', item.title, item.id);
+      try {
+        await openNoteEditor(item.id);
+      } catch (error) {
+        console.error('[Tab Napper] Error opening note:', error);
+      }
+    } else if (item.url) {
+      // Open URL in new tab
+      console.log('[Tab Napper] Navigating to:', item.title);
+      try {
+        await navigateToUrl(item.url, item.title);
+      } catch (error) {
+        console.error('[Tab Napper] Error navigating:', error);
+      }
+    }
+  };
+
   // Special handling for notes
   const isNote = item.type === 'note';
   
   // Get icon - use note icon for notes, favicon for tabs
   const getIcon = () => {
     if (isNote) {
-      return <FileText className="w-4 h-4 text-calm-600 dark:text-calm-400" />;
+      return <FileText className="w-5 h-5 text-calm-600 dark:text-calm-400" />;
     }
-    return getFavicon(item.url) || <div className="w-4 h-4 bg-calm-300 dark:bg-calm-600 rounded" />;
+    return getFavicon(item.url) || <div className="w-5 h-5 bg-calm-300 dark:bg-calm-600 rounded" />;
   };
 
-  // Get subtitle - different for notes vs tabs
-  const getSubtitle = () => {
-    if (isNote) {
-      const wordCount = typeof item.wordCount === 'number' ? item.wordCount : 0;
-      return `Note • ${wordCount} words`;
+  // Get tags array
+  const getTags = () => {
+    if (item.tags && Array.isArray(item.tags)) {
+      return item.tags;
     }
-    return getDomain(item.url);
+    if (item.category) {
+      return [item.category];
+    }
+    if (item.type && item.type !== 'tab') {
+      return [item.type];
+    }
+    return [];
   };
+
+  const tags = getTags();
 
   return (
     <div 
       className={cn(
-        "w-full p-4 bg-white dark:bg-calm-800 border border-calm-200 dark:border-calm-700 rounded-lg transition-all duration-200 ease-in-out hover:border-calm-300 dark:hover:border-calm-600 hover:shadow-sm",
-        onItemClick && "cursor-pointer",
+        "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors",
         className
       )}
-      onClick={onItemClick ? () => onItemClick(item) : undefined}
+      onClick={handleNavigate}
     >
-      {/* Structured Card Layout with Three Zones */}
-      <div className="flex justify-between items-start w-full">
-        
-        {/* Zone 1: Identity - Favicon, Title, Creation Date */}
-        <div className="flex items-start space-x-3 flex-1 min-w-0">
-          {/* Icon (Favicon or Note icon) */}
-          <div className="flex-shrink-0 mt-1">
-            {getIcon()}
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            {/* High Contrast Title */}
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-calm-200 truncate">
-              {item.title || item.name || 'Untitled'}
-            </h3>
-            
-            {/* Metadata Row - Domain/Type and Time */}
-            <div className="flex items-center justify-between text-xs mt-0.5">
-              <span className="text-gray-500 dark:text-calm-400 truncate flex-1 mr-2">
-                {getSubtitle()}
-              </span>
-              <span className="text-gray-400 dark:text-calm-500 flex-shrink-0">
-                {getTimeAgo(item.timestamp || item.createdAt)}
-              </span>
-            </div>
-            
-            {/* Category/Type badge if available */}
-            {(item.category || item.type) && (
-              <div className="mt-1">
-                <span className="inline-block text-xs text-calm-600 dark:text-calm-300 bg-calm-100 dark:bg-calm-750 px-2 py-0.5 rounded-full">
-                  {item.category || item.type}
-                </span>
-              </div>
-            )}
-          </div>
+      {/* Left side: Icon + Content */}
+      <div className="flex items-start space-x-3 flex-1 min-w-0">
+        {/* Icon */}
+        <div className="flex-shrink-0 mt-1">
+          {getIcon()}
         </div>
-
-        {/* Zone 2 & 3: Action Block - FidgetControl with proper containment */}
-        {showFidgetControls && (
-          <div 
-            className="flex-shrink-0 ml-4 flex flex-col items-end"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <FidgetControl
-              item={item}
-              onAction={onItemAction}
-              className="w-full"
-            />
-          </div>
-        )}
+        
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Title */}
+          <p className="text-sm font-semibold text-calm-900 dark:text-calm-100 truncate group-hover:text-calm-700 dark:group-hover:text-calm-200">
+            {item.title || item.name || 'Untitled'}
+          </p>
+          
+          {/* URL/Domain */}
+          <p className="text-sm text-calm-600 dark:text-calm-400 truncate">
+            {isNote 
+              ? `Note • ${typeof item.wordCount === 'number' ? item.wordCount : 0} words`
+              : getDomain(item.url)
+            }
+          </p>
+          
+          {/* Tags */}
+          {tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded-md bg-calm-100 dark:bg-calm-750 px-2 py-1 text-xs font-medium text-calm-700 dark:text-calm-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {/* Timestamp */}
+          <p className="mt-1 text-xs text-calm-500 dark:text-calm-400">
+            {getTimeAgo(item.timestamp || item.createdAt)}
+          </p>
+        </div>
       </div>
+
+      {/* Right side: Actions */}
+      {isTrashView ? (
+        /* Trash view: Show only Restore button */
+        <div 
+          className="flex-shrink-0 ml-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Restoring item from trash:', item.title);
+              if (onItemAction) {
+                onItemAction('restore', item);
+              }
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restore
+          </button>
+        </div>
+      ) : showFidgetControls ? (
+        /* Normal view: Show fidget controls */
+        <div 
+          className="flex-shrink-0 ml-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FidgetControl
+            item={item}
+            onAction={onItemAction}
+            className="w-full"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

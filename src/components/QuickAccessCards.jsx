@@ -5,7 +5,6 @@ import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { unpinItem } from '../utils/smartSuggestions.js';
 import { cn } from '../utils/cn.js';
-import ListItem from './ListItem.jsx';
 
 /**
  * Quick Access Cards component for the Right Column
@@ -205,15 +204,18 @@ function QuickAccessCards({ className, maxItems = 6 }) {
 
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Star className="h-5 w-5 text-calm-500 dark:text-calm-400" />
-          <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">Quick Access</h2>
-          {quickAccessItems.length > 0 && (
-            <span className="text-xs text-calm-500 bg-calm-100 dark:text-calm-400 dark:bg-calm-800 px-2 py-1 rounded-full">
-              {quickAccessItems.length}
-            </span>
-          )}
+      {/* Header */}
+      <div className="sm:flex sm:items-center">
+        <div className="sm:flex-auto">
+          <div className="flex items-center space-x-2">
+            <Star className="h-5 w-5 text-calm-500 dark:text-calm-400" />
+            <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">Quick Access</h2>
+            {quickAccessItems.length > 0 && (
+              <span className="text-xs text-calm-500 bg-calm-100 dark:text-calm-400 dark:bg-calm-800 px-2 py-1 rounded-full">
+                {quickAccessItems.length}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -226,18 +228,29 @@ function QuickAccessCards({ className, maxItems = 6 }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
           {quickAccessItems.map((item) => (
-            <ListItem
+            <li
               key={item.id}
-              title={item.title}
-              subtitle={
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
+              onClick={() => handleQuickAccessClick(item)}
+              className="py-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors cursor-pointer rounded-lg px-2 -mx-2 group"
+            >
+              <div className="flex items-center space-x-3">
+                {/* Icon */}
+                <div className="flex-shrink-0">
+                  {item.url ? renderFavicon(item.url) : <Star className="h-5 w-5 text-amber-500" />}
+                </div>
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
+                    {item.title}
+                  </p>
+                  <div className="mt-1 flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
                     <span className="truncate">
                       {item.url ? new URL(item.url).hostname : 'Unknown'}
                     </span>
-                    <div className="flex items-center space-x-2 ml-2">
+                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
                       <span className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
                         <span>{getTimeAgo(item.lastAccessed)}</span>
@@ -248,41 +261,33 @@ function QuickAccessCards({ className, maxItems = 6 }) {
                     </div>
                   </div>
                   {item.type === 'smart-suggestion' && (
-                    <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
+                    <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
                       <Pin className="h-3 w-3" />
                       <span>Smart suggestion</span>
                     </div>
                   )}
                 </div>
-              }
-              icon={
-                item.url ? renderFavicon(item.url) : <Star className="h-4 w-4 text-amber-500" />
-              }
-              onClick={() => {
-                console.log(`[Tab Napper] Quick access item clicked: ${item.title}`);
-                handleQuickAccessClick(item);
-              }}
-              className="hover:bg-amber-50 dark:hover:bg-amber-900/20 border-amber-200 dark:border-amber-900/30 hover:border-amber-300 dark:hover:border-amber-800 transition-colors cursor-pointer group"
-              badge={
-                item.accessCount > 5 ? (
-                  <div className="flex items-center space-x-1 text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded-full">
-                    <Star className="h-3 w-3" />
-                    <span>Frequently Used</span>
-                  </div>
-                ) : null
-              }
-              actions={
-                <button
-                  onClick={(e) => handleUnpinItem(item, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded"
-                  title="Unpin from Quick Access"
-                >
-                  <PinOff className="h-4 w-4" />
-                </button>
-              }
-            />
+
+                {/* Actions */}
+                <div className="flex items-center space-x-2">
+                  {item.accessCount > 5 && (
+                    <div className="flex items-center space-x-1 text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded-full">
+                      <Star className="h-3 w-3" />
+                      <span>Frequently Used</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => handleUnpinItem(item, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded"
+                    title="Unpin from Quick Access"
+                  >
+                    <PinOff className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
