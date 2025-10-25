@@ -3,7 +3,7 @@ import { Clock, ExternalLink } from 'lucide-react';
 import { navigateToUrl } from '../utils/navigation.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { cn } from '../utils/cn.js';
-import ListItem from './ListItem.jsx';
+import StackList from './StackList.jsx';
 
 /**
  * Lightweight history fetch for RecentlyVisited component
@@ -165,15 +165,18 @@ function RecentlyVisited({ className, maxItems = 50 }) {
     }
   };
 
-  // Get favicon URL
-  const getFaviconUrl = (url) => {
-    try {
-      const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
-    } catch {
-      return null;
-    }
-  };
+  // Prepare items with metadata for StackList
+  const itemsWithMetadata = historyItems.map(item => ({
+    ...item,
+    metadata: (
+      <React.Fragment>
+        <span>{getTimeAgo(item.lastVisitTime)}</span>
+        {item.visitCount > 1 && (
+          <span>{item.visitCount} visits</span>
+        )}
+      </React.Fragment>
+    )
+  }));
 
   if (isLoading && historyItems.length === 0) {
     return (
@@ -252,51 +255,10 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       </div>
 
       {/* History List - Tailwind UI Stack with dividers */}
-      <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
-        {historyItems.map((item, index) => (
-          <li
-            key={item.id || item.url || index}
-            onClick={() => handleHistoryItemClick(item)}
-            className="py-3 hover:bg-calm-50 dark:hover:bg-calm-800/50 transition-colors cursor-pointer rounded-lg px-2 -mx-2"
-          >
-            <div className="flex items-start space-x-3">
-              {/* Favicon */}
-              <div className="flex-shrink-0 mt-1">
-                {getFaviconUrl(item.url) ? (
-                  <img
-                    src={getFaviconUrl(item.url)}
-                    alt=""
-                    className="w-4 h-4"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <ExternalLink className="w-4 h-4 text-calm-400 dark:text-calm-500" />
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
-                  {item.title}
-                </p>
-                
-                <p className="text-xs text-calm-500 dark:text-calm-400 truncate mt-1">
-                  {item.url}
-                </p>
-                
-                <div className="flex items-center justify-between text-xs text-calm-400 dark:text-calm-500 mt-1">
-                  <span>{getTimeAgo(item.lastVisitTime)}</span>
-                  {item.visitCount > 1 && (
-                    <span>{item.visitCount} visits</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <StackList
+        items={itemsWithMetadata}
+        onItemClick={handleHistoryItemClick}
+      />
 
       {/* Simple footer */}
       <div className="border-t border-calm-200 dark:border-calm-700 pt-3 mt-4">

@@ -146,6 +146,33 @@ export async function clearScheduledAlarm(item, action) {
 }
 
 /**
+ * Clear all alarms for an item (in case it has scheduled actions)
+ * @param {Object} item - The item whose alarms should be cleared
+ * @returns {Promise<void>}
+ */
+export async function clearAllAlarmsForItem(item) {
+  if (typeof chrome === 'undefined' || !chrome.alarms) {
+    console.warn('[Schedule] Chrome alarms API not available');
+    return;
+  }
+
+  // Possible action types that could have alarms
+  const possibleActions = ['remind_me', 'follow_up', 'review'];
+  
+  try {
+    for (const action of possibleActions) {
+      const alarmName = createAlarmName(item, action);
+      const wasCleared = await chrome.alarms.clear(alarmName);
+      if (wasCleared) {
+        console.log(`[Schedule] Alarm cleared: ${alarmName}`);
+      }
+    }
+  } catch (error) {
+    console.error('[Schedule] Error clearing alarms for item:', error);
+  }
+}
+
+/**
  * Get a human-friendly description of the scheduled time
  * @param {number} timestamp - Unix timestamp in milliseconds
  * @returns {string} - Human-friendly description
@@ -166,5 +193,51 @@ export function getScheduledTimeDescription(timestamp) {
     return `in ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
   } else {
     return `on ${date.toLocaleDateString()}`;
+  }
+}
+
+/**
+ * Get a detailed human-friendly description of when an item is scheduled
+ * @param {number} timestamp - Unix timestamp in milliseconds
+ * @returns {string} - Human-friendly description with date and time
+ */
+export function getDetailedScheduledTime(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  
+  // Check if it's today
+  const isToday = date.toDateString() === now.toDateString();
+  
+  // Check if it's tomorrow
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+  
+  // Format time
+  const timeStr = date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+  
+  if (isToday) {
+    return `Today at ${timeStr}`;
+  } else if (isTomorrow) {
+    return `Tomorrow at ${timeStr}`;
+  } else {
+    // Check if within this week
+    const diffDays = Math.floor((date - now) / (1000 * 60 * 60 * 24));
+    if (diffDays < 7 && diffDays > 0) {
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+      return `${dayName} at ${timeStr}`;
+    } else {
+      // Use full date
+      const dateStr = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+      return `${dateStr} at ${timeStr}`;
+    }
   }
 }

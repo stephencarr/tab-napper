@@ -8,7 +8,7 @@ import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
-import { calculateScheduledTime, setScheduledAlarm } from './utils/schedule.js';
+import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import ListContainer from './components/ListContainer.jsx';
@@ -192,6 +192,9 @@ function App() {
           const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
           const updatedStashed = currentStashed.filter(i => i.id !== item.id);
           
+          // Clear any scheduled alarms (check all possible action types)
+          console.log('[Tab Napper] Clearing any alarms for deleted item:', item.title);
+          await clearAllAlarmsForItem(item);
           
           // Add to trash with deletion timestamp
           const trashedItem = {
@@ -219,26 +222,36 @@ function App() {
           const scheduledTime = calculateScheduledTime(actionData.when);
           console.log('[Tab Napper] Scheduled time:', new Date(scheduledTime).toLocaleString());
           
-          // Step 2: Remove from inbox
+          // Step 2: If item was previously scheduled, clear the old alarm
+          if (item.scheduledFor && item.scheduledAction) {
+            await clearScheduledAlarm(item, item.scheduledAction);
+            console.log('[Tab Napper] Cleared previous alarm');
+          }
+          
+          // Step 3: Remove from inbox (if present)
           const currentInboxForSchedule = await loadAppState('triageHub_inbox', []);
           const updatedInboxForSchedule = currentInboxForSchedule.filter(i => i.id !== item.id);
           
-          // Step 3: Add to stashed tabs with scheduling metadata
+          // Step 4: Update in stashed tabs with new scheduling metadata
           const currentStashedForSchedule = await loadAppState('triageHub_stashedTabs', []);
+          
+          // Remove old version from stashed (if it was already there)
+          const filteredStashed = currentStashedForSchedule.filter(i => i.id !== item.id);
+          
           const scheduledItem = {
             ...item,
             scheduledFor: scheduledTime,
             scheduledAction: action,
             scheduledWhen: actionData.when,
-            stashedAt: Date.now()
+            stashedAt: item.stashedAt || Date.now()
           };
-          const updatedStashedForSchedule = [scheduledItem, ...currentStashedForSchedule];
+          const updatedStashedForSchedule = [scheduledItem, ...filteredStashed];
           
-          // Step 4: Save to storage
+          // Step 5: Save to storage
           await saveAppState('triageHub_inbox', updatedInboxForSchedule);
           await saveAppState('triageHub_stashedTabs', updatedStashedForSchedule);
           
-          // Step 5: Set Chrome alarm
+          // Step 6: Set new Chrome alarm
           await setScheduledAlarm(item, action, scheduledTime);
           
           console.log('[Tab Napper] ✓ Item scheduled and stashed:', item.title);
