@@ -81,17 +81,18 @@ async function fetchRecentHistory(maxResults = 20) {
       // Determine time window based on request size
       const isComprehensiveSearch = maxResults > 1000;
       const timeWindow = isComprehensiveSearch 
-        ? (90 * 24 * 60 * 60 * 1000) // 90 days for comprehensive search
-        : (7 * 24 * 60 * 60 * 1000);  // 7 days for regular fetch
+        ? (365 * 24 * 60 * 60 * 1000) // 1 year for comprehensive search
+        : (30 * 24 * 60 * 60 * 1000);  // 30 days for regular fetch
         
-      console.log(`[Tab Napper] 📚 Fetching ${isComprehensiveSearch ? 'comprehensive' : 'recent'} history (${isComprehensiveSearch ? '90 days' : '7 days'})`);
+      console.log(`[Tab Napper] 📚 Fetching ${isComprehensiveSearch ? 'comprehensive' : 'recent'} history (${isComprehensiveSearch ? '1 year' : '30 days'})`);
+      console.log(`[Tab Napper] 📊 Requesting ${maxResults} items from ${Math.floor(timeWindow / (24 * 60 * 60 * 1000))} days ago`);
       
       // Get history from Chrome API
       const historyItems = await new Promise((resolve, reject) => {
         chrome.history.search(
           {
             text: '',
-            maxResults: maxResults * 3, // Get more to account for deduplication
+            maxResults: Math.max(maxResults * 3, 10000), // Get more to account for deduplication, minimum 10k
             startTime: Date.now() - timeWindow
           },
           (results) => {

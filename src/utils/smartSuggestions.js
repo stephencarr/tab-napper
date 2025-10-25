@@ -6,7 +6,6 @@
  */
 
 import { loadAppState, saveAppState } from './storage.js';
-import { getRecentHistoryWithStatus } from './history.js';
 import { debugLog, debugError } from './debug.js';
 
 // Configuration constants
@@ -20,7 +19,92 @@ const SUGGESTION_CONFIG = {
   CONSISTENCY_WEIGHT: 0.4,            // Weight for daily visit consistency
   RECENCY_WEIGHT: 0.3,                // Weight for recent activity
   FREQUENCY_WEIGHT: 0.3,              // Weight for overall frequency
+  CACHE_DURATION_MS: 60 * 60 * 1000,  // 1 hour cache duration
 };
+
+// Cache for smart suggestions
+let suggestionsCache = null;
+let cacheTimestamp = 0;
+
+/**
+ * Load cache from persistent storage
+ */
+async function loadCacheFromStorage() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const result = await chrome.storage.local.get(['smartSuggestions_cache', 'smartSuggestions_cacheTime']);
+      if (result.smartSuggestions_cache && result.smartSuggestions_cacheTime) {
+        suggestionsCache = result.smartSuggestions_cache;
+        cacheTimestamp = result.smartSuggestions_cacheTime;
+        debugLog('Suggestions', 'Loaded suggestions cache from storage');
+      }
+    }
+  } catch (error) {
+    debugLog('Suggestions', 'Could not load cache from storage:', error);
+  }
+}
+
+/**
+ * Save cache to persistent storage
+ */
+async function saveCacheToStorage() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && suggestionsCache) {
+      await chrome.storage.local.set({
+        'smartSuggestions_cache': suggestionsCache,
+        'smartSuggestions_cacheTime': cacheTimestamp
+      });
+      debugLog('Suggestions', 'Saved suggestions cache to storage');
+    }
+  } catch (error) {
+    debugLog('Suggestions', 'Could not save cache to storage:', error);
+  }
+}
+
+/**
+ * Lightweight history fetch for SmartSuggestions
+ * Only gets what we need without status indicators
+ */
+async function getLightweightHistory(maxResults = 500) {
+  if (typeof chrome === 'undefined' || !chrome.history) {
+    console.log('[SmartSuggestions] Chrome history API not available');
+    return [];
+  }
+  
+  try {
+    const historyItems = await new Promise((resolve, reject) => {
+      chrome.history.search(
+        {
+          text: '',
+          maxResults: maxResults,
+          startTime: Date.now() - (SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+        },
+        (results) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(results);
+          }
+        }
+      );
+    });
+    
+    // Filter out unwanted URLs
+    const excludePatterns = [
+      'chrome://', 'chrome-extension://', 'moz-extension://',
+      'data:', 'blob:', 'javascript:'
+    ];
+    
+    return historyItems.filter(item => 
+      !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
+      item.title && item.title.trim().length > 0
+    );
+    
+  } catch (error) {
+    console.error('[SmartSuggestions] Error fetching lightweight history:', error);
+    return [];
+  }
+}
 
 /**
  * Calculate daily visit metrics for a URL
@@ -208,16 +292,35 @@ function extractItemInfo(url, historyItems) {
 
 /**
  * Generate smart suggestions based on browsing history
+ * Uses 1-hour persistent caching to improve performance
  */
 export async function generateSmartSuggestions() {
   try {
-    debugLog('Suggestions', 'Starting smart suggestion generation...');
+    const now = Date.now();
     
-    // Get recent browsing history (extended window for pattern analysis)
-    const historyItems = await getRecentHistoryWithStatus(1000);
+    // Load cache from storage if not already in memory
+    if (!suggestionsCache) {
+      await loadCacheFromStorage();
+    }
+    
+    // Check if we have valid cached suggestions
+    if (suggestionsCache && (now - cacheTimestamp) < SUGGESTION_CONFIG.CACHE_DURATION_MS) {
+      debugLog('Suggestions', `Using cached smart suggestions (${Math.round((now - cacheTimestamp) / 60000)} minutes old)`);
+      return suggestionsCache;
+    }
+    
+    debugLog('Suggestions', 'Generating fresh smart suggestions...');
+    
+    // Get recent browsing history (lightweight for pattern analysis)
+    const historyItems = await getLightweightHistory(500);
     if (historyItems.length === 0) {
       debugLog('Suggestions', 'No history items available for analysis');
-      return [];
+      const emptyResult = [];
+      // Cache empty result too to avoid repeated failed attempts
+      suggestionsCache = emptyResult;
+      cacheTimestamp = now;
+      await saveCacheToStorage();
+      return emptyResult;
     }
     
     debugLog('Suggestions', `Analyzing ${historyItems.length} history items`);
@@ -298,10 +401,16 @@ export async function generateSmartSuggestions() {
     
     debugLog('Suggestions', `Generated ${suggestions.length} suggestions from ${candidates.length} candidates`);
     
+    // Cache the results
+    suggestionsCache = suggestions;
+    cacheTimestamp = now;
+    await saveCacheToStorage();
+    
     return suggestions;
     
   } catch (error) {
     debugError('Suggestions', 'Error generating smart suggestions:', error);
+    // Don't cache errors - let it retry next time
     return [];
   }
 }
@@ -356,6 +465,9 @@ export async function pinSuggestion(suggestion) {
     metadata.pinnedHistory[normalizeUrl(suggestion.url)] = Date.now();
     await saveSuggestionMetadata(metadata);
     
+    // Clear suggestions cache since pinning affects future suggestions
+    await clearSuggestionsCache();
+    
     debugLog('Suggestions', `Successfully pinned: ${suggestion.title}`);
     return newItem;
     
@@ -389,6 +501,9 @@ export async function unpinItem(itemId) {
     metadata.unpinnedItems[normalizeUrl(itemToUnpin.url)] = Date.now();
     await saveSuggestionMetadata(metadata);
     
+    // Clear suggestions cache since unpinning affects future suggestions
+    await clearSuggestionsCache();
+    
     debugLog('Suggestions', `Successfully unpinned: ${itemToUnpin.title}`);
     return itemToUnpin;
     
@@ -403,7 +518,7 @@ export async function unpinItem(itemId) {
  */
 export async function getSuggestionStats() {
   try {
-    const historyItems = await getRecentHistoryWithStatus(1000);
+    const historyItems = await getLightweightHistory(500);
     const metadata = await getSuggestionMetadata();
     const pinnedItems = await getPinnedItems();
     const suggestions = await generateSmartSuggestions();
@@ -466,10 +581,49 @@ export async function clearAllSuggestionData() {
       chrome.storage.local.remove(['triageHub_suggestionMetadata']);
     }
     
+    // Clear the suggestions cache
+    await clearSuggestionsCache();
+    
     console.log('[Smart Suggestions] ✅ All suggestion data cleared');
     return true;
   } catch (error) {
     console.error('[Smart Suggestions] ❌ Error clearing suggestion data:', error);
     return false;
   }
+}
+
+/**
+ * Clear the suggestions cache to force fresh generation
+ */
+export async function clearSuggestionsCache() {
+  suggestionsCache = null;
+  cacheTimestamp = 0;
+  
+  // Clear from persistent storage too
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      await chrome.storage.local.remove(['smartSuggestions_cache', 'smartSuggestions_cacheTime']);
+    }
+  } catch (error) {
+    debugLog('Suggestions', 'Could not clear cache from storage:', error);
+  }
+  
+  debugLog('Suggestions', 'Suggestions cache cleared from memory and storage');
+}
+
+/**
+ * Get cache info for debugging
+ */
+export function getCacheInfo() {
+  const now = Date.now();
+  const age = cacheTimestamp ? now - cacheTimestamp : null;
+  const isValid = suggestionsCache && age && age < SUGGESTION_CONFIG.CACHE_DURATION_MS;
+  
+  return {
+    hasCachedData: !!suggestionsCache,
+    cacheAge: age,
+    cacheValidFor: isValid ? SUGGESTION_CONFIG.CACHE_DURATION_MS - age : 0,
+    isValid: isValid,
+    cacheDuration: SUGGESTION_CONFIG.CACHE_DURATION_MS
+  };
 }

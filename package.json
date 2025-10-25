@@ -1,7 +1,7 @@
 {
   "name": "triage-hub",
-  "version": "0.5.0",
-  "description": "ADHD-friendly Chrome extension for tab management and reminders",
+  "version": "0.5.1",
+  "description": "ADHD-friendly Chrome extension with enhanced omnisearch and intelligent suggestions",
   "private": true,
   "type": "module",
   "scripts": {

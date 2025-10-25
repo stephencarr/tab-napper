@@ -1,10 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Square, Pin, ExternalLink } from 'lucide-react';
-import { getRecentHistoryWithStatus } from '../utils/history.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { cn } from '../utils/cn.js';
 import ListItem from './ListItem.jsx';
+
+/**
+ * Lightweight history fetch for RecentlyVisited component
+ */
+async function getLightweightRecentHistory(maxResults = 20) {
+  if (typeof chrome === 'undefined' || !chrome.history) {
+    console.log('[RecentlyVisited] Chrome history API not available');
+    return [];
+  }
+  
+  try {
+    const historyItems = await new Promise((resolve, reject) => {
+      chrome.history.search(
+        {
+          text: '',
+          maxResults: maxResults,
+          startTime: Date.now() - (7 * 24 * 60 * 60 * 1000) // Last 7 days
+        },
+        (results) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(results);
+          }
+        }
+      );
+    });
+    
+    // Filter out unwanted URLs
+    const excludePatterns = [
+      'chrome://', 'chrome-extension://', 'moz-extension://',
+      'data:', 'blob:', 'javascript:'
+    ];
+    
+    return historyItems
+      .filter(item => 
+        !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
+        item.title && item.title.trim().length > 0
+      )
+      .map(item => ({
+        ...item,
+        id: `history-${item.url}`,
+        description: item.url,
+        isCurrentlyOpen: false,
+        isPreviouslyStashed: false
+      }));
+    
+  } catch (error) {
+    console.error('[RecentlyVisited] Error fetching lightweight history:', error);
+    return [];
+  }
+}
 
 /**
  * Recently Visited component for the Left Column
@@ -28,7 +79,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
       setIsLoading(true);
       setError(null);
       
-      const items = await getRecentHistoryWithStatus(maxItems);
+      const items = await getLightweightRecentHistory(maxItems);
       setHistoryItems(items);
       
     } catch (err) {

@@ -8,8 +8,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Advanced triage actions and reminder integrations
-- Enhanced notification systems
+- Advanced filtering for search results
+- Full keyboard navigation support
+- Export/import functionality
+
+## [0.5.1] - 2025-10-24
+
+### Added - Enhanced Omnisearch & Performance Revolution
+- **🔍 Enhanced Omnisearch**: Universal search across all data sources with browser history integration
+  - Priority-based result segmentation (inbox > stashed > quick access > history > trash)
+  - Real-time Chrome History API integration with native search capabilities
+  - Auto-focused search input with ESC key clearing
+  - Click-to-open functionality for all search results
+  - Visual hierarchy with color-coded segments and relevance scores
+- **⚡ Performance Revolution**: Complete optimization of history handling and caching
+  - Lightweight, component-specific history fetching eliminates browser stalling
+  - Persistent caching for SmartSuggestions (1-hour duration, survives reloads)
+  - Search-driven history queries only fetch matching items
+  - Smart cache invalidation on user actions (pin/unpin)
+- **🎯 Gateway Deduplication**: Simplified and reliable duplicate prevention
+  - Replaced complex storage-level deduplication with simple gateway approach
+  - Capture-time duplicate removal across all collections
+  - Cleaner, more maintainable codebase
+- **🔧 Developer Tools**: Comprehensive debugging and testing capabilities
+  - Debug functions for Chrome History API testing
+  - Cache inspection and management tools
+  - Enhanced omnisearch test suite
+  - Performance profiling capabilities
+
+### Changed
+- **Search Architecture**: Complete rewrite using Chrome's native search APIs
+- **History Management**: Component-specific lightweight functions replace heavy pre-fetching
+- **Cache Strategy**: Memory + persistent storage with intelligent invalidation
+- **Error Handling**: Enhanced Chrome History API permission checks and fallbacks
+
+### Performance Improvements
+- **Eliminated Browser Stalling**: No more massive history pre-fetching
+- **Instant Cache Loading**: SmartSuggestions load immediately after first generation
+- **Responsive Search**: Debounced search with progressive result loading
+- **Optimized APIs**: Direct Chrome API usage for maximum efficiency
+
+### Fixed
+- **Search Input Focus**: Proper auto-focus with browser extension compatibility
+- **ESC Key Handling**: Reliable search clearing functionality
+- **Search Result Clicking**: URLs now properly open in new tabs
+- **SmartSuggestions Shimmer**: Persistent caching eliminates reload delays
 
 ## [0.5.0] - 2025-10-24
 

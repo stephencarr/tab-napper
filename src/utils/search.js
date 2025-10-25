@@ -4,7 +4,6 @@
  */
 
 import { loadAppState } from './storage.js';
-import { getRecentHistoryWithStatus } from './history.js';
 
 /**
  * Search within a single text field
@@ -46,24 +45,13 @@ async function searchAllData(searchTerm) {
   try {
     console.log(`[Tab Napper] 🔍 Starting search for: "${searchTerm}"`);
     
-    // Load all data sources including extensive browsing history
+    // Load our internal data sources
     const [inbox, stashedTabs, quickAccessCards, trash] = await Promise.all([
       loadAppState('triageHub_inbox'),
       loadAppState('triageHub_stashedTabs'),
       loadAppState('triageHub_quickAccessCards'),
       loadAppState('triageHub_trash')
     ]);
-
-    // Get browsing history separately with better error handling
-    let recentHistory = [];
-    try {
-      console.log(`[Tab Napper] 📚 Fetching browser history for search...`);
-      recentHistory = await getRecentHistoryWithStatus(5000); // Get extensive history for search
-      console.log(`[Tab Napper] ✅ Retrieved ${recentHistory.length} history items`);
-    } catch (historyError) {
-      console.warn('[Tab Napper] ⚠️ Browser history not available:', historyError);
-      // Continue with search even if history fails
-    }
 
     const results = [];
     
@@ -109,23 +97,22 @@ async function searchAllData(searchTerm) {
       });
     }
     
-    // Search recent browsing history (lower priority but important for discovery)
-    if (recentHistory && recentHistory.length > 0) {
-      console.log(`[Tab Napper] 🔍 Searching ${recentHistory.length} browser history items...`);
-      let historyMatches = 0;
-      recentHistory.forEach(item => {
-        if (searchInItem(item, searchTerm)) {
-          historyMatches++;
-          results.push({
-            ...item,
-            source: 'recentHistory',
-            relevance: calculateRelevance(item, searchTerm) + 2 // History gets base priority
-          });
-        }
+    // Search browser history using Chrome's built-in search (lightweight!)
+    try {
+      console.log(`[Tab Napper] 🔍 Searching browser history for "${searchTerm}"...`);
+      const historyResults = await searchChromeHistory(searchTerm);
+      console.log(`[Tab Napper] ✅ Found ${historyResults.length} matches in browser history`);
+      
+      historyResults.forEach(item => {
+        results.push({
+          ...item,
+          source: 'recentHistory',
+          relevance: calculateRelevance(item, searchTerm) + 2 // History gets base priority
+        });
       });
-      console.log(`[Tab Napper] ✅ Found ${historyMatches} matches in browser history`);
-    } else {
-      console.log(`[Tab Napper] ℹ️ No browser history available for search`);
+    } catch (historyError) {
+      console.warn('[Tab Napper] ⚠️ Browser history search failed:', historyError);
+      // Continue with search even if history fails
     }
     
     // Search trash (lowest priority)
@@ -164,6 +151,73 @@ async function searchAllData(searchTerm) {
     console.error('[Tab Napper] ❌ Error searching data:', error);
     return [];
   }
+}
+
+/**
+ * Search Chrome history directly using the built-in search API
+ * This is much more efficient than pre-fetching everything
+ */
+async function searchChromeHistory(searchTerm, maxResults = 50) {
+  if (typeof chrome === 'undefined' || !chrome.history) {
+    console.log('[Tab Napper] ⚠️ Chrome history API not available');
+    return [];
+  }
+  
+  try {
+    // Use Chrome's built-in history search - much more efficient!
+    const historyResults = await new Promise((resolve, reject) => {
+      chrome.history.search(
+        {
+          text: searchTerm,
+          maxResults: maxResults,
+          startTime: Date.now() - (365 * 24 * 60 * 60 * 1000) // Search last year
+        },
+        (results) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(results);
+          }
+        }
+      );
+    });
+    
+    // Filter out unwanted URLs and add status indicators
+    const validResults = historyResults
+      .filter(item => isValidHistoryItem(item))
+      .map(item => ({
+        ...item,
+        id: `history-${item.url}`,
+        description: item.url,
+        isCurrentlyOpen: false, // We could check this if needed
+        isPreviouslyStashed: false // We could check this if needed
+      }));
+    
+    return validResults;
+    
+  } catch (error) {
+    console.error('[Tab Napper] ❌ Chrome history search failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if history item should be included
+ */
+function isValidHistoryItem(item) {
+  // Filter out unwanted URLs
+  const excludePatterns = [
+    'chrome://',
+    'chrome-extension://',
+    'moz-extension://',
+    'data:',
+    'blob:',
+    'javascript:'
+  ];
+  
+  return !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
+         item.title && 
+         item.title.trim().length > 0;
 }
 
 /**
@@ -256,5 +310,6 @@ export {
   searchAllData,
   searchInItem,
   calculateRelevance,
-  createDebouncedSearch
+  createDebouncedSearch,
+  searchChromeHistory
 };
