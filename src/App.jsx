@@ -53,10 +53,10 @@ function App() {
         // Initialize reactive store and load data
         const data = await initializeReactiveStore();
         console.log('[Tab Napper] Reactive store initialized with', {
-          inbox: data.inbox?.length || 0,
-          stashedTabs: data.stashedTabs?.length || 0,
-          trash: data.trash?.length || 0,
-          quickAccessCards: data.quickAccessCards?.length || 0
+          inbox: data.inbox?.length ?? 'undefined',
+          stashedTabs: data.stashedTabs?.length ?? 'undefined',
+          trash: data.trash?.length ?? 'undefined',
+          quickAccessCards: data.quickAccessCards?.length ?? 'undefined'
         });
         
         // Subscribe to state changes for automatic UI updates
