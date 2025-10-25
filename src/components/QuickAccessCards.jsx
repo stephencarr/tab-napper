@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { Star, ExternalLink, Clock, PinOff, Pin } from 'lucide-react';
 import { saveAppState } from '../utils/storage.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
@@ -71,9 +71,8 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     }
   };
 
-  // PERFORMANCE: Use useCallback to memoize this function
   // Update access count for an item
-  const updateAccessCount = useCallback(async (item) => {
+  const updateAccessCount = async (item) => {
     try {
       // PERFORMANCE: Use the reactive data we already have, don't reload it
       if (!quickAccessData) return;
@@ -95,7 +94,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     } catch (error) {
       console.error('[Tab Napper] Error updating access count:', error);
     }
-  }, [quickAccessData]);
+  };
 
   // Get favicon URL with better error handling
   const getFaviconUrl = (url) => {

@@ -142,7 +142,8 @@ async function handleStorageChanges(changes, namespace) {
         if (stateKey) {
           // Use the new value from changes (already available, no need to read!)
           const newValue = changes[storageKey].newValue;
-          updatedState[stateKey] = newValue || (stateKey === 'userPreferences'
+          // Use ?? instead of || to properly handle empty arrays/objects
+          updatedState[stateKey] = newValue ?? (stateKey === 'userPreferences'
             ? { theme: 'light', analogFidgetSensitivity: 'medium' }
             : []);
           hasChanges = true;

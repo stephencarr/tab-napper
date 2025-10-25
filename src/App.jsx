@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
 import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
@@ -33,7 +33,7 @@ function App() {
 
   // PERFORMANCE: Create debounced search function only once
   // useMemo instead of useCallback because createDebouncedSearch returns a function
-  const debouncedSearch = React.useMemo(
+  const debouncedSearch = useMemo(
     () => createDebouncedSearch(300),
     [] // Only create once on mount
   );
