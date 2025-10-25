@@ -13,9 +13,37 @@
 import { loadAllAppData } from './storage.js';
 import { debugLog, debugSuccess } from './debug.js';
 
+// Default values for state properties
+const DEFAULT_USER_PREFERENCES = {
+  theme: 'light',
+  analogFidgetSensitivity: 'medium'
+};
+
 // Global store state and listeners
 let globalAppState = null;
 let stateChangeListeners = new Set();
+
+// Storage key to state property mapping (constant to avoid recreation)
+const STORAGE_KEY_MAPPING = {
+  'triageHub_inbox': 'inbox',
+  'triageHub_stashedTabs': 'stashedTabs',
+  'triageHub_trash': 'trash',
+  'triageHub_notes': 'notes',
+  'triageHub_quickAccessCards': 'quickAccessCards',
+  'triageHub_userPreferences': 'userPreferences',
+};
+
+/**
+ * Get default value for a state key when storage value is undefined
+ * @param {string} stateKey - The state property key
+ * @returns {*} - Default value for the key
+ */
+function getDefaultValue(stateKey) {
+  if (stateKey === 'userPreferences') {
+    return DEFAULT_USER_PREFERENCES;
+  }
+  return []; // Default for arrays (inbox, stashed, etc.)
+}
 
 /**
  * Subscribe to app state changes
@@ -84,40 +112,75 @@ export async function initializeReactiveStore() {
 async function handleStorageChanges(changes, namespace) {
   try {
     debugLog('ReactiveStore', `Storage changes detected in ${namespace}:`, Object.keys(changes));
-    
+
     // All app-related storage keys that should trigger state updates
     const appDataKeys = [
       // Main data keys
       'triageHub_inbox',
-      'triageHub_stashedTabs', 
+      'triageHub_stashedTabs',
       'triageHub_trash',
       'triageHub_notes',
       'triageHub_suggestionMetadata',
-      
+
       // UI and preference keys
       'triageHub_quickAccessCards',
       'triageHub_userPreferences',
       'triageHub_encryptionKey',
-      
+
       // Mock data and dev keys
       'tabNapper_mockHistory',
-      
+
       // Any other triageHub_ prefixed keys
     ];
-    
+
     // Check for any app-related changes (including wildcard for triageHub_ prefix)
-    const relevantChanges = Object.keys(changes).filter(key => 
+    const relevantChanges = Object.keys(changes).filter(key =>
       appDataKeys.includes(key) || key.startsWith('triageHub_') || key.startsWith('tabNapper_')
     );
-    
+
     if (relevantChanges.length > 0) {
       debugLog('ReactiveStore', 'Relevant app data changes detected:', relevantChanges);
-      
-      // Reload the entire app state to ensure consistency
-      const newState = await loadAllAppData();
-      
-      debugSuccess('ReactiveStore', 'State refreshed from storage due to changes:', relevantChanges);
-      notifyStateChange(newState);
+
+      // PERFORMANCE: Only update changed keys instead of reloading everything
+      // This reduces storage I/O from 5 reads to 1-2 reads per change
+      if (!globalAppState) {
+        // If no state exists yet, load all data
+        const newState = await loadAllAppData();
+        debugSuccess('ReactiveStore', 'Initial state loaded');
+        notifyStateChange(newState);
+        return;
+      }
+
+      // Clone current state and update only changed keys
+      const updatedState = { ...globalAppState };
+      let hasChanges = false;
+
+      for (const storageKey of relevantChanges) {
+        const stateKey = STORAGE_KEY_MAPPING[storageKey];
+        if (stateKey) {
+          const changeData = changes[storageKey];
+          // Use the new value from changes (already available, no need to read!)
+          const newValue = changeData.newValue;
+
+          // When storage key is deleted (newValue === undefined), we set defaults
+          // instead of deleting the state property. This prevents component crashes
+          // as React components expect these properties to always exist.
+          // - For arrays (inbox, stashed, etc.): defaults to []
+          // - For userPreferences: defaults to DEFAULT_USER_PREFERENCES
+          // This ensures a consistent state shape regardless of storage state.
+          if (newValue === undefined) {
+            updatedState[stateKey] = getDefaultValue(stateKey);
+          } else {
+            updatedState[stateKey] = newValue;
+          }
+          hasChanges = true;
+        }
+      }
+
+      if (hasChanges) {
+        debugSuccess('ReactiveStore', 'State updated with granular changes:', relevantChanges);
+        notifyStateChange(updatedState);
+      }
     } else {
       debugLog('ReactiveStore', 'No relevant changes detected, skipping state refresh');
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
 import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
@@ -30,11 +30,12 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  
-  // Create debounced search function
-  const debouncedSearch = useCallback(
-    createDebouncedSearch(300),
-    []
+
+  // PERFORMANCE: Create debounced search function only once
+  // useMemo instead of useCallback because createDebouncedSearch returns a function
+  const debouncedSearch = useMemo(
+    () => createDebouncedSearch(300),
+    [] // Only create once on mount
   );
 
   // Initialize the application with reactive store
@@ -51,24 +52,19 @@ function App() {
         
         // Initialize reactive store and load data
         const data = await initializeReactiveStore();
-        console.log('[Tab Napper] Reactive store initialized with data:', data);
+        console.log('[Tab Napper] Reactive store initialized with', {
+          inbox: data.inbox?.length ?? 'undefined',
+          stashedTabs: data.stashedTabs?.length ?? 'undefined',
+          trash: data.trash?.length ?? 'undefined',
+          quickAccessCards: data.quickAccessCards?.length ?? 'undefined'
+        });
         
         // Subscribe to state changes for automatic UI updates
         unsubscribe = subscribeToStateChanges((newState) => {
-          console.log('[Tab Napper] State change detected, updating UI:', newState);
+          console.log('[Tab Napper] State change detected, updating UI');
           setAppState(newState);
         });
-        
-        // Test direct state reading for individual keys
-        console.log('[Tab Napper] Testing direct state reading...');
-        const directInbox = await loadAppState('triageHub_inbox');
-        const directStashed = await loadAppState('triageHub_stashedTabs');
-        const directTrash = await loadAppState('triageHub_trash');
 
-        console.log('[Tab Napper] Direct inbox read:', directInbox);
-        console.log('[Tab Napper] Direct stashed read:', directStashed);
-        console.log('[Tab Napper] Direct trash read:', directTrash);
-        
         // Set up tab capture listeners
         setupTabCaptureListeners();
         
