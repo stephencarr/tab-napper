@@ -179,8 +179,8 @@ function StashManagerView({
           <div>
             <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
               {currentData.items.map((item, index) => {
-                // Use index in key to guarantee uniqueness, especially for trash with duplicates
-                const itemKey = `${activeTab}-${item.id || item.url || index}-${index}`;
+                // Use a stable key based on id or url; deduplication is handled in storage
+                const itemKey = `${activeTab}-${item.id || item.url}`;
                 console.log(`[StashManagerView] Rendering item ${index} in ${activeTab}:`, {
                   key: itemKey,
                   title: item.title,
