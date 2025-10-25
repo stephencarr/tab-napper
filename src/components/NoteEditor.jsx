@@ -379,7 +379,7 @@ export default function NoteEditor({ noteId }) {
             <button
               onClick={() => setIsPreview((v) => !v)}
               className={cn('px-3 py-1.5 text-xs rounded-md transition-colors',
-                isPreview ? 'bg-calm-600 text-white' : 'text-calm-600 dark:text-calm-400 hover:bg-calm-100 dark:hover:bg-calm-700')}
+                isPreview ? 'bg-calm-600 dark:bg-calm-500 text-white' : 'text-calm-600 dark:text-calm-400 hover:bg-calm-100 dark:hover:bg-calm-700')}
             >
               {isPreview ? <Edit className="h-3 w-3 inline mr-1"/> : <Eye className="h-3 w-3 inline mr-1"/>}
               {isPreview ? 'Edit' : 'Preview'}
