@@ -158,8 +158,11 @@ async function handleStorageChanges(changes, namespace) {
       for (const storageKey of relevantChanges) {
         const stateKey = STORAGE_KEY_MAPPING[storageKey];
         if (stateKey) {
+          // Defensive: Only process if changes[storageKey] exists
+          const changeData = changes[storageKey];
+          if (!changeData) continue;
           // Use the new value from changes (already available, no need to read!)
-          const newValue = changes[storageKey].newValue;
+          const newValue = changeData.newValue;
 
           // When storage key is deleted (newValue === undefined), we set defaults
           // instead of deleting the state property. This prevents component crashes
