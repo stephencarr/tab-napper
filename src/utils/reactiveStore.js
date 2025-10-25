@@ -148,7 +148,13 @@ async function handleStorageChanges(changes, namespace) {
         if (stateKey) {
           // Use the new value from changes (already available, no need to read!)
           const newValue = changes[storageKey].newValue;
-          // Explicitly check for undefined to handle null values correctly
+
+          // When storage key is deleted (newValue === undefined), we set defaults
+          // instead of deleting the state property. This prevents component crashes
+          // as React components expect these properties to always exist.
+          // - For arrays (inbox, stashed, etc.): defaults to []
+          // - For userPreferences: defaults to DEFAULT_USER_PREFERENCES
+          // This ensures a consistent state shape regardless of storage state.
           updatedState[stateKey] = newValue === undefined
             ? (stateKey === 'userPreferences' ? DEFAULT_USER_PREFERENCES : [])
             : newValue;

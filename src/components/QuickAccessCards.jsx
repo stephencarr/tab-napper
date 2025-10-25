@@ -18,7 +18,10 @@ function QuickAccessCards({ className, maxItems = 6 }) {
   const quickAccessItems = useMemo(() => {
     if (!quickAccessData) return [];
 
-    // Sort by access frequency and last accessed time
+    // IMPORTANT: Spread operator [...array] creates a copy before sorting
+    // This is necessary because sort() mutates arrays, and we must not
+    // mutate data from useReactiveStorage (React immutability principle).
+    // Without the spread, we'd be mutating the reactive storage state.
     return [...quickAccessData]
       .sort((a, b) => {
         // Primary sort: access count (descending)
@@ -75,7 +78,10 @@ function QuickAccessCards({ className, maxItems = 6 }) {
   const updateAccessCount = async (item) => {
     try {
       // PERFORMANCE: Use the reactive data we already have, don't reload it
-      if (!quickAccessData) return;
+      if (!quickAccessData) {
+        console.error('[Tab Napper] ❌ Cannot update access count: quickAccessData is null or undefined');
+        return;
+      }
 
       const updatedData = quickAccessData.map(accessItem => {
         if (accessItem.id === item.id) {
