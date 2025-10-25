@@ -68,7 +68,7 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       
       // Create note item
       const noteItem = {
-        id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `note-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         title: generateTitle(noteContent),
         description: noteContent, // Store full markdown content
         content: noteContent, // Also store in content field for search
