@@ -35,3 +35,6 @@ __pycache__/
 # Logs
 logs
 *.log
+
+# Local helper files for PR comments (not needed in repo)
+.github/pr-comments/

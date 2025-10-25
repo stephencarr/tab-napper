@@ -10,6 +10,9 @@
     "activeTab",
     "history"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "chrome_url_overrides": {
     "newtab": "triage_hub.html"
   },
