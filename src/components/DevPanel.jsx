@@ -43,30 +43,19 @@ function DevPanel({ isOpen, onClose, className }) {
     {
       label: 'Test Alarm',
       icon: Clock,
-      action: async () => {
-        addLog('Creating test alarm (10s)...', 'info');
-        await testAlarm();
-        addLog('✅ Test alarm created', 'success');
-      },
+      action: () => testAlarm(),
       color: 'blue'
     },
     {
       label: 'Test Notification',
       icon: Bell,
-      action: async () => {
-        addLog('Testing notification...', 'info');
-        await testNotification();
-        addLog('✅ Notification sent', 'success');
-      },
+      action: () => testNotification(),
       color: 'purple'
     },
     {
       label: 'List Alarms',
       icon: Eye,
-      action: async () => {
-        addLog('Listing active alarms...', 'info');
-        await listActiveAlarms();
-      },
+      action: () => listActiveAlarms(),
       color: 'green'
     }
   ];
@@ -271,8 +260,8 @@ function AlarmsTab({ addLog }) {
             </div>
           ) : (
             <div className="space-y-2">
-              {alarms.map((alarm, index) => (
-                <AlarmCard key={index} alarm={alarm} />
+              {alarms.map((alarm) => (
+                <AlarmCard key={alarm.name} alarm={alarm} />
               ))}
             </div>
           )}
