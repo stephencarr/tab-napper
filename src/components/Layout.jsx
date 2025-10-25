@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Home, Archive, Inbox, Trash2, Menu, X } from 'lucide-react';
 import UniversalSearch from './UniversalSearch.jsx';
 import { toggleDarkMode } from '../hooks/useDarkMode.js';
+import { useReactiveStore } from '../hooks/useReactiveStore.js';
 
 const navigation = [
   { name: 'Dashboard', icon: Home },
-  { name: 'All Stashed', icon: Archive },
-  { name: 'Inbox', icon: Inbox },
-  { name: 'Trash', icon: Trash2 }
+  { name: 'All Stashed', icon: Archive, countKey: 'stashedTabs' },
+  { name: 'Inbox', icon: Inbox, countKey: 'inbox' },
+  { name: 'Trash', icon: Trash2, countKey: 'trash' }
 ];
 
 // Header height constant to ensure consistency
@@ -27,36 +28,58 @@ export default function Layout({
   searchLoading
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const appState = useReactiveStore();
+
+  // Get count for a navigation item
+  const getItemCount = (item) => {
+    if (!item.countKey || !appState) return 0;
+    return (appState[item.countKey] || []).length;
+  };
 
   const NavLinks = ({ onClick }) => (
     <nav className="mt-5 px-2 space-y-1">
-      {navigation.map((item) => (
-        <button
-          key={item.name}
-          onClick={() => {
-            setCurrentView(item.name);
-            onSearchClear?.(); // Clear search when clicking any menu item
-            onClick?.();
-          }}
-          className={cx(
-            currentView === item.name
-              ? 'bg-calm-100 dark:bg-calm-700 text-calm-900 dark:text-calm-100'
-              : 'text-calm-600 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 hover:text-calm-900 dark:hover:text-calm-100',
-            'w-full group flex items-center px-2 py-2 text-base md:text-sm font-medium rounded-md transition-colors'
-          )}
-        >
-          <item.icon
+      {navigation.map((item) => {
+        const count = getItemCount(item);
+        return (
+          <button
+            key={item.name}
+            onClick={() => {
+              setCurrentView(item.name);
+              onSearchClear?.(); // Clear search when clicking any menu item
+              onClick?.();
+            }}
             className={cx(
-              currentView === item.name 
-                ? 'text-calm-600 dark:text-calm-400' 
-                : 'text-calm-500 dark:text-calm-400 group-hover:text-calm-600 dark:group-hover:text-calm-300',
-              'mr-3 flex-shrink-0 h-6 w-6'
+              currentView === item.name
+                ? 'bg-calm-100 dark:bg-calm-700 text-calm-900 dark:text-calm-100'
+                : 'text-calm-600 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 hover:text-calm-900 dark:hover:text-calm-100',
+              'w-full group flex items-center justify-between px-2 py-2 text-base md:text-sm font-medium rounded-md transition-colors'
             )}
-            aria-hidden="true"
-          />
-          {item.name}
-        </button>
-      ))}
+          >
+            <div className="flex items-center">
+              <item.icon
+                className={cx(
+                  currentView === item.name 
+                    ? 'text-calm-600 dark:text-calm-400' 
+                    : 'text-calm-500 dark:text-calm-400 group-hover:text-calm-600 dark:group-hover:text-calm-300',
+                  'mr-3 flex-shrink-0 h-6 w-6'
+                )}
+                aria-hidden="true"
+              />
+              {item.name}
+            </div>
+            {item.countKey && count > 0 && (
+              <span className={cx(
+                'ml-auto rounded-full px-2 py-0.5 text-xs font-medium',
+                currentView === item.name
+                  ? 'bg-calm-200 dark:bg-calm-600 text-calm-900 dark:text-calm-100'
+                  : 'bg-calm-100 dark:bg-calm-800 text-calm-600 dark:text-calm-400'
+              )}>
+                {count}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </nav>
   );
 

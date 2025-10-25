@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -13,9 +13,10 @@ function FidgetControl({ item, onAction, className }) {
   const [actionState, setActionState] = useState('Remind Me');
   const [whenState, setWhenState] = useState('In 1 hour');
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+  const [deleteTimeoutId, setDeleteTimeoutId] = useState(null);
   
-  // Action cycle states
-  const actionCycle = ['Remind Me', 'Follow Up', 'Review', 'DELETE NOW'];
+  // Action cycle states (removed DELETE NOW)
+  const actionCycle = ['Remind Me', 'Follow Up', 'Review'];
   
   // Smart contextual "when" options that always make logical sense
   const getSmartWhenOptions = useCallback(() => {
@@ -46,33 +47,10 @@ function FidgetControl({ item, onAction, className }) {
 
   // Cycle to next action state
   const cycleAction = useCallback(() => {
-    // If we're in DELETE NOW state, handle confirmation logic
-    if (actionState === 'DELETE NOW') {
-      if (deleteConfirmation) {
-        // Second click on DELETE NOW = actual deletion
-        if (onAction) {
-          onAction('delete', item);
-        }
-        setDeleteConfirmation(false);
-      } else {
-        // First click on DELETE NOW = enable confirmation mode
-        setDeleteConfirmation(true);
-        // Auto-reset confirmation after 3 seconds to prevent accidental deletion
-        setTimeout(() => {
-          setDeleteConfirmation(false);
-        }, 3000);
-      }
-      return;
-    }
-
-    // Normal cycling through actions
     const currentIndex = actionCycle.indexOf(actionState);
     const nextIndex = (currentIndex + 1) % actionCycle.length;
     setActionState(actionCycle[nextIndex]);
-    
-    // Reset delete confirmation when cycling away from DELETE NOW
-    setDeleteConfirmation(false);
-  }, [actionState, deleteConfirmation, onAction, item, actionCycle]);
+  }, [actionState, actionCycle]);
 
   // Cycle to next when state
   const cycleWhen = useCallback(() => {
@@ -82,15 +60,33 @@ function FidgetControl({ item, onAction, className }) {
     setWhenState(whenOptions[nextIndex]);
   }, [whenState, getSmartWhenOptions]);
 
+  // Handle delete button click
+  const handleDelete = useCallback(() => {
+    if (deleteConfirmation) {
+      // Second click - execute deletion
+      if (onAction) {
+        onAction('delete', item);
+      }
+      setDeleteConfirmation(false);
+      if (deleteTimeoutId) {
+        clearTimeout(deleteTimeoutId);
+        setDeleteTimeoutId(null);
+      }
+    } else {
+      // First click - enable confirmation mode
+      setDeleteConfirmation(true);
+      
+      // Auto-reset confirmation after 3 seconds
+      const timeoutId = setTimeout(() => {
+        setDeleteConfirmation(false);
+        setDeleteTimeoutId(null);
+      }, 3000);
+      setDeleteTimeoutId(timeoutId);
+    }
+  }, [deleteConfirmation, deleteTimeoutId, onAction, item]);
+
   // Handle execute action
   const handleExecute = useCallback(() => {
-    if (actionState === 'DELETE NOW' && !deleteConfirmation) {
-      // If DELETE NOW but not confirmed, start confirmation process
-      cycleAction();
-      return;
-    }
-
-    // For all other actions, execute immediately
     if (onAction) {
       const actionData = {
         action: actionState.toLowerCase().replace(' ', '_'),
@@ -99,21 +95,13 @@ function FidgetControl({ item, onAction, className }) {
       };
       onAction(actionData.action, item, actionData);
     }
-  }, [actionState, whenState, deleteConfirmation, onAction, item, cycleAction]);
+  }, [actionState, whenState, onAction, item]);
 
   // Generate friendly preview text
   const getPreviewText = useCallback(() => {
     const action = actionState.toLowerCase();
-    
-    if (actionState === 'DELETE NOW') {
-      if (deleteConfirmation) {
-        return 'Click again to confirm deletion';
-      }
-      return 'Click to delete this item';
-    }
-    
     return `${action}: ${whenState.toLowerCase()}`;
-  }, [actionState, whenState, deleteConfirmation]);
+  }, [actionState, whenState]);
 
   return (
     <div className={cn("flex flex-col space-y-2", className)}>
@@ -126,30 +114,21 @@ function FidgetControl({ item, onAction, className }) {
             onClick={cycleAction}
             className={cn(
               "relative inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
-              // The z-10 ensures the delete button appears above adjacent buttons when in confirmation state,
-              // since these buttons are siblings in a flex container and may have overlapping effects (e.g., focus ring).
-              actionState === 'DELETE NOW' 
-                ? deleteConfirmation
-                  ? "border-red-600 bg-red-600 text-white hover:bg-red-700 z-10"
-                  : "border-red-500 bg-red-500 text-white hover:bg-red-600"
-                : "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
+              "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
             title="Click to cycle through actions"
           >
-            {actionState === 'DELETE NOW' && deleteConfirmation ? '⚠ CONFIRM' : actionState}
+            {actionState}
           </button>
           
           {/* When Pill */}
           <button
-            onClick={actionState === 'DELETE NOW' && deleteConfirmation ? undefined : cycleWhen}
+            onClick={cycleWhen}
             className={cn(
               "relative -ml-px inline-flex items-center px-3 py-1.5 text-xs font-medium border transition-colors",
-              actionState === 'DELETE NOW' && deleteConfirmation
-                ? "border-calm-300 dark:border-calm-600 bg-calm-100 dark:bg-calm-700 text-calm-400 dark:text-calm-500 cursor-not-allowed"
-                : "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
+              "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
-            title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Cancel delete first' : 'Click to cycle through timing options'}
-            disabled={actionState === 'DELETE NOW' && deleteConfirmation}
+            title="Click to cycle through timing options"
           >
             {whenState}
           </button>
@@ -159,34 +138,36 @@ function FidgetControl({ item, onAction, className }) {
             onClick={handleExecute}
             className={cn(
               "relative -ml-px inline-flex items-center justify-center w-8 py-1.5 rounded-r-md border transition-colors",
-              actionState === 'DELETE NOW' && deleteConfirmation
-                ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
-                : "border-calm-300 dark:border-calm-600 bg-emerald-500 dark:bg-emerald-600 text-white hover:bg-emerald-600 dark:hover:bg-emerald-700"
+              "border-calm-300 dark:border-calm-600 bg-emerald-500 dark:bg-emerald-600 text-white hover:bg-emerald-600 dark:hover:bg-emerald-700"
             )}
-            title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Confirm deletion' : 'Execute action'}
+            title="Execute action"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Cancel button for delete confirmation */}
-        {actionState === 'DELETE NOW' && deleteConfirmation && (
-          <button
-            onClick={() => {
-              setDeleteConfirmation(false);
-              setActionState('Remind Me');
-            }}
-            className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
-            title="Cancel delete"
-          >
-            ✕
-          </button>
-        )}
+        {/* Delete Button */}
+        <button
+          onClick={handleDelete}
+          className={cn(
+            "inline-flex items-center justify-center h-8 w-8 rounded-md border transition-colors",
+            deleteConfirmation
+              ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
+              : "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-500 dark:text-calm-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700"
+          )}
+          title={deleteConfirmation ? "Click again to confirm deletion" : "Delete item"}
+        >
+          {deleteConfirmation ? (
+            <span className="text-[10px] font-bold">✓</span>
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+        </button>
       </div>
 
       {/* Preview Text */}
       <div className="text-xs text-right text-calm-500 dark:text-calm-400">
-        {getPreviewText()}
+        {deleteConfirmation ? 'Click again to confirm deletion' : getPreviewText()}
       </div>
     </div>
   );
