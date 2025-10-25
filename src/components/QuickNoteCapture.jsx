@@ -73,7 +73,7 @@ function QuickNoteCapture({ className, onNoteSaved }) {
         title: noteTitle,
         content: noteContent,
         timestamp: timestamp,
-        lastModified: timestamp,
+        wordCount: noteContent.trim() ? noteContent.trim().split(/\s+/).length : 0
         type: 'note',
         wordCount: noteContent.trim().split(/\s+/).length
       };      // Add to beginning of inbox (most recent first)
