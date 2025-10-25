@@ -39,11 +39,11 @@ async function retriageNote(noteId) {
     const notes = result.triageHub_notes || [];
     const inbox = result.triageHub_inbox || [];
 
-    // Find the note in the notes collection
-    const note = notes.find(n => n.id === noteId);
+    // Find the note in either the notes collection or the inbox (quick notes may live in inbox only)
+    const note = notes.find(n => n.id === noteId) || inbox.find(n => n.id === noteId);
     
     if (!note) {
-      console.log('[Tab Napper] Note not found in triageHub_notes:', noteId);
+      console.log('[Tab Napper] Note not found in storage:', noteId);
       return;
     }
 
@@ -66,18 +66,7 @@ async function retriageNote(noteId) {
   }
 }
 
-/**
- * Check if a URL is a note tab that should skip standard tab capture
- * @param {string} url - The tab URL
- * @returns {boolean} - True if this is a note tab
- */
-function isNoteTab(url) {
-  try {
-    return url && url.includes('note.html');
-  } catch (e) {
-    return false;
-  }
-}
+// (Removed unused isNoteTab helper)
 
 
 // Track note tabs so we know their URLs when they close
