@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Clock, ExternalLink } from 'lucide-react';
 import { navigateToUrl } from '../utils/navigation.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
@@ -67,8 +67,8 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const debounceRef = React.useRef(null);
-  const mountedRef = React.useRef(false);
+  const debounceRef = useRef(null);
+  const mountedRef = useRef(false);
   
   // Watch for changes in stashed tabs to update history status
   const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
