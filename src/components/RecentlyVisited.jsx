@@ -14,6 +14,8 @@ async function getLightweightRecentHistory(maxItems = 50) {
   }
   
   try {
+    // Fetch up to 5x the requested items to account for filtering out excluded patterns
+    // (e.g., chrome://, file://, etc.) and ensure enough valid items remain after filtering.
     const searchBudget = Math.max(50, maxItems * 5);
     
     const historyItems = await new Promise((resolve, reject) => {
