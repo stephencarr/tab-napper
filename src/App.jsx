@@ -433,6 +433,7 @@ function App() {
       searchTerm={searchTerm}
       onSearchChange={handleSearchChange}
       onSearchClear={handleSearchClear}
+      searchLoading={isSearching}
     >
       {renderContent()}
       {!isSearchMode && <DevConsole isEnabled={true} />}

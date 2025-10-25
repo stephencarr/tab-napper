@@ -8,18 +8,19 @@ import ListItem from './ListItem.jsx';
 /**
  * Lightweight history fetch for RecentlyVisited component
  */
-async function getLightweightRecentHistory(maxResults = 50) {
+async function getLightweightRecentHistory(maxItems = 50) {
   if (typeof chrome === 'undefined' || !chrome.history) {
     console.log('[RecentlyVisited] Chrome history API not available');
     return [];
   }
   
   try {
+    const searchBudget = Math.max(50, maxItems * 5);
     const historyItems = await new Promise((resolve, reject) => {
       chrome.history.search(
         {
           text: '',
-          maxResults: maxResults,
+          maxResults: searchBudget,
           // Removed startTime to get most recent items regardless of date
         },
         (results) => {
@@ -38,7 +39,7 @@ async function getLightweightRecentHistory(maxResults = 50) {
       'data:', 'blob:', 'javascript:'
     ];
     
-    return historyItems
+    const filtered = historyItems
       .filter(item => 
         !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
         item.title && item.title.trim().length > 0
@@ -48,6 +49,9 @@ async function getLightweightRecentHistory(maxResults = 50) {
         id: `history-${item.url}`,
         description: item.url
       }));
+
+    // Ensure we only return up to requested maxItems
+    return filtered.slice(0, Math.max(0, maxItems));
     
   } catch (error) {
     console.error('[RecentlyVisited] Error fetching lightweight history:', error);

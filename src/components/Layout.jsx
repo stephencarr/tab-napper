@@ -20,7 +20,8 @@ export default function Layout({
   setCurrentView,
   searchTerm,
   onSearchChange,
-  onSearchClear
+  onSearchClear,
+  searchLoading
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -130,6 +131,7 @@ export default function Layout({
                 placeholder="Search titles, content, URLs, and all your saved items..."
                 autoFocus={false}
                 variant="compact"
+                isLoading={Boolean(searchLoading)}
               />
             </div>
             <button
