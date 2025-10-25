@@ -130,7 +130,7 @@ function App() {
   // Handle search (stabilized with useCallback to reduce rerenders downstream)
   const handleSearchChange = React.useCallback((value) => {
     setSearchTerm(value);
-  }, []);
+  }, [setSearchTerm]);
 
   const handleSearchClear = React.useCallback(() => {
     setSearchTerm('');
