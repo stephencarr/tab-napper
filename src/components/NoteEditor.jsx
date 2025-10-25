@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Save, FileText, Edit, Eye } from 'lucide-react';
+import { Save, FileText, Edit, Eye, Bold as BoldIcon, Italic as ItalicIcon, Code as CodeIcon, Heading1, Heading2, List as ListIcon, Link as LinkIcon, Smile } from 'lucide-react';
 import { loadAppState, saveAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 import { useDarkMode } from '../hooks/useDarkMode.js';
@@ -15,11 +15,14 @@ export default function NoteEditor({ noteId }) {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('Untitled Note');
   const [loading, setLoading] = useState(true);
-  const [isPreview, setIsPreview] = useState(false);
+  const [isPreview, setIsPreview] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const lastSavedContentRef = useRef('');
   const currentCollectionsRef = useRef({ inInbox: false, inNotes: false });
+  const textareaRef = useRef(null);
 
   // Derive title from first non-empty line
   const generateTitle = (text) => {
@@ -174,12 +177,130 @@ export default function NoteEditor({ noteId }) {
 
       lastSavedContentRef.current = content;
       setLastSavedAt(Date.now());
+  setShowSavedToast(true);
+  setTimeout(() => setShowSavedToast(false), 1200);
       console.log(`[NoteEditor] Saved (${reason})`);
     } catch (err) {
       console.error('[NoteEditor] Save failed:', err);
     } finally {
       setIsSaving(false);
     }
+  }
+
+  // Markdown helpers
+  function wrapSelection(prefix, suffix = prefix) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const before = content.slice(0, start);
+    const selected = content.slice(start, end) || 'text';
+    const after = content.slice(end);
+    const updated = `${before}${prefix}${selected}${suffix}${after}`;
+    setContent(updated);
+    // restore caret inside wrapped text
+    const pos = start + prefix.length + selected.length + suffix.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  function toggleHeading(level = 1) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    // Expand to full lines
+    const lineStart = content.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = content.indexOf('\n', end);
+    const realEnd = lineEnd === -1 ? content.length : lineEnd;
+    const segment = content.slice(lineStart, realEnd);
+    const hash = '#'.repeat(level) + ' ';
+    const updatedSegment = segment
+      .split('\n')
+      .map(line => {
+        const stripped = line.replace(/^#+\s+/, '');
+        return hash + stripped;
+      })
+      .join('\n');
+    const updated = content.slice(0, lineStart) + updatedSegment + content.slice(realEnd);
+    setContent(updated);
+  }
+
+  function makeList() {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const lineStart = content.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = content.indexOf('\n', end);
+    const realEnd = lineEnd === -1 ? content.length : lineEnd;
+    const segment = content.slice(lineStart, realEnd);
+    const updatedSegment = segment
+      .split('\n')
+      .map(line => (line.startsWith('- ') ? line : `- ${line}`))
+      .join('\n');
+    const updated = content.slice(0, lineStart) + updatedSegment + content.slice(realEnd);
+    setContent(updated);
+  }
+
+  function makeLink() {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const selected = content.slice(start, end) || 'link text';
+    const url = typeof window !== 'undefined' ? window.prompt('Enter URL', 'https://') : '';
+    if (url) {
+      wrapSelection(`[`, `](${url})`);
+    } else {
+      wrapSelection('[', '](#)');
+    }
+  }
+
+  // Emoji: minimal shortcode replacement and picker
+  const EMOJI_MAP = {
+    smile: '😄',
+    grin: '😁',
+    joy: '😂',
+    wink: '😉',
+    heart: '❤️',
+    thumbs_up: '👍',
+    thinking: '🤔',
+    clap: '👏',
+    fire: '🔥',
+    star: '⭐',
+    rocket: '🚀',
+    tada: '🎉',
+    writing_hand: '✍️',
+    wave: '👋',
+    eyes: '👀',
+  };
+
+  function replaceShortcodesOnSpace(e) {
+    if (e.key !== ' ') return;
+    const replaced = content.replace(/:([a-z0-9_+\-]+):/gi, (m, name) => EMOJI_MAP[name] || m);
+    if (replaced !== content) {
+      setContent(replaced);
+    }
+  }
+
+  function insertEmoji(emoji) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const before = content.slice(0, start);
+    const after = content.slice(end);
+    const updated = `${before}${emoji}${after}`;
+    setContent(updated);
+    const pos = start + emoji.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+    setShowEmojiPicker(false);
   }
 
   if (loading) {
@@ -213,6 +334,15 @@ export default function NoteEditor({ noteId }) {
               {isPreview ? <Edit className="h-3 w-3 inline mr-1"/> : <Eye className="h-3 w-3 inline mr-1"/>}
               {isPreview ? 'Edit' : 'Preview'}
             </button>
+            <a
+              href="https://www.markdownguide.org/basic-syntax/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-calm-600 dark:text-calm-400 hover:text-calm-800 dark:hover:text-calm-200 px-2 py-1 rounded"
+              title="Markdown help"
+            >
+              Markdown Help
+            </a>
             <button
               onClick={() => doSave('manual')}
               className="calm-button-primary px-3 py-1 text-xs flex items-center space-x-1"
@@ -224,6 +354,36 @@ export default function NoteEditor({ noteId }) {
           </div>
         </div>
       </header>
+
+      {/* Formatting Toolbar (edit mode only) */}
+      {!isPreview && (
+        <div className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-2">
+          <div className="max-w-4xl mx-auto flex items-center space-x-2 text-calm-600 dark:text-calm-400">
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Bold (**)" onClick={() => wrapSelection('**', '**')}><BoldIcon className="h-4 w-4"/></button>
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Italic (*)" onClick={() => wrapSelection('*', '*')}><ItalicIcon className="h-4 w-4"/></button>
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Inline code (`)" onClick={() => wrapSelection('`', '`')}><CodeIcon className="h-4 w-4"/></button>
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Heading 1" onClick={() => toggleHeading(1)}><Heading1 className="h-4 w-4"/></button>
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Heading 2" onClick={() => toggleHeading(2)}><Heading2 className="h-4 w-4"/></button>
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Bulleted list" onClick={makeList}><ListIcon className="h-4 w-4"/></button>
+            <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Link" onClick={makeLink}><LinkIcon className="h-4 w-4"/></button>
+
+            <div className="ml-auto relative">
+              <button className="px-2 py-1 rounded hover:bg-calm-100 dark:hover:bg-calm-700" title="Emoji" onClick={() => setShowEmojiPicker((v) => !v)}>
+                <Smile className="h-4 w-4"/>
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute right-0 mt-2 w-56 p-2 rounded-lg shadow-lg border border-calm-200 dark:border-calm-700 bg-white dark:bg-calm-800 z-50">
+                  <div className="grid grid-cols-8 gap-1 text-lg">
+                    {Object.values(EMOJI_MAP).map((e, idx) => (
+                      <button key={idx} onClick={() => insertEmoji(e)} className="hover:bg-calm-100 dark:hover:bg-calm-700 rounded" title="Insert emoji">{e}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Editor */}
       <main className="max-w-4xl mx-auto px-6 py-6">
@@ -247,8 +407,10 @@ export default function NoteEditor({ noteId }) {
             </div>
           ) : (
             <textarea
+              ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onKeyDown={replaceShortcodesOnSpace}
               placeholder="Start writing…"
               className="w-full min-h-[300px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 dark:text-calm-200 placeholder-calm-400 dark:placeholder-calm-500 bg-white dark:bg-calm-800"
               style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
@@ -256,6 +418,13 @@ export default function NoteEditor({ noteId }) {
           )}
         </div>
       </main>
+
+      {/* Saved toast */}
+      {showSavedToast && (
+        <div className="fixed bottom-4 right-4 px-3 py-2 rounded-md bg-calm-900 text-white dark:bg-calm-700 shadow-lg text-xs">
+          Saved
+        </div>
+      )}
     </div>
   );
 }
