@@ -151,7 +151,7 @@ async function handleStorageChanges(changes, namespace) {
       // This reduces storage I/O from 5 reads to 1-2 reads per change
       if (!globalAppState) {
         // If no state exists yet, load all data
-        console.log('[ReactiveStore] No global state yet, loading all data');
+        debugLog('ReactiveStore', 'No global state yet, loading all data');
         const newState = await loadAllAppData();
         debugSuccess('ReactiveStore', 'Initial state loaded');
         notifyStateChange(newState);
