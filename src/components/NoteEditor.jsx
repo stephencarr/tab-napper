@@ -397,8 +397,12 @@ export default function NoteEditor({ noteId }) {
             </button>
             <button
               onClick={async () => {
-                await doSave('manual');
-                window.close();
+                try {
+                  await doSave('manual');
+                  window.close();
+                } catch (err) {
+                  window.alert('Failed to save note. Please try again.');
+                }
               }}
               className="calm-button-primary px-3 py-1 text-xs flex items-center space-x-1"
               disabled={isSaving}
