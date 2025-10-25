@@ -264,11 +264,31 @@ console.log('[Tab Napper] Background service worker ready - monitoring all tabs 
 
 /**
  * Handle scheduled reminders/follow-ups/reviews
- * When an alarm fires, move the item back to inbox for re-triage
+ * When an alarm fires, move the item back to inbox and show a notification
  */
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
-    console.log('[Tab Napper] Alarm fired:', alarm.name);
+    console.log('[Tab Napper] ⏰ Alarm fired:', alarm.name);
+    
+    // Handle test alarms
+    if (alarm.name === 'test-alarm') {
+      console.log('[Tab Napper] ✅ Test alarm fired successfully!');
+      
+      // Create test notification
+      chrome.notifications.create('test-alarm-notification', {
+        type: 'basic',
+        iconUrl: 'icons/icon128.svg',
+        title: 'Tab Napper Test Alarm',
+        message: 'Test alarm fired successfully! The alarm system is working.',
+        priority: 2,
+        requireInteraction: true,
+        buttons: [
+          { title: 'Great!' },
+          { title: 'Dismiss' }
+        ]
+      });
+      return;
+    }
     
     // Parse alarm name: tabNapper_{action}_{itemId}
     if (!alarm.name.startsWith('tabNapper_')) {
@@ -326,9 +346,76 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     
     console.log('[Tab Napper] ✓ Item re-triaged from scheduled reminder:', item.title);
     
+    // Create a sticky notification
+    const actionLabel = action === 'remind_me' ? 'Reminder' : 
+                       action === 'follow_up' ? 'Follow-up' : 'Review';
+    
+    const notificationOptions = {
+      type: 'basic',
+      iconUrl: 'icons/icon128.svg',
+      title: `Tab Napper ${actionLabel}`,
+      message: item.title || 'Scheduled item ready for review',
+      priority: 2, // High priority
+      requireInteraction: true, // Make it sticky - user must dismiss
+      buttons: [
+        { title: 'Open Tab Napper' },
+        { title: 'Dismiss' }
+      ]
+    };
+    
+    // Create the notification
+    chrome.notifications.create(`reminder-${itemId}`, notificationOptions, (notificationId) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Tab Napper] Error creating notification:', chrome.runtime.lastError);
+      } else {
+        console.log('[Tab Napper] ✓ Notification created:', notificationId);
+      }
+    });
+    
   } catch (error) {
     console.error('[Tab Napper] Error handling alarm:', error);
   }
 });
 
+// Handle notification button clicks
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  console.log('[Tab Napper] Notification button clicked:', notificationId, buttonIndex);
+  
+  if (buttonIndex === 0) {
+    // "Open Tab Napper" button clicked
+    chrome.action.openPopup().catch(() => {
+      // If popup can't be opened, try opening the new tab page
+      chrome.tabs.create({ url: 'chrome://newtab' });
+    });
+  }
+  
+  // Clear the notification
+  chrome.notifications.clear(notificationId);
+});
+
+// Handle notification clicks (clicking the body of the notification)
+chrome.notifications.onClicked.addListener((notificationId) => {
+  console.log('[Tab Napper] Notification clicked:', notificationId);
+  
+  // Open Tab Napper
+  chrome.action.openPopup().catch(() => {
+    chrome.tabs.create({ url: 'chrome://newtab' });
+  });
+  
+  // Clear the notification
+  chrome.notifications.clear(notificationId);
+});
+
 console.log('[Tab Napper] Alarm listener registered for scheduled reminders');
+
+// Debug utility: List all active alarms (useful for troubleshooting)
+chrome.alarms.getAll((alarms) => {
+  if (alarms.length > 0) {
+    console.log('[Tab Napper] Active alarms on startup:', alarms.length);
+    alarms.forEach(alarm => {
+      console.log(`  - ${alarm.name} scheduled for:`, new Date(alarm.scheduledTime));
+    });
+  } else {
+    console.log('[Tab Napper] No active alarms found on startup');
+  }
+});

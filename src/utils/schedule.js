@@ -119,9 +119,22 @@ export async function setScheduledAlarm(item, action, scheduledTime) {
     await chrome.alarms.create(alarmName, {
       delayInMinutes: delayMinutes
     });
-    console.log(`[Schedule] Alarm set: ${alarmName} for ${new Date(scheduledTime).toLocaleString()}`);
+    console.log(`[Schedule] ✅ Alarm set successfully:`);
+    console.log(`  - Name: ${alarmName}`);
+    console.log(`  - Item: ${item.title}`);
+    console.log(`  - Scheduled for: ${new Date(scheduledTime).toLocaleString()}`);
+    console.log(`  - Delay: ${delayMinutes.toFixed(2)} minutes`);
+    
+    // Verify the alarm was created
+    chrome.alarms.get(alarmName, (alarm) => {
+      if (alarm) {
+        console.log(`  - ✅ Verified: Alarm will fire at ${new Date(alarm.scheduledTime).toLocaleString()}`);
+      } else {
+        console.error(`  - ❌ Failed to verify alarm creation`);
+      }
+    });
   } catch (error) {
-    console.error('[Schedule] Error setting alarm:', error);
+    console.error('[Schedule] ❌ Error setting alarm:', error);
   }
 }
 
