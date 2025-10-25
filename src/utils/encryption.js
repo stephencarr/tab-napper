@@ -50,9 +50,14 @@ async function importKey(keyData) {
  */
 async function getOrCreateEncryptionKey() {
   try {
+    // Check if Chrome storage API is available
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.sync) {
+      throw new Error('Chrome storage API not available');
+    }
+
     // Try to get existing key from sync storage
     const result = await chrome.storage.sync.get([ENCRYPTION_KEY_STORAGE_KEY]);
-    
+
     if (result[ENCRYPTION_KEY_STORAGE_KEY]) {
       // Import existing key
       return await importKey(result[ENCRYPTION_KEY_STORAGE_KEY]);
@@ -60,13 +65,13 @@ async function getOrCreateEncryptionKey() {
       // Generate new key
       console.log('[Tab Napper] Generating new encryption key...');
       const newKey = await generateEncryptionKey();
-      
+
       // Export and store in sync storage
       const exportedKey = await exportKey(newKey);
       await chrome.storage.sync.set({
         [ENCRYPTION_KEY_STORAGE_KEY]: exportedKey
       });
-      
+
       console.log('[Tab Napper] Encryption key stored in sync storage');
       return newKey;
     }

@@ -227,6 +227,10 @@ function setupTabCaptureListeners() {
     
     // Track all existing tabs on startup
     chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Tab Napper] Error querying tabs on startup:', chrome.runtime.lastError.message);
+        return;
+      }
       tabs.forEach(tab => trackTab(tab));
       debugLog('Capture', `Tracking ${tabs.length} existing tabs`);
     });
