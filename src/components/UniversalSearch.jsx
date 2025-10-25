@@ -3,7 +3,7 @@ import { Search, X } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
- * Universal Search Bar component for Triage Hub
+ * Universal Search Bar component for Tab Napper
  * Large, horizontal search with auto-focus and ADHD-friendly design
  */
 function UniversalSearch({ 

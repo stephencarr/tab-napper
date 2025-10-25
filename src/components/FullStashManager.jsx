@@ -29,17 +29,17 @@ function FullStashManager({ className, onNavigate }) {
       const categories = new Set(stashedTabs.map(item => item.type).filter(Boolean));
       setCategoryCount(categories.size);
       
-      console.log(`[Triage Hub] Stash stats loaded: ${stashedTabs.length} items, ${categories.size} categories`);
+      console.log(`[Tab Napper] Stash stats loaded: ${stashedTabs.length} items, ${categories.size} categories`);
       
     } catch (error) {
-      console.error('[Triage Hub] Error loading stash stats:', error);
+      console.error('[Tab Napper] Error loading stash stats:', error);
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleClick = () => {
-    console.log('[Triage Hub] 📁 Full Stash Manager clicked');
+    console.log('[Tab Napper] 📁 Full Stash Manager clicked');
     
     // For now, we'll just log the action
     // In a future implementation, this could:
@@ -51,8 +51,8 @@ function FullStashManager({ className, onNavigate }) {
       onNavigate('stash-manager');
     } else {
       // Default behavior: log the intended action
-      console.log('[Triage Hub] Full Stash Manager would open here');
-      console.log('[Triage Hub] Future implementation: Modal or dedicated stash management view');
+      console.log('[Tab Napper] Full Stash Manager would open here');
+      console.log('[Tab Napper] Future implementation: Modal or dedicated stash management view');
     }
   };
 

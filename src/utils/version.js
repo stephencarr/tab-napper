@@ -1,5 +1,5 @@
 /**
- * Version utilities for Triage Hub
+ * Version utilities for Tab Napper
  * Reads version from manifest.json for consistent display
  */
 
@@ -16,7 +16,7 @@ function getExtensionVersion() {
       return '0.2.0';
     }
   } catch (error) {
-    console.warn('[Triage Hub] Could not read manifest version:', error);
+    console.warn('[Tab Napper] Could not read manifest version:', error);
     return '0.2.0';
   }
 }

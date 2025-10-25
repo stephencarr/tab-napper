@@ -121,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Body/summary content gets high relevance weight (8 points)
   - URL domain matching with bonus scoring
   - Enhanced sample data with rich content for testing
-- **Application Rebranding**: Changed name from "Triage Hub" to "Tab Napper"
+- **Application Rebranding**: Changed name from "Tab Napper" to "Tab Napper"
   - Updated manifest.json, UI headers, and documentation
   - Maintained consistent ADHD-friendly design principles
   - Updated search placeholder to reflect enhanced capabilities
@@ -183,7 +183,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Visual status indicators (Blue Square: currently open, Green Pin: previously stashed)
   - Click to navigate/switch tabs functionality
   - Last 7 days of browsing history with visit counts
-- **Triage Hub Shell and Search**
+- **Tab Napper Shell and Search**
   - 60/40 responsive layout (Context/Action columns)
   - Universal search bar with auto-focus and real-time results
   - Search across all data sources with relevance scoring
