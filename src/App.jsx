@@ -350,83 +350,29 @@ function App() {
 
   // Routing logic
   const renderDashboard = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-      <div className="lg:col-span-3 space-y-8">
-        <div className="calm-card p-6">
-          <RecentlyVisited maxItems={50} />
-        </div>
-        <div className="calm-card p-6">
-          <ListContainer
-            title="Triage Inbox"
-            items={appState.inbox}
-            emptyMessage="Your inbox is empty"
-            emptyDescription="Closed tabs and new items will appear here for you to triage and organize."
-            icon={Inbox}
-            onItemClick={(item) => {
-              if (item.isNote || item.type === 'note') {
-                openNoteEditor(item.id);
-              } else if (item.url) {
-                chrome.tabs.create({ url: item.url });
-              }
-            }}
-            onItemAction={handleItemAction}
-            triageButton={
-              <button
-                onClick={() => {
-                  setCurrentView('Inbox');
-                }}
-                className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-calm-600 text-white rounded-md hover:bg-calm-700 transition-colors"
-              >
-                <Inbox className="h-4 w-4" />
-                <span>Triage {appState.inbox.length} Items</span>
-              </button>
-            }
-          />
-        </div>
-        <div className="calm-card p-6">
-          <ListContainer
-            title="Stashed Tabs"
-            items={appState.stashedTabs}
-            emptyMessage="No stashed tabs"
-            emptyDescription="Tabs you've decided to keep for later will be organized here."
-            icon={Archive}
-            onItemClick={(item) => {
-              if (item.isNote || item.type === 'note') {
-                openNoteEditor(item.id);
-              } else if (item.url) {
-                chrome.tabs.create({ url: item.url });
-              }
-            }}
-            onItemAction={handleItemAction}
-          />
-        </div>
+    <div className="space-y-6">
+      {/* Page Heading */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-calm-900 dark:text-calm-100">Dashboard</h1>
       </div>
-      <div className="lg:col-span-2 space-y-8">
-        <div className="calm-card p-6">
-          <QuickNoteCapture onNoteSaved={() => {}} />
+
+      {/* Widgets Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column */}
+        <div className="space-y-6">
+          <div className="calm-card p-6">
+            <QuickNoteCapture onNoteSaved={() => {}} />
+          </div>
+          <div className="calm-card p-6">
+            <RecentlyVisited maxItems={10} />
+          </div>
         </div>
-        <div className="calm-card p-6">
-          <QuickAccessCards maxItems={6} />
-        </div>
-        <div className="calm-card p-6">
-          <SmartSuggestions onSuggestionPinned={() => {}} />
-        </div>
-        <ContextualCardWrapper />
-        <div className="calm-card p-6">
-          <ListContainer
-            title="Trash"
-            items={appState.trash}
-            emptyMessage="Trash is empty"
-            emptyDescription="Deleted items can be recovered from here for a limited time."
-            icon={Trash2}
-            onItemClick={(item) => {
-              if (item.isNote || item.type === 'note') {
-                openNoteEditor(item.id);
-              } else if (item.url) {
-                chrome.tabs.create({ url: item.url });
-              }
-            }}
-          />
+
+        {/* Right column */}
+        <div className="space-y-6">
+          <div className="calm-card p-6">
+            <QuickAccessCards maxItems={6} />
+          </div>
         </div>
       </div>
     </div>

@@ -272,7 +272,7 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       {/* Simple footer */}
       <div className="border-t border-calm-200 dark:border-calm-700 pt-3">
         <div className="flex items-center justify-center text-xs text-calm-500 dark:text-calm-400">
-          <span>Last 50 items</span>
+          <span>Last {maxItems} items</span>
         </div>
       </div>
     </div>
