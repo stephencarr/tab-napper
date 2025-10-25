@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Background service worker to monitor note tab closures
+- Background service worker to monitor note tab closure
   - Automatically re-triages notes to Inbox when note.html tabs are closed
   - Tracks note tabs via URL parsing and maintains tab-to-noteId mapping
   - Completes Ticket 12: Note Tab Re-Triage on Close lifecycle
