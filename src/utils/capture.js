@@ -137,19 +137,55 @@ async function captureClosedTab(tabInfo) {
     debugLog('Capture', `🎯 STARTING TAB CAPTURE: ${tabInfo.title}`);
     debugLog('Capture', `📍 URL: ${tabInfo.url}`);
     
-    // Step 1: Check for duplicates in stashed tabs
-    const duplicate = await findDuplicateInStashed(tabInfo.url);
+    // Step 1: Simple gateway deduplication - check ALL collections
+    const normalizedUrl = normalizeUrl(tabInfo.url);
+    debugLog('Capture', `🔍 Checking for duplicates of: ${normalizedUrl}`);
     
-    if (duplicate) {
-      debugLog('Capture', `🔄 DUPLICATE FOUND in stashed tabs: ${duplicate.title}`);
-      await removeDuplicateFromStashed(duplicate);
-      debugSuccess('Capture', '✅ DEDUPLICATION COMPLETE - Old version removed');
-    } else {
-      debugLog('Capture', 'ℹ️  No duplicates found in stashed tabs');
+    // Load all collections
+    const [triageInbox, stashedTabs, trash] = await Promise.all([
+      loadAppState('triageHub_inbox', []),
+      loadAppState('triageHub_stashedTabs', []),
+      loadAppState('triageHub_trash', [])
+    ]);
+    
+    let removedFrom = [];
+    
+    // Check and remove from triage inbox
+    const inboxDuplicates = triageInbox.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
+    if (inboxDuplicates.length > 0) {
+      const cleanedInbox = triageInbox.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      await saveAppState('triageHub_inbox', cleanedInbox);
+      removedFrom.push(`inbox (${inboxDuplicates.length})`);
+      debugLog('Capture', `�️ Removed ${inboxDuplicates.length} duplicates from inbox`);
     }
     
-    // Step 2: Add to triage inbox
-    debugLog('Capture', '📥 Adding to triage inbox...');
+    // Check and remove from stashed tabs
+    const stashedDuplicates = stashedTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
+    if (stashedDuplicates.length > 0) {
+      const cleanedStashed = stashedTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      await saveAppState('triageHub_stashedTabs', cleanedStashed);
+      removedFrom.push(`stashed (${stashedDuplicates.length})`);
+      debugLog('Capture', `🗑️ Removed ${stashedDuplicates.length} duplicates from stashed tabs`);
+    }
+    
+    // Check and remove from trash (optional - might want to keep trash separate)
+    const trashDuplicates = trash.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
+    if (trashDuplicates.length > 0) {
+      const cleanedTrash = trash.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      await saveAppState('triageHub_trash', cleanedTrash);
+      removedFrom.push(`trash (${trashDuplicates.length})`);
+      debugLog('Capture', `🗑️ Removed ${trashDuplicates.length} duplicates from trash`);
+    }
+    
+    // Log deduplication summary
+    if (removedFrom.length > 0) {
+      debugSuccess('Capture', `✅ DEDUPLICATION: Removed old entries from ${removedFrom.join(', ')}`);
+    } else {
+      debugLog('Capture', 'ℹ️ No duplicates found - this is a new URL');
+    }
+    
+    // Step 2: Add fresh entry to triage inbox
+    debugLog('Capture', '📥 Adding fresh entry to triage inbox...');
     const inboxItem = await addToTriageInbox({
       title: tabInfo.title,
       description: `Captured from ${new URL(tabInfo.url).hostname}`,
@@ -158,13 +194,8 @@ async function captureClosedTab(tabInfo) {
       type: 'captured-tab'
     });
     
-    debugSuccess('Capture', `✅ TAB CAPTURE COMPLETE - New inbox item: ${inboxItem.id}`);
-    
-    if (duplicate) {
-      debugLog('Capture', '📊 SUMMARY: Removed 1 duplicate, added 1 new item');
-    } else {
-      debugLog('Capture', '📊 SUMMARY: No duplicates found, added 1 new item');
-    }
+    debugSuccess('Capture', `✅ TAB CAPTURE COMPLETE - Fresh entry: ${inboxItem.id}`);
+    debugLog('Capture', `📊 SUMMARY: Removed duplicates from [${removedFrom.join(', ')}], added 1 fresh entry`);
     
     return inboxItem;
     
