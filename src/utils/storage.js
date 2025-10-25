@@ -197,21 +197,24 @@ async function loadAllAppData() {
   ]);
   
   // Deduplicate arrays (especially trash which can accumulate duplicates)
+  const originalInboxLength = Array.isArray(inbox) ? inbox.length : undefined;
+  const originalStashedLength = Array.isArray(stashedTabs) ? stashedTabs.length : undefined;
+  const originalTrashLength = Array.isArray(trash) ? trash.length : undefined;
   const deduplicatedInbox = deduplicateById(inbox || []);
   const deduplicatedStashed = deduplicateById(stashedTabs || []);
   const deduplicatedTrash = deduplicateById(trash || []);
   
   // If we removed duplicates, save the cleaned data back to storage
-  if (deduplicatedInbox.length !== (inbox || []).length) {
-    console.log('[Storage] Deduplicating inbox:', (inbox || []).length, '→', deduplicatedInbox.length);
+  if (deduplicatedInbox.length !== originalInboxLength) {
+    console.log('[Storage] Deduplicating inbox:', originalInboxLength, '→', deduplicatedInbox.length);
     await saveAppState('triageHub_inbox', deduplicatedInbox);
   }
-  if (deduplicatedStashed.length !== (stashedTabs || []).length) {
-    console.log('[Storage] Deduplicating stashed:', (stashedTabs || []).length, '→', deduplicatedStashed.length);
+  if (deduplicatedStashed.length !== originalStashedLength) {
+    console.log('[Storage] Deduplicating stashed:', originalStashedLength, '→', deduplicatedStashed.length);
     await saveAppState('triageHub_stashedTabs', deduplicatedStashed);
   }
-  if (deduplicatedTrash.length !== (trash || []).length) {
-    console.log('[Storage] Deduplicating trash:', (trash || []).length, '→', deduplicatedTrash.length);
+  if (deduplicatedTrash.length !== originalTrashLength) {
+    console.log('[Storage] Deduplicating trash:', originalTrashLength, '→', deduplicatedTrash.length);
     await saveAppState('triageHub_trash', deduplicatedTrash);
   }
   
