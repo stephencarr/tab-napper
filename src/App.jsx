@@ -52,20 +52,11 @@ function App() {
   useEffect(() => {
     async function initializeApp() {
       try {
-        console.log('[Tab Napper] Initializing application...');
-        
         // Initialize E2EE key (will create if doesn't exist)
         await getOrCreateEncryptionKey();
-        console.log('[Tab Napper] Encryption key ready');
         
         // Initialize reactive store and load data
         const data = await initializeReactiveStore();
-        console.log('[Tab Napper] Reactive store initialized with', {
-          inbox: data.inbox?.length ?? 'undefined',
-          stashedTabs: data.stashedTabs?.length ?? 'undefined',
-          trash: data.trash?.length ?? 'undefined',
-          quickAccessCards: data.quickAccessCards?.length ?? 'undefined'
-        });
 
         // Set up tab capture listeners
         setupTabCaptureListeners();
@@ -138,8 +129,6 @@ function App() {
 
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
-    console.log('[Tab Napper] Search result clicked:', item);
-
     // Notes: open in internal editor
     if (item.isNote || item.type === 'note') {
       openNoteEditor(item.id);
@@ -153,13 +142,10 @@ function App() {
           console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
         }
       });
-    } else {
-      console.log('[Tab Napper] Item has no URL to open:', item);
     }
   };
 
   const handleTriageInbox = () => {
-    console.log('[Tab Napper] Navigating to inbox triage view...');
     setCurrentView('stash-manager');
     setStashManagerFilter('inbox');
   };
@@ -171,12 +157,10 @@ function App() {
   // Handle FidgetControl actions
   const handleItemAction = async (action, item) => {
     try {
-      console.log('[Tab Napper] FidgetControl action:', action, 'for item:', item);
       
       switch (action) {
         case 'restore':
           // Restore item from trash back to inbox using the proper capture API
-          console.log('[Tab Napper] Restoring item from trash:', item.title);
           
           // Step 1: Remove from trash
           const currentTrash = await loadAppState('triageHub_trash', []);
@@ -193,36 +177,20 @@ function App() {
           await addToTriageInbox(restoredItem);
           
           // Chrome storage listener will automatically update the reactive store
-          console.log('[Tab Napper] Item restored to inbox:', item.title);
           break;
           
         case 'delete':
           // Move item to trash
-          console.log('[Tab Napper] ===== DELETE ACTION =====');
-          console.log('[Tab Napper] Deleting item:', {
-            id: item.id,
-            title: item.title,
-            url: item.url
-          });
           
           const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
           const currentStashed = await loadAppState('triageHub_stashedTabs', []);
           const currentTrashForDelete = await loadAppState('triageHub_trash', []);
           
-          console.log('[Tab Napper] Current state before delete:', {
-            inboxCount: currentInboxForDelete.length,
-            stashedCount: currentStashed.length,
-            trashCount: currentTrashForDelete.length
-          });
           
           // Remove from inbox or stashed
           const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
           const updatedStashed = currentStashed.filter(i => i.id !== item.id);
           
-          console.log('[Tab Napper] After filtering:', {
-            inboxRemoved: currentInboxForDelete.length - updatedInboxForDelete.length,
-            stashedRemoved: currentStashed.length - updatedStashed.length
-          });
           
           // Add to trash with deletion timestamp
           const trashedItem = {
@@ -232,21 +200,12 @@ function App() {
           };
           const updatedTrashForDelete = [...currentTrashForDelete, trashedItem];
           
-          console.log('[Tab Napper] New trash count:', updatedTrashForDelete.length);
-          console.log('[Tab Napper] Trashed item:', {
-            id: trashedItem.id,
-            title: trashedItem.title,
-            deletedAt: trashedItem.deletedAt,
-            originalLocation: trashedItem.originalLocation
-          });
           
           // Update storage
           await saveAppState('triageHub_inbox', updatedInboxForDelete);
           await saveAppState('triageHub_stashedTabs', updatedStashed);
           await saveAppState('triageHub_trash', updatedTrashForDelete);
           
-          console.log('[Tab Napper] Storage updated');
-          console.log('[Tab Napper] ===== END DELETE ACTION =====');
           break;
           
         case 'remind':
@@ -254,7 +213,6 @@ function App() {
         case 'review':
           // For now, just log the scheduled action
           // TODO: Implement reminder/scheduling system
-          console.log('[Tab Napper] Scheduled action:', action, 'for item:', item.title);
           break;
           
         default:
@@ -280,12 +238,9 @@ function App() {
       const testUrl = testUrls[urlIndex];
       const testTitle = `Test Tab ${urlIndex + 1} - ${new Date().toLocaleTimeString()}`;
       
-      console.log(`[Tab Napper] Simulating capture of: ${testUrl}`);
-
       const capturedItem = await simulateTabCapture(testUrl, testTitle);
 
       // Chrome storage listener will automatically update the reactive store
-      console.log(`[Tab Napper] Captured: ${capturedItem.title}`);
 
     } catch (err) {
       console.error('[Tab Napper] Error simulating capture:', err);
@@ -296,7 +251,6 @@ function App() {
   const handleGenerateTestHistory = async () => {
     try {
       await generateTestBrowsingHistory();
-      console.log('[Tab Napper] Test browsing history generated!');
     } catch (error) {
       console.error('[Tab Napper] Error generating test history:', error);
     }
@@ -336,8 +290,6 @@ function App() {
       await saveAppState('triageHub_stashedTabs', testStashedItems);
       
       // Chrome storage listener will automatically update the reactive store
-      console.log('[Tab Napper] Added test items to stashed tabs for deduplication testing');
-      console.log('Now click "Simulate Tab Capture" to see deduplication in action!');
 
     } catch (err) {
       console.error('[Tab Napper] Error setting up dedupe test:', err);
@@ -416,14 +368,6 @@ function App() {
     
     // Handler for tab changes within StashManagerView
     const handleTabChange = (tabId) => {
-      console.log('[App] ===== TAB CHANGE =====');
-      console.log('[App] Tab clicked:', tabId);
-      console.log('[App] Current view before change:', currentView);
-      console.log('[App] Current appState:', {
-        inbox: appState?.inbox?.length,
-        stashedTabs: appState?.stashedTabs?.length,
-        trash: appState?.trash?.length
-      });
       
       // Map tab IDs to view names
       const tabToViewMap = {
@@ -433,10 +377,8 @@ function App() {
       };
       const newView = tabToViewMap[tabId];
       if (newView) {
-        console.log('[App] Setting currentView to:', newView);
         setCurrentView(newView);
       }
-      console.log('[App] ===== END TAB CHANGE =====');
     };
     
     switch (currentView) {

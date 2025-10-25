@@ -111,10 +111,6 @@ export async function initializeReactiveStore() {
  */
 async function handleStorageChanges(changes, namespace) {
   try {
-    debugLog('ReactiveStore', '===== STORAGE CHANGE DETECTED =====');
-    debugLog('ReactiveStore', 'Namespace:', namespace);
-    debugLog('ReactiveStore', 'Changed keys:', Object.keys(changes));
-    
     debugLog('ReactiveStore', `Storage changes detected in ${namespace}:`, Object.keys(changes));
 
     // All app-related storage keys that should trigger state updates
@@ -142,8 +138,6 @@ async function handleStorageChanges(changes, namespace) {
       appDataKeys.includes(key) || key.startsWith('triageHub_') || key.startsWith('tabNapper_')
     );
 
-    debugLog('ReactiveStore', 'Relevant changes:', relevantChanges);
-
     if (relevantChanges.length > 0) {
       debugLog('ReactiveStore', 'Relevant app data changes detected:', relevantChanges);
 
@@ -151,7 +145,6 @@ async function handleStorageChanges(changes, namespace) {
       // This reduces storage I/O from 5 reads to 1-2 reads per change
       if (!globalAppState) {
         // If no state exists yet, load all data
-        debugLog('ReactiveStore', 'No global state yet, loading all data');
         const newState = await loadAllAppData();
         debugSuccess('ReactiveStore', 'Initial state loaded');
         notifyStateChange(newState);
@@ -170,13 +163,6 @@ async function handleStorageChanges(changes, namespace) {
           const newValue = changeData.newValue;
           const oldValue = changeData.oldValue;
 
-          console.log(`[ReactiveStore] Updating ${stateKey}:`, {
-            oldLength: Array.isArray(oldValue) ? oldValue?.length : 'N/A',
-            newLength: Array.isArray(newValue) ? newValue?.length : 'N/A',
-            oldSample: Array.isArray(oldValue) ? oldValue?.[0]?.title : 'N/A',
-            newSample: Array.isArray(newValue) ? newValue?.[0]?.title : 'N/A'
-          });
-
           // When storage key is deleted (newValue === undefined), we set defaults
           // instead of deleting the state property. This prevents component crashes
           // as React components expect these properties to always exist.
@@ -193,19 +179,12 @@ async function handleStorageChanges(changes, namespace) {
       }
 
       if (hasChanges) {
-        console.log('[ReactiveStore] Notifying state change with:', {
-          inbox: updatedState.inbox?.length,
-          stashedTabs: updatedState.stashedTabs?.length,
-          trash: updatedState.trash?.length
-        });
         debugSuccess('ReactiveStore', 'State updated with granular changes:', relevantChanges);
         notifyStateChange(updatedState);
       }
     } else {
-      console.log('[ReactiveStore] No relevant changes, skipping');
       debugLog('ReactiveStore', 'No relevant changes detected, skipping state refresh');
     }
-    console.log('[ReactiveStore] ===== END STORAGE CHANGE =====');
   } catch (error) {
     console.error('[Reactive Store] Error handling storage changes:', error);
   }

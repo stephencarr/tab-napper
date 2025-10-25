@@ -9,7 +9,6 @@ import StashCard from './StashCard.jsx';
  * Tab options: All Stashed, Inbox, Trash
  */
 function StashManagerView({ 
-  onNavigateBack, 
   initialFilter = 'stashed',
   inboxData = [],
   stashedTabs = [],
@@ -20,20 +19,9 @@ function StashManagerView({
   // Tab state - derived from initialFilter prop
   const activeTab = initialFilter;
   
-  console.log('[StashManagerView] Rendering with:', {
-    activeTab,
-    inboxLength: inboxData?.length,
-    stashedLength: stashedTabs?.length,
-    trashLength: trashData?.length,
-    inboxSample: inboxData?.[0]?.title,
-    stashedSample: stashedTabs?.[0]?.title,
-    trashSample: trashData?.[0]?.title
-  });
 
   // Get current tab data
   const getCurrentData = () => {
-    console.log('[StashManagerView] getCurrentData() called for tab:', activeTab);
-    
     // Helper to sort items by timestamp (newest first)
     const sortByTimestamp = (items) => {
       return [...items].sort((a, b) => {
@@ -45,7 +33,6 @@ function StashManagerView({
     
     switch (activeTab) {
       case 'inbox':
-        console.log('[StashManagerView] Returning inbox data:', inboxData?.length, 'items');
         return {
           items: sortByTimestamp(inboxData || []),
           title: 'Inbox',
@@ -54,7 +41,6 @@ function StashManagerView({
           emptyDescription: 'Closed tabs and new items will appear here for you to triage and organize.'
         };
       case 'trash':
-        console.log('[StashManagerView] Returning trash data:', trashData?.length, 'items');
         return {
           items: sortByTimestamp(trashData || []),
           title: 'Trash',
@@ -64,7 +50,6 @@ function StashManagerView({
         };
       case 'stashed':
       default:
-        console.log('[StashManagerView] Returning stashed data:', stashedTabs?.length, 'items');
         return {
           items: sortByTimestamp(stashedTabs || []),
           title: 'All Stashed',
@@ -83,7 +68,6 @@ function StashManagerView({
   };
 
   const handleItemClick = (item) => {
-    console.log(`[Tab Napper] ${activeTab} item clicked:`, item);
     // TODO: Implement item interaction (navigate, edit, move between lists, etc.)
   };
 
@@ -181,12 +165,6 @@ function StashManagerView({
               {currentData.items.map((item, index) => {
                 // Use a stable key based on id or url; deduplication is handled in storage
                 const itemKey = `${activeTab}-${item.id || item.url}`;
-                console.log(`[StashManagerView] Rendering item ${index} in ${activeTab}:`, {
-                  key: itemKey,
-                  title: item.title,
-                  id: item.id,
-                  url: item.url
-                });
                 return (
                   <li key={itemKey} className="py-4">
                     <StashCard
