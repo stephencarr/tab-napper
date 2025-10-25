@@ -128,24 +128,27 @@ function StashManagerView({
         ) : (
           /* Items List */
           <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-medium text-calm-800 dark:text-calm-200">{currentData.title}</h2>
-              <div className="flex items-center space-x-2 text-sm text-calm-500 dark:text-calm-400">
-                <span>Sorted by date added</span>
+            <div className="sm:flex sm:items-center mb-6">
+              <div className="sm:flex-auto">
+                <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">{currentData.title}</h2>
+                <p className="mt-1 text-sm text-calm-500 dark:text-calm-400">
+                  Sorted by date added
+                </p>
               </div>
             </div>
             
-            <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+            <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700 max-h-[70vh] overflow-y-auto">
               {currentData.items.map((item, index) => (
-                <StashCard
-                  key={item.id || item.url || index}
-                  item={item}
-                  onItemClick={() => handleItemClick(item)}
-                  onItemAction={onItemAction}
-                  showFidgetControls={true}
-                />
+                <li key={item.id || item.url || index} className="-mx-2 px-2">
+                  <StashCard
+                    item={item}
+                    onItemClick={() => handleItemClick(item)}
+                    onItemAction={onItemAction}
+                    showFidgetControls={true}
+                  />
+                </li>
               ))}
-            </div>
+            </ul>
             
             {currentData.items.length > 10 && (
               <div className="mt-6 text-center text-sm text-calm-500 dark:text-calm-400">
