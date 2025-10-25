@@ -9,13 +9,17 @@ import ListItem from './ListItem.jsx';
  * Lightweight history fetch for RecentlyVisited component
  */
 async function getLightweightRecentHistory(maxItems = 50) {
+  console.log('[getLightweightRecentHistory] Called with maxItems:', maxItems);
+  
   if (typeof chrome === 'undefined' || !chrome.history) {
-    console.log('[RecentlyVisited] Chrome history API not available');
+    console.log('[getLightweightRecentHistory] Chrome history API not available');
     return [];
   }
   
   try {
     const searchBudget = Math.max(50, maxItems * 5);
+    console.log('[getLightweightRecentHistory] Searching with budget:', searchBudget);
+    
     const historyItems = await new Promise((resolve, reject) => {
       chrome.history.search(
         {
@@ -25,8 +29,10 @@ async function getLightweightRecentHistory(maxItems = 50) {
         },
         (results) => {
           if (chrome.runtime.lastError) {
+            console.error('[getLightweightRecentHistory] Chrome error:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
           } else {
+            console.log('[getLightweightRecentHistory] Raw results:', results?.length);
             resolve(results);
           }
         }
@@ -50,11 +56,15 @@ async function getLightweightRecentHistory(maxItems = 50) {
         description: item.url
       }));
 
+    console.log('[getLightweightRecentHistory] Filtered to:', filtered.length, 'items');
+    
     // Ensure we only return up to requested maxItems
-    return filtered.slice(0, Math.max(0, maxItems));
+    const sliced = filtered.slice(0, Math.max(0, maxItems));
+    console.log('[getLightweightRecentHistory] Returning:', sliced.length, 'items');
+    return sliced;
     
   } catch (error) {
-    console.error('[RecentlyVisited] Error fetching lightweight history:', error);
+    console.error('[getLightweightRecentHistory] Error fetching lightweight history:', error);
     return [];
   }
 }
@@ -83,31 +93,49 @@ function RecentlyVisited({ className, maxItems = 50 }) {
 
   // Load history on component mount and when stashed tabs change
   useEffect(() => {
+    console.log('[RecentlyVisited] Effect triggered - maxItems:', maxItems, 'stashedTabs:', stashedTabs?.length);
     // Debounce rapid triggers so we don't hammer chrome.history.search
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
     debounceRef.current = setTimeout(() => {
+      console.log('[RecentlyVisited] Debounce expired, calling loadHistory');
       loadHistory();
     }, 400);
   }, [maxItems, stashedTabs]); // Add stashedTabs as dependency
 
   const loadHistory = async () => {
+    console.log('[RecentlyVisited] loadHistory called, mountedRef:', mountedRef.current);
     try {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        console.log('[RecentlyVisited] Not mounted, bailing out');
+        return;
+      }
+      console.log('[RecentlyVisited] Setting loading state...');
       setIsLoading(true);
       setError(null);
       
+      console.log('[RecentlyVisited] Fetching history with maxItems:', maxItems);
       const items = await getLightweightRecentHistory(maxItems);
-      if (!mountedRef.current) return;
+      console.log('[RecentlyVisited] Fetched items:', items.length);
+      
+      if (!mountedRef.current) {
+        console.log('[RecentlyVisited] Component unmounted during fetch, bailing');
+        return;
+      }
+      console.log('[RecentlyVisited] Setting history items...');
       setHistoryItems(items);
       
     } catch (err) {
-      console.error('[Tab Napper] Error loading history:', err);
+      console.error('[RecentlyVisited] Error loading history:', err);
       if (!mountedRef.current) return;
       setError('Failed to load browsing history');
     } finally {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        console.log('[RecentlyVisited] Component unmounted in finally, not updating loading state');
+        return;
+      }
+      console.log('[RecentlyVisited] Setting loading to false');
       setIsLoading(false);
     }
   };
