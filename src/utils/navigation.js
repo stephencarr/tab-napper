@@ -90,6 +90,23 @@ function normalizeUrl(url) {
 }
 
 /**
+ * Open a note editor tab at chrome-extension://<id>/note.html?id=<noteId>
+ * Reuses navigateToUrl for tab reuse behavior.
+ */
+async function openNoteEditor(noteId) {
+  try {
+    const base = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL
+      ? chrome.runtime.getURL('note.html')
+      : `${window.location.origin}/note.html`;
+    const url = `${base}?id=${encodeURIComponent(noteId)}`;
+    return await navigateToUrl(url);
+  } catch (err) {
+    console.error('[Tab Napper] Error opening note editor:', err);
+    return await navigateToUrl(`note.html?id=${encodeURIComponent(noteId)}`);
+  }
+}
+
+/**
  * Close a tab by ID
  */
 async function closeTab(tabId) {
@@ -143,5 +160,6 @@ export {
   findOpenTab,
   closeTab,
   getCurrentTab,
-  normalizeUrl
+  normalizeUrl,
+  openNoteEditor
 };

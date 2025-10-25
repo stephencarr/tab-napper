@@ -7,6 +7,7 @@ import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
+import { openNoteEditor } from './utils/navigation.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
@@ -152,6 +153,12 @@ function App() {
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
     console.log('[Tab Napper] Search result clicked:', item);
+
+    // Notes: open in internal editor
+    if (item.isNote || item.type === 'note') {
+      openNoteEditor(item.id);
+      return;
+    }
 
     // If item has a URL, open it in a new tab
     if (item.url) {
@@ -434,7 +441,13 @@ function App() {
                   emptyMessage="Your inbox is empty"
                   emptyDescription="Closed tabs and new items will appear here for you to triage and organize."
                   icon={Inbox}
-                  onItemClick={(item) => console.log('Inbox item clicked:', item)}
+                  onItemClick={(item) => {
+                    if (item.isNote || item.type === 'note') {
+                      openNoteEditor(item.id);
+                    } else if (item.url) {
+                      chrome.tabs.create({ url: item.url });
+                    }
+                  }}
                   onItemAction={handleItemAction}
                   triageButton={
                     <button
@@ -456,7 +469,13 @@ function App() {
                   emptyMessage="No stashed tabs"
                   emptyDescription="Tabs you've decided to keep for later will be organized here."
                   icon={Archive}
-                  onItemClick={(item) => console.log('Stashed tab clicked:', item)}
+                  onItemClick={(item) => {
+                    if (item.isNote || item.type === 'note') {
+                      openNoteEditor(item.id);
+                    } else if (item.url) {
+                      chrome.tabs.create({ url: item.url });
+                    }
+                  }}
                   onItemAction={handleItemAction}
                 />
               </div>
@@ -510,7 +529,13 @@ function App() {
                   emptyMessage="Trash is empty"
                   emptyDescription="Deleted items can be recovered from here for a limited time."
                   icon={Trash2}
-                  onItemClick={(item) => console.log('Trash item clicked:', item)}
+                  onItemClick={(item) => {
+                    if (item.isNote || item.type === 'note') {
+                      openNoteEditor(item.id);
+                    } else if (item.url) {
+                      chrome.tabs.create({ url: item.url });
+                    }
+                  }}
                 />
               </div>
             </div>
