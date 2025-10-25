@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Terminal, Database, Bell, Clock, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import {
@@ -250,7 +250,7 @@ function AlarmsTab({ addLog }) {
     });
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadAlarms();
   }, []);
 
