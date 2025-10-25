@@ -111,9 +111,9 @@ export async function initializeReactiveStore() {
  */
 async function handleStorageChanges(changes, namespace) {
   try {
-    console.log('[ReactiveStore] ===== STORAGE CHANGE DETECTED =====');
-    console.log('[ReactiveStore] Namespace:', namespace);
-    console.log('[ReactiveStore] Changed keys:', Object.keys(changes));
+    debugLog('ReactiveStore', '===== STORAGE CHANGE DETECTED =====');
+    debugLog('ReactiveStore', 'Namespace:', namespace);
+    debugLog('ReactiveStore', 'Changed keys:', Object.keys(changes));
     
     debugLog('ReactiveStore', `Storage changes detected in ${namespace}:`, Object.keys(changes));
 
