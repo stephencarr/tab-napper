@@ -142,7 +142,7 @@ async function handleStorageChanges(changes, namespace) {
       appDataKeys.includes(key) || key.startsWith('triageHub_') || key.startsWith('tabNapper_')
     );
 
-    console.log('[ReactiveStore] Relevant changes:', relevantChanges);
+    debugLog('ReactiveStore', 'Relevant changes:', relevantChanges);
 
     if (relevantChanges.length > 0) {
       debugLog('ReactiveStore', 'Relevant app data changes detected:', relevantChanges);
