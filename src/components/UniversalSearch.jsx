@@ -81,7 +81,7 @@ function UniversalSearch({
           {/* Optional inside shimmer sweep (non-intrusive) */}
           {shimmer && (
             <div className="absolute inset-0 rounded-full pointer-events-none overflow-hidden" aria-hidden="true">
-              <div className="absolute inset-0 -translate-x-full bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)] animate-[shimmer-sweep_1.2s_linear_1] rounded-full" />
+              <div className="absolute inset-0 -translate-x-full bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)] dark:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] animate-[shimmer-sweep_1.2s_linear_1] rounded-full" />
             </div>
           )}
           {/* Search Icon */}
