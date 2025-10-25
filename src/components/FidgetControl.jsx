@@ -129,7 +129,7 @@ function FidgetControl({ item, onAction, className }) {
                 ? deleteConfirmation
                   ? "bg-red-600 text-white shadow-lg ring-2 ring-red-300 animate-pulse"
                   : "bg-red-500 text-white hover:bg-red-600"
-                : "bg-blue-100 text-blue-800 hover:bg-blue-200 hover:shadow-md"
+                : "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:hover:bg-blue-900/80"
             )}
             title="Click to cycle through actions"
           >
@@ -143,7 +143,7 @@ function FidgetControl({ item, onAction, className }) {
                 setDeleteConfirmation(false);
                 setActionState('Remind Me');
               }}
-              className="w-8 h-8 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800 transition-all duration-200 text-xs flex items-center justify-center"
+              className="w-8 h-8 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white transition-all duration-200 text-xs flex items-center justify-center"
               title="Cancel delete"
             >
               ✕
@@ -156,7 +156,7 @@ function FidgetControl({ item, onAction, className }) {
           onClick={actionState === 'DELETE NOW' && deleteConfirmation ? undefined : cycleWhen}
           className={cn(
             "py-2 px-3 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 select-none text-center min-w-[120px]",
-            "bg-purple-100 text-purple-800 hover:bg-purple-200 hover:shadow-md",
+            "bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80",
             actionState === 'DELETE NOW' && deleteConfirmation && "opacity-50 cursor-not-allowed"
           )}
           title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Cancel delete first' : 'Click to cycle through timing options'}
@@ -168,7 +168,7 @@ function FidgetControl({ item, onAction, className }) {
         {/* Execute Button - uniform height */}
         <button
           onClick={handleExecute}
-          className="w-8 h-8 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md transition-all duration-200 flex items-center justify-center"
+          className="w-8 h-8 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-200 dark:hover:bg-green-900/80 transition-all duration-200 flex items-center justify-center"
           title={actionState === 'DELETE NOW' && deleteConfirmation ? 'Confirm deletion' : 'Execute action'}
         >
           <ChevronRight size={14} />
@@ -176,7 +176,7 @@ function FidgetControl({ item, onAction, className }) {
       </div>
 
       {/* Zone 3: Commitment - Date and Time Preview (subtle & confirmatory) */}
-      <div className="text-xs text-gray-500 leading-relaxed">
+      <div className="text-xs text-gray-500 dark:text-calm-400 leading-relaxed">
         {getPreviewText()}
       </div>
     </div>

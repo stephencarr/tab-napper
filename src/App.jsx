@@ -312,11 +312,11 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-calm-50 flex items-center justify-center">
+      <div className="min-h-screen bg-calm-50 dark:bg-calm-900 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-calm-600 mx-auto mb-4" />
-          <p className="text-calm-600 text-lg">Initializing Tab Napper...</p>
-          <p className="text-calm-400 text-sm mt-2">Setting up encryption and loading your data</p>
+          <Loader2 className="h-8 w-8 animate-spin text-calm-600 dark:text-calm-400 mx-auto mb-4" />
+          <p className="text-calm-600 dark:text-calm-300 text-lg">Initializing Tab Napper...</p>
+          <p className="text-calm-400 dark:text-calm-500 text-sm mt-2">Setting up encryption and loading your data</p>
         </div>
       </div>
     );
@@ -324,11 +324,11 @@ function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-calm-50 flex items-center justify-center">
+      <div className="min-h-screen bg-calm-50 dark:bg-calm-900 flex items-center justify-center">
         <div className="calm-card p-8 max-w-md">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-center mb-4">Initialization Error</h1>
-          <p className="text-calm-600 text-center mb-6">{error}</p>
+          <h1 className="text-xl font-semibold text-center mb-4 text-calm-800 dark:text-calm-200">Initialization Error</h1>
+          <p className="text-calm-600 dark:text-calm-300 text-center mb-6">{error}</p>
           <button 
             onClick={() => window.location.reload()}
             className="calm-button-primary w-full px-4 py-2"

@@ -58,12 +58,12 @@ function SearchResults({
   // Get type color for visual hierarchy
   const getTypeColor = (type) => {
     switch (type) {
-      case 'inbox': return 'text-blue-600 bg-blue-50';
-      case 'stashedTabs': return 'text-green-600 bg-green-50';
-      case 'quickAccessCards': return 'text-purple-600 bg-purple-50';
-      case 'recentHistory': return 'text-gray-600 bg-gray-50';
-      case 'trash': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'inbox': return 'text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/40';
+      case 'stashedTabs': return 'text-green-600 bg-green-50 dark:text-green-300 dark:bg-green-900/40';
+      case 'quickAccessCards': return 'text-purple-600 bg-purple-50 dark:text-purple-300 dark:bg-purple-900/40';
+      case 'recentHistory': return 'text-gray-600 bg-gray-50 dark:text-gray-300 dark:bg-gray-800/40';
+      case 'trash': return 'text-red-600 bg-red-50 dark:text-red-300 dark:bg-red-900/40';
+      default: return 'text-gray-600 bg-gray-50 dark:text-gray-300 dark:bg-gray-800/40';
     }
   };
 
@@ -76,7 +76,7 @@ function SearchResults({
     
     return parts.map((part, index) => 
       regex.test(part) ? (
-        <mark key={index} className="bg-yellow-200 text-yellow-900 px-1 rounded">
+        <mark key={index} className="bg-yellow-200 text-yellow-900 dark:bg-yellow-700 dark:text-yellow-100 px-1 rounded">
           {part}
         </mark>
       ) : part
@@ -87,8 +87,8 @@ function SearchResults({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <Search className="h-8 w-8 animate-pulse text-calm-400 mx-auto mb-2" />
-          <p className="text-calm-600">Searching...</p>
+          <Search className="h-8 w-8 animate-pulse text-calm-400 dark:text-calm-500 mx-auto mb-2" />
+          <p className="text-calm-600 dark:text-calm-300">Searching...</p>
         </div>
       </div>
     );
@@ -97,9 +97,9 @@ function SearchResults({
   if (!searchTerm) {
     return (
       <div className="text-center py-12">
-        <Search className="h-12 w-12 text-calm-300 mx-auto mb-4" />
-        <p className="text-calm-500 text-lg mb-2">Start typing to search</p>
-        <p className="text-calm-400 text-sm max-w-md mx-auto">
+        <Search className="h-12 w-12 text-calm-300 dark:text-calm-600 mx-auto mb-4" />
+        <p className="text-calm-500 dark:text-calm-300 text-lg mb-2">Start typing to search</p>
+        <p className="text-calm-400 dark:text-calm-500 text-sm max-w-md mx-auto">
           Search across all your tabs, notes, and saved items to find what you need quickly.
         </p>
       </div>
@@ -109,9 +109,9 @@ function SearchResults({
   if (results.length === 0) {
     return (
       <div className="text-center py-12">
-        <Search className="h-12 w-12 text-calm-300 mx-auto mb-4" />
-        <p className="text-calm-500 text-lg mb-2">No results found</p>
-        <p className="text-calm-400 text-sm max-w-md mx-auto">
+        <Search className="h-12 w-12 text-calm-300 dark:text-calm-600 mx-auto mb-4" />
+        <p className="text-calm-500 dark:text-calm-300 text-lg mb-2">No results found</p>
+        <p className="text-calm-400 dark:text-calm-500 text-sm max-w-md mx-auto">
           Try adjusting your search terms or check if the item you're looking for has been moved to trash.
         </p>
       </div>
@@ -122,12 +122,12 @@ function SearchResults({
     <div className="space-y-6">
       {/* Search Summary */}
       <div className="flex items-center justify-between">
-        <p className="text-calm-600">
+        <p className="text-calm-600 dark:text-calm-300">
           Found <strong>{results.length}</strong> result{results.length !== 1 ? 's' : ''} for{' '}
           <strong>"{searchTerm}"</strong>
         </p>
         {results.length > 0 && (
-          <p className="text-xs text-calm-500">
+          <p className="text-xs text-calm-500 dark:text-calm-400">
             Showing: {orderedSegments.map(([type, items]) => 
               `${getTypeName(type)} (${items.length})`
             ).join(', ')}
@@ -165,27 +165,27 @@ function SearchResults({
                 <ListItem
                   key={`${type}-${item.id || index}`}
                   onClick={() => onItemClick?.(item)}
-                  className="hover:bg-calm-50 border-l-4 border-transparent hover:border-calm-300"
+                  className="hover:bg-calm-50 dark:hover:bg-calm-800 border-l-4 border-transparent hover:border-calm-300 dark:hover:border-calm-600"
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-calm-800">
+                      <p className="text-sm font-medium text-calm-800 dark:text-calm-200">
                         {highlightText(item.title || item.name || 'Untitled', searchTerm)}
                       </p>
                       {item.description && (
-                        <p className="text-sm text-calm-600 mt-1 line-clamp-2">
+                        <p className="text-sm text-calm-600 dark:text-calm-300 mt-1 line-clamp-2">
                           {highlightText(item.description, searchTerm)}
                         </p>
                       )}
                       {item.url && (
-                        <p className="text-xs text-calm-500 mt-1 truncate">
+                        <p className="text-xs text-calm-500 dark:text-calm-400 mt-1 truncate">
                           {highlightText(item.url, searchTerm)}
                         </p>
                       )}
                     </div>
-                    <div className="text-xs text-calm-400 flex-shrink-0 flex flex-col items-end">
+                    <div className="text-xs text-calm-400 dark:text-calm-500 flex-shrink-0 flex flex-col items-end">
                       <span>{typeName}</span>
-                      <span className="text-xs text-calm-300">
+                      <span className="text-xs text-calm-300 dark:text-calm-600">
                         Score: {item.relevance?.toFixed(1) || 'N/A'}
                       </span>
                     </div>
@@ -199,7 +199,7 @@ function SearchResults({
 
       {/* Footer Info */}
       {results.length > 0 && (
-        <div className="text-xs text-calm-400 text-center pt-4 border-t border-calm-100">
+        <div className="text-xs text-calm-400 dark:text-calm-500 text-center pt-4 border-t border-calm-100 dark:border-calm-700">
           Results are ordered by relevance within each category.
           Inbox and Stashed items appear first for quick access.
         </div>

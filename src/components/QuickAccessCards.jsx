@@ -192,11 +192,11 @@ function QuickAccessCards({ className, maxItems = 6 }) {
       <div className={cn('space-y-4', className)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Star className="h-5 w-5 text-calm-500" />
-            <h2 className="text-lg font-medium text-calm-900">Quick Access</h2>
+            <Star className="h-5 w-5 text-calm-500 dark:text-calm-400" />
+            <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">Quick Access</h2>
           </div>
         </div>
-        <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
           {error}
         </div>
       </div>
@@ -207,10 +207,10 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Star className="h-5 w-5 text-calm-500" />
-          <h2 className="text-lg font-medium text-calm-900">Quick Access</h2>
+          <Star className="h-5 w-5 text-calm-500 dark:text-calm-400" />
+          <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">Quick Access</h2>
           {quickAccessItems.length > 0 && (
-            <span className="text-xs text-calm-500 bg-calm-100 px-2 py-1 rounded-full">
+            <span className="text-xs text-calm-500 bg-calm-100 dark:text-calm-400 dark:bg-calm-800 px-2 py-1 rounded-full">
               {quickAccessItems.length}
             </span>
           )}
@@ -218,10 +218,10 @@ function QuickAccessCards({ className, maxItems = 6 }) {
       </div>
 
       {quickAccessItems.length === 0 ? (
-        <div className="text-center py-8 text-calm-500">
-          <Star className="h-8 w-8 mx-auto mb-3 text-calm-300" />
+        <div className="text-center py-8 text-calm-500 dark:text-calm-400">
+          <Star className="h-8 w-8 mx-auto mb-3 text-calm-300 dark:text-calm-600" />
           <p className="text-sm font-medium mb-1">No quick access cards yet</p>
-          <p className="text-xs text-calm-400">
+          <p className="text-xs text-calm-400 dark:text-calm-500">
             Items you access frequently will appear here for quick navigation
           </p>
         </div>
@@ -233,7 +233,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
               title={item.title}
               subtitle={
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-calm-500">
+                  <div className="flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
                     <span className="truncate">
                       {item.url ? new URL(item.url).hostname : 'Unknown'}
                     </span>
@@ -242,13 +242,13 @@ function QuickAccessCards({ className, maxItems = 6 }) {
                         <Clock className="h-3 w-3" />
                         <span>{getTimeAgo(item.lastAccessed)}</span>
                       </span>
-                      <span className="text-amber-600 font-medium">
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">
                         {item.accessCount || 0}×
                       </span>
                     </div>
                   </div>
                   {item.type === 'smart-suggestion' && (
-                    <div className="text-xs text-emerald-600 flex items-center space-x-1">
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
                       <Pin className="h-3 w-3" />
                       <span>Smart suggestion</span>
                     </div>
@@ -262,10 +262,10 @@ function QuickAccessCards({ className, maxItems = 6 }) {
                 console.log(`[Tab Napper] Quick access item clicked: ${item.title}`);
                 handleQuickAccessClick(item);
               }}
-              className="hover:bg-amber-50 border-amber-200 hover:border-amber-300 transition-colors cursor-pointer group"
+              className="hover:bg-amber-50 dark:hover:bg-amber-900/20 border-amber-200 dark:border-amber-900/30 hover:border-amber-300 dark:hover:border-amber-800 transition-colors cursor-pointer group"
               badge={
                 item.accessCount > 5 ? (
-                  <div className="flex items-center space-x-1 text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                  <div className="flex items-center space-x-1 text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded-full">
                     <Star className="h-3 w-3" />
                     <span>Frequently Used</span>
                   </div>
@@ -274,7 +274,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
               actions={
                 <button
                   onClick={(e) => handleUnpinItem(item, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-100 rounded"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded"
                   title="Unpin from Quick Access"
                 >
                   <PinOff className="h-4 w-4" />

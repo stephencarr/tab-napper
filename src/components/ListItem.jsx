@@ -23,9 +23,9 @@ function ListItem({
     'group',
     'w-full',              // Ensure full width
     'p-4',
-    'bg-white',
+    'bg-white dark:bg-calm-800',
     'border',
-    'border-calm-200',
+    'border-calm-200 dark:border-calm-700',
     'rounded-lg',
     'transition-all',
     'duration-200',
@@ -35,16 +35,16 @@ function ListItem({
 
   const interactiveClasses = onClick ? [
     'cursor-pointer',
-    'hover:border-calm-300',
+    'hover:border-calm-300 dark:hover:border-calm-600',
     'hover:shadow-sm',
     'focus:outline-none',
     'focus:ring-2',
-    'focus:ring-calm-400',
-    'focus:ring-offset-2'
+    'focus:ring-calm-400 dark:focus:ring-calm-500',
+    'focus:ring-offset-2 dark:focus:ring-offset-calm-800'
   ] : [];
 
   const stateClasses = [
-    isSelected ? 'border-calm-400 bg-calm-50' : '',
+    isSelected ? 'border-calm-400 bg-calm-50 dark:bg-calm-750' : '',
     isDisabled ? 'opacity-50 cursor-not-allowed' : ''
   ];
 
@@ -70,7 +70,7 @@ function ListItem({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-sm font-medium text-calm-800 truncate">
+          <h3 className="text-sm font-medium text-calm-800 dark:text-calm-200 truncate">
             {title}
           </h3>
           <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
@@ -80,7 +80,7 @@ function ListItem({
         </div>
         
         {subtitle && (
-          <div className="text-xs text-calm-500">
+          <div className="text-xs text-calm-500 dark:text-calm-400">
             {subtitle}
           </div>
         )}

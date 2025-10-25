@@ -84,7 +84,7 @@ function StashCard({
   return (
     <div 
       className={cn(
-        "w-full p-4 bg-white border border-calm-200 rounded-lg transition-all duration-200 ease-in-out hover:border-calm-300 hover:shadow-sm",
+        "w-full p-4 bg-white dark:bg-calm-800 border border-calm-200 dark:border-calm-700 rounded-lg transition-all duration-200 ease-in-out hover:border-calm-300 dark:hover:border-calm-600 hover:shadow-sm",
         onItemClick && "cursor-pointer",
         className
       )}
@@ -102,16 +102,16 @@ function StashCard({
           
           <div className="flex-1 min-w-0">
             {/* High Contrast Title */}
-            <h3 className="text-sm font-semibold text-gray-900 truncate">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-calm-200 truncate">
               {item.title || item.name || 'Untitled'}
             </h3>
             
             {/* Metadata Row - Domain/Type and Time */}
             <div className="flex items-center justify-between text-xs mt-0.5">
-              <span className="text-gray-500 truncate flex-1 mr-2">
+              <span className="text-gray-500 dark:text-calm-400 truncate flex-1 mr-2">
                 {getSubtitle()}
               </span>
-              <span className="text-gray-400 flex-shrink-0">
+              <span className="text-gray-400 dark:text-calm-500 flex-shrink-0">
                 {getTimeAgo(item.timestamp || item.createdAt)}
               </span>
             </div>
@@ -119,7 +119,7 @@ function StashCard({
             {/* Category/Type badge if available */}
             {(item.category || item.type) && (
               <div className="mt-1">
-                <span className="inline-block text-xs text-calm-600 bg-calm-100 px-2 py-0.5 rounded-full">
+                <span className="inline-block text-xs text-calm-600 dark:text-calm-300 bg-calm-100 dark:bg-calm-750 px-2 py-0.5 rounded-full">
                   {item.category || item.type}
                 </span>
               </div>

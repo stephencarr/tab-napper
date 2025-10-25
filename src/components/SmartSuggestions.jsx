@@ -155,7 +155,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
   const renderMetricsBadge = (suggestion) => {
     const { metrics } = suggestion;
     return (
-      <div className="flex items-center space-x-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+      <div className="flex items-center space-x-1 text-xs text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 px-2 py-1 rounded-full">
         <Calendar className="h-3 w-3" />
         <span>{metrics.uniqueDaysVisited}d</span>
       </div>
@@ -165,7 +165,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
   // Render suggestion reason
   const renderSuggestionReason = (suggestion) => {
     return (
-      <div className="text-xs text-calm-600 mt-1 flex items-center space-x-1">
+      <div className="text-xs text-calm-600 dark:text-calm-400 mt-1 flex items-center space-x-1">
         <TrendingUp className="h-3 w-3 text-emerald-500" />
         <span>{suggestion.suggestionReason}</span>
       </div>
@@ -178,15 +178,15 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
       <div className={cn("space-y-4", className)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Lightbulb className="h-5 w-5 text-emerald-600 animate-pulse" />
-            <h2 className="text-lg font-semibold text-calm-800">Smart Suggestions</h2>
+            <Lightbulb className="h-5 w-5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+            <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">Smart Suggestions</h2>
           </div>
         </div>
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="p-4 bg-emerald-50 rounded-lg animate-pulse">
-              <div className="h-4 bg-emerald-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-emerald-200 rounded w-1/2"></div>
+            <div key={i} className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg animate-pulse">
+              <div className="h-4 bg-emerald-200 dark:bg-emerald-800/50 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-emerald-200 dark:bg-emerald-800/50 rounded w-1/2"></div>
             </div>
           ))}
         </div>
@@ -200,15 +200,15 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
       <div className={cn("space-y-4", className)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Lightbulb className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-calm-800">Smart Suggestions</h2>
+            <Lightbulb className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">Smart Suggestions</h2>
           </div>
         </div>
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700 text-sm">{error}</p>
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-lg">
+          <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
           <button
             onClick={loadSuggestions}
-            className="mt-2 text-red-600 hover:text-red-700 text-xs underline"
+            className="mt-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-xs underline"
           >
             Try again
           </button>
@@ -223,10 +223,10 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Lightbulb className="h-5 w-5 text-emerald-600" />
-          <h2 className="text-lg font-semibold text-calm-800">Smart Suggestions</h2>
+          <Lightbulb className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">Smart Suggestions</h2>
           {suggestions.length > 0 && (
-            <span className="text-sm text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
+            <span className="text-sm text-emerald-600 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-1 rounded-full">
               {suggestions.length}
             </span>
           )}
@@ -236,7 +236,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
         {stats && (
           <button
             onClick={() => setShowStats(!showStats)}
-            className="text-xs text-calm-500 hover:text-calm-700 transition-colors"
+            className="text-xs text-calm-500 dark:text-calm-400 hover:text-calm-700 dark:hover:text-calm-200 transition-colors"
           >
             {showStats ? 'Hide' : 'Show'} Stats
           </button>
@@ -245,7 +245,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
 
       {/* Debug stats */}
       {showStats && stats && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs space-y-2">
+        <div className="bg-gray-50 dark:bg-calm-800 border border-gray-200 dark:border-calm-700 rounded-lg p-3 text-xs space-y-2 text-calm-600 dark:text-calm-300">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <span className="font-medium">Suggestions:</span> {stats.totalSuggestions}
@@ -265,10 +265,10 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
 
       {/* Suggestions list */}
       {suggestions.length === 0 ? (
-        <div className="text-center py-8 text-calm-500">
-          <Lightbulb className="h-8 w-8 mx-auto mb-3 text-emerald-300" />
+        <div className="text-center py-8 text-calm-500 dark:text-calm-400">
+          <Lightbulb className="h-8 w-8 mx-auto mb-3 text-emerald-300 dark:text-emerald-600" />
           <p className="text-sm font-medium mb-1">No suggestions right now</p>
-          <p className="text-xs text-calm-400">
+          <p className="text-xs text-calm-400 dark:text-calm-500">
             Keep browsing and we'll suggest frequently visited sites
           </p>
         </div>
@@ -280,7 +280,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
               title={suggestion.title}
               subtitle={
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-calm-500">
+                  <div className="flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
                     <span className="truncate">
                       {suggestion.domain}
                     </span>
@@ -309,12 +309,12 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
                 )
               }
               onClick={() => handleSuggestionClick(suggestion)}
-              className="hover:bg-emerald-50 border-emerald-200 hover:border-emerald-300 transition-colors cursor-pointer group"
+              className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-800 transition-colors cursor-pointer group"
               badge={renderMetricsBadge(suggestion)}
               actions={
                 <button
                   onClick={(e) => handlePinSuggestion(suggestion, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 rounded"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded"
                   title="Pin to Quick Access"
                 >
                   <Pin className="h-4 w-4" />
@@ -330,7 +330,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
         <div className="text-center pt-2">
           <button
             onClick={loadSuggestions}
-            className="text-xs text-emerald-600 hover:text-emerald-700 underline transition-colors"
+            className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline transition-colors"
           >
             Refresh suggestions
           </button>
