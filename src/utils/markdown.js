@@ -11,33 +11,39 @@ marked.setOptions({
 
 // Custom renderer to add Calm UI classes
 const renderer = {
-  heading(text, level) {
-    if (level === 1) return `<h1 class="text-xl font-bold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">${text}</h1>`;
-    if (level === 2) return `<h2 class="text-lg font-semibold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">${text}</h2>`;
-    if (level === 3) return `<h3 class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">${text}</h3>`;
-    return `<h${level} class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">${text}</h${level}>`;
+  heading({ tokens, depth }) {
+    const text = this.parser.parseInline(tokens);
+    if (depth === 1) return `<h1 class="text-xl font-bold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">${text}</h1>`;
+    if (depth === 2) return `<h2 class="text-lg font-semibold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">${text}</h2>`;
+    if (depth === 3) return `<h3 class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">${text}</h3>`;
+    return `<h${depth} class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">${text}</h${depth}>`;
   },
-  paragraph(text) {
+  paragraph({ tokens }) {
+    const text = this.parser.parseInline(tokens);
     return `<p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">${text}</p>`;
   },
-  strong(text) {
+  strong({ tokens }) {
+    const text = this.parser.parseInline(tokens);
     return `<strong class="font-semibold text-calm-900 dark:text-calm-100">${text}</strong>`;
   },
-  em(text) {
+  em({ tokens }) {
+    const text = this.parser.parseInline(tokens);
     return `<em class="italic text-calm-800 dark:text-calm-200">${text}</em>`;
   },
-  codespan(code) {
-    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  codespan({ text }) {
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `<code class="bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded text-sm font-mono text-calm-900 dark:text-calm-100 border dark:border-calm-600">${escaped}</code>`;
   },
-  list(body, ordered) {
+  list({ ordered, items }) {
     const tag = ordered ? 'ol' : 'ul';
     const cls = ordered
       ? 'list-decimal ml-5 mb-3 text-calm-800 dark:text-calm-200 leading-relaxed space-y-1'
       : 'list-disc ml-5 mb-3 text-calm-800 dark:text-calm-200 leading-relaxed space-y-1';
+    const body = items.map(item => this.listitem(item)).join('');
     return `<${tag} class="${cls}">${body}</${tag}>`;
   },
-  listitem(text) {
+  listitem({ tokens }) {
+    const text = this.parser.parseInline(tokens);
     return `<li class="pl-1">${text}</li>`;
   },
 };
