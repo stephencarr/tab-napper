@@ -37,14 +37,16 @@ export default function Layout({
           }}
           className={cx(
             currentView === item.name
-              ? 'bg-gray-100 text-gray-900'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-            'w-full group flex items-center px-2 py-2 text-base md:text-sm font-medium rounded-md'
+              ? 'bg-calm-100 dark:bg-calm-700 text-calm-900 dark:text-calm-100'
+              : 'text-calm-600 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 hover:text-calm-900 dark:hover:text-calm-100',
+            'w-full group flex items-center px-2 py-2 text-base md:text-sm font-medium rounded-md transition-colors'
           )}
         >
           <item.icon
             className={cx(
-              currentView === item.name ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500',
+              currentView === item.name 
+                ? 'text-calm-600 dark:text-calm-400' 
+                : 'text-calm-500 dark:text-calm-400 group-hover:text-calm-600 dark:group-hover:text-calm-300',
               'mr-3 flex-shrink-0 h-6 w-6'
             )}
             aria-hidden="true"
