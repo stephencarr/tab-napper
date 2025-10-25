@@ -410,7 +410,7 @@ function App() {
               
               {/* Recently Visited History */}
               <div className="calm-card p-6">
-                <RecentlyVisited maxItems={20} />
+                <RecentlyVisited maxItems={50} />
               </div>
               
               {/* Triage Inbox */}

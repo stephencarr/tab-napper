@@ -8,7 +8,7 @@ import ListItem from './ListItem.jsx';
 /**
  * Lightweight history fetch for RecentlyVisited component
  */
-async function getLightweightRecentHistory(maxResults = 20) {
+async function getLightweightRecentHistory(maxResults = 50) {
   if (typeof chrome === 'undefined' || !chrome.history) {
     console.log('[RecentlyVisited] Chrome history API not available');
     return [];
@@ -20,7 +20,7 @@ async function getLightweightRecentHistory(maxResults = 20) {
         {
           text: '',
           maxResults: maxResults,
-          startTime: Date.now() - (7 * 24 * 60 * 60 * 1000) // Last 7 days
+          // Removed startTime to get most recent items regardless of date
         },
         (results) => {
           if (chrome.runtime.lastError) {
@@ -59,7 +59,7 @@ async function getLightweightRecentHistory(maxResults = 20) {
  * Recently Visited component for the Left Column
  * Shows browser history with visual status indicators
  */
-function RecentlyVisited({ className, maxItems = 20 }) {
+function RecentlyVisited({ className, maxItems = 50 }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -272,7 +272,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
       {/* Simple footer */}
       <div className="border-t border-calm-200 pt-3">
         <div className="flex items-center justify-center text-xs text-calm-500">
-          <span>Last 7 days</span>
+          <span>Last 50 items</span>
         </div>
       </div>
     </div>
