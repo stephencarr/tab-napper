@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
@@ -13,10 +13,21 @@ function FidgetControl({ item, onAction, className }) {
   const [actionState, setActionState] = useState('Remind Me');
   const [whenState, setWhenState] = useState('In 1 hour');
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
-  const [deleteTimeoutId, setDeleteTimeoutId] = useState(null);
   
   // Action cycle states (removed DELETE NOW)
   const actionCycle = ['Remind Me', 'Follow Up', 'Review'];
+  
+  // Auto-reset delete confirmation after 3 seconds
+  useEffect(() => {
+    if (!deleteConfirmation) return;
+    
+    const timeoutId = setTimeout(() => {
+      setDeleteConfirmation(false);
+    }, 3000);
+    
+    // Cleanup timeout on unmount or when deleteConfirmation changes
+    return () => clearTimeout(timeoutId);
+  }, [deleteConfirmation]);
   
   // Smart contextual "when" options that always make logical sense
   const getSmartWhenOptions = useCallback(() => {
@@ -68,22 +79,11 @@ function FidgetControl({ item, onAction, className }) {
         onAction('delete', item);
       }
       setDeleteConfirmation(false);
-      if (deleteTimeoutId) {
-        clearTimeout(deleteTimeoutId);
-        setDeleteTimeoutId(null);
-      }
     } else {
       // First click - enable confirmation mode
       setDeleteConfirmation(true);
-      
-      // Auto-reset confirmation after 3 seconds
-      const timeoutId = setTimeout(() => {
-        setDeleteConfirmation(false);
-        setDeleteTimeoutId(null);
-      }, 3000);
-      setDeleteTimeoutId(timeoutId);
     }
-  }, [deleteConfirmation, deleteTimeoutId, onAction, item]);
+  }, [deleteConfirmation, onAction, item]);
 
   // Handle execute action
   const handleExecute = useCallback(() => {

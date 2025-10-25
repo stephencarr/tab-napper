@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FileText, RotateCcw, Clock } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
@@ -20,8 +20,16 @@ function StashCard({
   // Track whether we're showing reschedule controls for scheduled items
   const [showingReschedule, setShowingReschedule] = useState(false);
   
-  // Check if item is scheduled
-  const isScheduled = item.scheduledFor && !showingReschedule;
+  // Reset reschedule state when item changes
+  useEffect(() => {
+    setShowingReschedule(false);
+  }, [item.id]);
+  
+  // Check if item is scheduled (memoized for performance)
+  const isScheduled = useMemo(
+    () => item.scheduledFor && !showingReschedule,
+    [item.scheduledFor, showingReschedule]
+  );
   // Get favicon or fallback
   const getFavicon = (url) => {
     if (!url) return null;

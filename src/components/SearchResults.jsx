@@ -153,12 +153,12 @@ function SearchResults({
                   {typeName} ({items.length})
                 </h3>
                 {type === 'inbox' && (
-                  <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full">
+                  <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-white px-2 py-1 rounded-full">
                     High Priority
                   </span>
                 )}
                 {type === 'stashedTabs' && (
-                  <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full">
+                  <span className="text-xs bg-green-100 text-green-700 dark:bg-green-800 dark:text-white px-2 py-1 rounded-full">
                     Saved
                   </span>
                 )}

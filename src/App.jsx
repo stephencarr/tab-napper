@@ -261,7 +261,7 @@ function App() {
           console.warn('[Tab Napper] Unknown FidgetControl action:', action);
       }
     } catch (error) {
-      console.error('[Tab Napper] Error handling FidgetControl action:', error);
+      console.error(`[Tab Napper] Error handling action '${action}':`, error);
     }
   };
 

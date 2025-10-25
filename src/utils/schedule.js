@@ -109,9 +109,11 @@ export async function setScheduledAlarm(item, action, scheduledTime) {
 
   const alarmName = createAlarmName(item, action);
   
-  // Chrome alarms use minutes from now, not absolute timestamps
+  // Chrome alarms require a minimum delay of 0.1 minutes (6 seconds)
+  // Values below this threshold are not guaranteed to work reliably
+  // See: https://developer.chrome.com/docs/extensions/reference/alarms/#method-create
   const now = Date.now();
-  const delayMinutes = Math.max(0.1, (scheduledTime - now) / 60000); // Minimum 0.1 minutes
+  const delayMinutes = Math.max(0.1, (scheduledTime - now) / 60000);
 
   try {
     await chrome.alarms.create(alarmName, {

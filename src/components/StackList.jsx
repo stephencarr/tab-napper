@@ -1,5 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
+
+/**
+ * Favicon component with error handling
+ */
+function FaviconIcon({ url }) {
+  const [imageError, setImageError] = useState(false);
+  
+  const getFaviconUrl = (url) => {
+    try {
+      const domain = new URL(url).hostname;
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=16`;
+    } catch {
+      return null;
+    }
+  };
+  
+  const faviconUrl = getFaviconUrl(url);
+  
+  if (faviconUrl && !imageError) {
+    return (
+      <img
+        src={faviconUrl}
+        alt=""
+        className="w-4 h-4"
+        onError={() => setImageError(true)}
+      />
+    );
+  }
+  
+  return <ExternalLink className="w-4 h-4 text-calm-400 dark:text-calm-500" />;
+}
 
 /**
  * Reusable Stack List Component
@@ -7,33 +38,8 @@ import { ExternalLink } from 'lucide-react';
  * Used by RecentlyVisited, SearchResults, and other list views
  */
 function StackList({ items, onItemClick, renderIcon, highlightText }) {
-  // Get favicon URL
-  const getFaviconUrl = (url) => {
-    try {
-      const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
-    } catch {
-      return null;
-    }
-  };
-
   // Default icon renderer if none provided
-  const defaultRenderIcon = (item) => {
-    const faviconUrl = getFaviconUrl(item.url);
-    if (faviconUrl) {
-      return (
-        <img
-          src={faviconUrl}
-          alt=""
-          className="w-4 h-4"
-          onError={(e) => {
-            e.target.style.display = 'none';
-          }}
-        />
-      );
-    }
-    return <ExternalLink className="w-4 h-4 text-calm-400 dark:text-calm-500" />;
-  };
+  const defaultRenderIcon = (item) => <FaviconIcon url={item.url} />;
 
   const iconRenderer = renderIcon || defaultRenderIcon;
 
