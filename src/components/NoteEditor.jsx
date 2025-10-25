@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Save, FileText, Edit, Eye } from 'lucide-react';
 import { loadAppState, saveAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
+import { useDarkMode } from '../hooks/useDarkMode.js';
 
 /**
  * NoteEditor Component
@@ -9,6 +10,8 @@ import { cn } from '../utils/cn.js';
  * Allows editing markdown content with lightweight preview and auto-save.
  */
 export default function NoteEditor({ noteId }) {
+  // Apply system dark mode
+  useDarkMode();
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('Untitled Note');
   const [loading, setLoading] = useState(true);
