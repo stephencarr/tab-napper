@@ -14,7 +14,7 @@ function UniversalSearch({
   className,
   autoFocus = true,
   variant = 'large', // 'large' | 'compact'
-  isLoading = false, // optional external trigger (no longer spins; may trigger a one-shot sweep)
+  isLoading = false, // optional external trigger to display loading shimmer animation
   ...props 
 }) {
   const inputRef = useRef(null);
