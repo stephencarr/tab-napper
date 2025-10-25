@@ -108,16 +108,19 @@ export default function NoteEditor({ noteId }) {
         loadAppState('triageHub_inbox').then((v) => v || [])
       ]);
 
-      const updateItem = (item) => ({
-        ...item,
-        title: newTitle,
-        description: content,
-        content,
-        timestamp: item.timestamp || Date.now(),
-        type: 'note',
-        wordCount: content.trim() ? content.trim().split(/\s+/).length : 0,
-        lastEditedAt: Date.now(),
-      });
+      const updateItem = (item) => {
+        const trimmedContent = content.trim();
+        return {
+          ...item,
+          title: newTitle,
+          description: content,
+          content,
+          timestamp: item.timestamp || Date.now(),
+          type: 'note',
+          wordCount: trimmedContent ? trimmedContent.split(/\s+/).length : 0,
+          lastEditedAt: Date.now(),
+        };
+      };
 
       let notesUpdated = false;
       let inboxUpdated = false;
