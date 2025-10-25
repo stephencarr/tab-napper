@@ -10,6 +10,9 @@ const navigation = [
   { name: 'Trash', icon: Trash2 }
 ];
 
+// Header height constant to ensure consistency
+const HEADER_HEIGHT = 'h-16'; // 64px / 4rem
+
 function cx(...classes) {
   return classes.filter(Boolean).join(' ');
 }
@@ -60,8 +63,8 @@ export default function Layout({
   return (
     <div className="min-h-screen flex flex-col bg-calm-50 dark:bg-calm-900">
       {/* Unified sticky header - spans full width */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700">
-        <div className="flex h-16 items-center">
+      <header className={cx('sticky top-0 z-30 bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700')}>
+        <div className={cx('flex items-center', HEADER_HEIGHT)}>
           {/* Logo section - same width as sidebar */}
           <div className="hidden md:flex md:w-64 items-center px-4 border-r border-calm-200 dark:border-calm-700">
             <div className="w-8 h-8 bg-calm-600 dark:bg-calm-500 rounded-lg flex items-center justify-center">
@@ -137,7 +140,7 @@ export default function Layout({
 
         {/* Desktop sidebar - sticky navigation */}
         <aside className="hidden md:block md:w-64 md:border-r md:border-calm-200 dark:md:border-calm-800 md:bg-white dark:md:bg-calm-800">
-          <nav className="sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4">
+          <nav className="sticky top-16 h-[calc(100vh-theme(spacing.16))] overflow-y-auto py-4">
             <NavLinks />
           </nav>
         </aside>
