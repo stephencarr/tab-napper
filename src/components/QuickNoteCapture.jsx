@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Save, Edit, Eye, EyeOff, FileText } from 'lucide-react';
 import { saveAppState, loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 /**
  * Quick Note Capture Component
@@ -40,19 +42,55 @@ function QuickNoteCapture({ className, onNoteSaved }) {
     return content.trim().substring(0, 50) + (content.trim().length > 50 ? '...' : '');
   };
 
-  // Simple markdown to HTML conversion for preview
+  // Secure markdown to HTML conversion with proper parsing and sanitization
   const renderMarkdown = (content) => {
-    return content
-      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold text-calm-800 mb-2 mt-4">$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold text-calm-800 mb-3 mt-4">$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold text-calm-800 mb-3 mt-4">$1</h1>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-calm-100 px-1 py-0.5 rounded text-sm font-mono">$1</code>')
-      .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
-      .replace(/\n\n/g, '</p><p class="mb-2">')
-      .replace(/^(.*)$/gm, '<p class="mb-2">$1</p>')
-      .replace(/(<li.*<\/li>)/g, '<ul class="list-disc ml-4 mb-2">$1</ul>');
+    // Configure marked with custom renderer for Tailwind classes
+    const renderer = new marked.Renderer();
+    
+    renderer.heading = (text, level) => {
+      const classes = {
+        1: 'text-2xl font-bold text-calm-800 mb-3 mt-4',
+        2: 'text-xl font-semibold text-calm-800 mb-3 mt-4', 
+        3: 'text-lg font-semibold text-calm-800 mb-2 mt-4'
+      };
+      const className = classes[level] || 'text-base font-medium text-calm-800 mb-2 mt-2';
+      return `<h${level} class="${className}">${text}</h${level}>`;
+    };
+    
+    renderer.paragraph = (text) => {
+      return `<p class="mb-2 text-calm-700">${text}</p>`;
+    };
+    
+    renderer.list = (body, ordered) => {
+      const tag = ordered ? 'ol' : 'ul';
+      const listClass = ordered ? 'list-decimal' : 'list-disc';
+      return `<${tag} class="${listClass} ml-4 mb-2 text-calm-700">${body}</${tag}>`;
+    };
+    
+    renderer.listitem = (text) => {
+      return `<li class="mb-1">${text}</li>`;
+    };
+    
+    renderer.strong = (text) => {
+      return `<strong class="font-semibold">${text}</strong>`;
+    };
+    
+    renderer.em = (text) => {
+      return `<em class="italic">${text}</em>`;
+    };
+    
+    renderer.codespan = (text) => {
+      return `<code class="bg-calm-100 px-1 py-0.5 rounded text-sm font-mono">${text}</code>`;
+    };
+    
+    // Parse markdown with custom renderer
+    const rawHtml = marked(content, { renderer });
+    
+    // Sanitize the HTML to prevent XSS attacks
+    return DOMPurify.sanitize(rawHtml, {
+      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'code'],
+      ALLOWED_ATTR: ['class']
+    });
   };
 
   // Handle save note
