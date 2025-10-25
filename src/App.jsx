@@ -18,6 +18,7 @@ import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
 import DevConsole from './components/DevConsole.jsx';
+import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 
 function App() {
   const [appState, setAppState] = useState(null);
@@ -451,6 +452,17 @@ function App() {
 
             {/* Right Column - Action (40% width = 2/5 cols) */}
             <div className="lg:col-span-2 space-y-8">
+              
+              {/* Quick Note Capture */}
+              <div className="calm-card p-6">
+                <QuickNoteCapture 
+                  onNoteSaved={(note) => {
+                    console.log('[Tab Napper] Note saved to inbox:', note.title);
+                    // Trigger reactive state refresh to update UI
+                    refreshStateFromStorage();
+                  }}
+                />
+              </div>
               
               {/* Quick Access Cards */}
               <div className="calm-card p-6">

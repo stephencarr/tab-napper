@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
 
@@ -60,6 +61,26 @@ function StashCard({
     }
   };
 
+  // Special handling for notes
+  const isNote = item.isNote || item.type === 'note';
+  
+  // Get icon - use note icon for notes, favicon for tabs
+  const getIcon = () => {
+    if (isNote) {
+      return <FileText className="w-4 h-4 text-calm-600" />;
+    }
+    return getFavicon(item.url) || <div className="w-4 h-4 bg-calm-300 rounded" />;
+  };
+
+  // Get subtitle - different for notes vs tabs
+  const getSubtitle = () => {
+    if (isNote) {
+      const wordCount = item.wordCount || (item.description ? item.description.trim().split(/\s+/).length : 0);
+      return `Note • ${wordCount} words`;
+    }
+    return getDomain(item.url);
+  };
+
   return (
     <div 
       className={cn(
@@ -74,11 +95,9 @@ function StashCard({
         
         {/* Zone 1: Identity - Favicon, Title, Creation Date */}
         <div className="flex items-center space-x-3 flex-1 min-w-0">
-          {/* Favicon */}
+          {/* Icon (Favicon or Note icon) */}
           <div className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
-            {getFavicon(item.url) || (
-              <div className="w-4 h-4 bg-calm-300 rounded" />
-            )}
+            {getIcon()}
           </div>
           
           <div className="flex-1 min-w-0">
@@ -87,10 +106,10 @@ function StashCard({
               {item.title || item.name || 'Untitled'}
             </h3>
             
-            {/* Metadata Row - Domain and Time */}
+            {/* Metadata Row - Domain/Type and Time */}
             <div className="flex items-center justify-between text-xs mt-0.5">
               <span className="text-gray-500 truncate flex-1 mr-2">
-                {getDomain(item.url)}
+                {getSubtitle()}
               </span>
               <span className="text-gray-400 flex-shrink-0">
                 {getTimeAgo(item.timestamp || item.createdAt)}
