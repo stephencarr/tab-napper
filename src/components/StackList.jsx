@@ -54,7 +54,7 @@ function StackList({ items, onItemClick, renderIcon, highlightText }) {
             {/* Content */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
-                {highlightText ? highlightText(item.title || item.name || 'Untitled') : (item.title || item.name || 'Untitled')}
+                {highlightText ? highlightText(item.title || item.name || 'Untitled') : item.title || item.name || 'Untitled'}
               </p>
               
               {item.description && (
