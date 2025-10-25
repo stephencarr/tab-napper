@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Archive, Trash2, Inbox } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import StashCard from './StashCard.jsx';
@@ -14,15 +14,11 @@ function StashManagerView({
   inboxData = [],
   stashedTabs = [],
   trashData = [],
-  onItemAction
+  onItemAction,
+  onTabChange // New prop to notify parent of tab changes
 }) {
-  // Tab state
-  const [activeTab, setActiveTab] = useState(initialFilter);
-
-  // Set initial tab from prop
-  useEffect(() => {
-    setActiveTab(initialFilter);
-  }, [initialFilter]);
+  // Tab state - derived from initialFilter prop
+  const activeTab = initialFilter;
 
   // Get current tab data
   const getCurrentData = () => {
@@ -93,7 +89,12 @@ function StashManagerView({
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  // Notify parent to change view instead of using local state
+                  if (onTabChange) {
+                    onTabChange(tab.id);
+                  }
+                }}
                 className={cn(
                   'group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium transition-colors',
                   isActive

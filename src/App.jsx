@@ -416,6 +416,21 @@ function App() {
         />
       );
     }
+    
+    // Handler for tab changes within StashManagerView
+    const handleTabChange = (tabId) => {
+      // Map tab IDs to view names
+      const tabToViewMap = {
+        'stashed': 'All Stashed',
+        'inbox': 'Inbox',
+        'trash': 'Trash'
+      };
+      const newView = tabToViewMap[tabId];
+      if (newView) {
+        setCurrentView(newView);
+      }
+    };
+    
     switch (currentView) {
       case 'All Stashed':
         return (
@@ -425,6 +440,7 @@ function App() {
             stashedTabs={appState?.stashedTabs || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
           />
         );
       case 'Inbox':
@@ -435,6 +451,7 @@ function App() {
             stashedTabs={appState?.stashedTabs || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
           />
         );
       case 'Trash':
@@ -445,6 +462,7 @@ function App() {
             stashedTabs={appState?.stashedTabs || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
           />
         );
       case 'Dashboard':
