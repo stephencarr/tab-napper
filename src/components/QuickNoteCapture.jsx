@@ -66,6 +66,8 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       // Create note item
       const timestamp = Date.now();
       const noteTitle = generateTitle(noteContent);
+      const timestamp = Date.now();
+      const noteTitle = generateTitle(noteContent);
       const noteItem = {
         id: `note-${crypto.randomUUID()}`,
         title: noteTitle,
