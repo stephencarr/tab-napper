@@ -44,53 +44,65 @@ function QuickNoteCapture({ className, onNoteSaved }) {
 
   // Secure markdown to HTML conversion with proper parsing and sanitization
   const renderMarkdown = (content) => {
-    // Configure marked with custom renderer for Tailwind classes
-    const renderer = new marked.Renderer();
-    
-    renderer.heading = (text, level) => {
-      const classes = {
-        1: 'text-2xl font-bold text-calm-800 mb-3 mt-4',
-        2: 'text-xl font-semibold text-calm-800 mb-3 mt-4', 
-        3: 'text-lg font-semibold text-calm-800 mb-2 mt-4'
+    try {
+      // Configure marked with custom renderer for Tailwind classes
+      const renderer = new marked.Renderer();
+      
+      renderer.heading = (text, level) => {
+        const classes = {
+          1: 'text-xl font-bold text-calm-900 mb-3 mt-4 leading-tight',
+          2: 'text-lg font-semibold text-calm-900 mb-3 mt-4 leading-tight', 
+          3: 'text-base font-semibold text-calm-900 mb-2 mt-3 leading-tight'
+        };
+        const className = classes[level] || 'text-sm font-medium text-calm-900 mb-2 mt-2 leading-tight';
+        return `<h${level} class="${className}">${text}</h${level}>`;
       };
-      const className = classes[level] || 'text-base font-medium text-calm-800 mb-2 mt-2';
-      return `<h${level} class="${className}">${text}</h${level}>`;
-    };
-    
-    renderer.paragraph = (text) => {
-      return `<p class="mb-2 text-calm-700">${text}</p>`;
-    };
-    
-    renderer.list = (body, ordered) => {
-      const tag = ordered ? 'ol' : 'ul';
-      const listClass = ordered ? 'list-decimal' : 'list-disc';
-      return `<${tag} class="${listClass} ml-4 mb-2 text-calm-700">${body}</${tag}>`;
-    };
-    
-    renderer.listitem = (text) => {
-      return `<li class="mb-1">${text}</li>`;
-    };
-    
-    renderer.strong = (text) => {
-      return `<strong class="font-semibold">${text}</strong>`;
-    };
-    
-    renderer.em = (text) => {
-      return `<em class="italic">${text}</em>`;
-    };
-    
-    renderer.codespan = (text) => {
-      return `<code class="bg-calm-100 px-1 py-0.5 rounded text-sm font-mono">${text}</code>`;
-    };
-    
-    // Parse markdown with custom renderer
-    const rawHtml = marked(content, { renderer });
-    
-    // Sanitize the HTML to prevent XSS attacks
-    return DOMPurify.sanitize(rawHtml, {
-      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'code'],
-      ALLOWED_ATTR: ['class']
-    });
+      
+      renderer.paragraph = (text) => {
+        return `<p class="mb-3 text-calm-800 leading-relaxed">${text}</p>`;
+      };
+      
+      renderer.list = (body, ordered) => {
+        const tag = ordered ? 'ol' : 'ul';
+        const listClass = ordered ? 'list-decimal' : 'list-disc';
+        return `<${tag} class="${listClass} ml-5 mb-3 text-calm-800 leading-relaxed space-y-1">${body}</${tag}>`;
+      };
+      
+      renderer.listitem = (text) => {
+        return `<li class="pl-1">${text}</li>`;
+      };
+      
+      renderer.strong = (text) => {
+        return `<strong class="font-semibold text-calm-900">${text}</strong>`;
+      };
+      
+      renderer.em = (text) => {
+        return `<em class="italic text-calm-800">${text}</em>`;
+      };
+      
+      renderer.codespan = (text) => {
+        return `<code class="bg-calm-100 px-2 py-1 rounded text-sm font-mono text-calm-900 border">${text}</code>`;
+      };
+      
+      // Set marked options
+      marked.setOptions({
+        renderer: renderer,
+        gfm: true,
+        breaks: true
+      });
+      
+      // Parse markdown synchronously 
+      const rawHtml = marked.parse(content);
+      
+      // Sanitize the HTML to prevent XSS attacks
+      return DOMPurify.sanitize(rawHtml, {
+        ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'br'],
+        ALLOWED_ATTR: ['class']
+      });
+    } catch (error) {
+      console.error('Markdown rendering error:', error);
+      return content; // Fallback to plain text
+    }
   };
 
   // Handle save note
@@ -176,17 +188,19 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       <div className="bg-white border border-calm-200 rounded-lg overflow-hidden">
         {isPreviewMode ? (
           /* Preview Mode */
-          <div className="p-4 min-h-[200px]">
+          <div className="p-6 min-h-[200px] bg-white">
             {noteContent.trim() ? (
               <div 
-                className="prose prose-sm max-w-none"
+                className="markdown-content max-w-none text-base leading-relaxed font-normal"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
                 dangerouslySetInnerHTML={{ 
                   __html: renderMarkdown(noteContent) 
                 }}
               />
             ) : (
               <div 
-                className="prose prose-sm max-w-none text-calm-400"
+                className="markdown-content max-w-none text-base leading-relaxed font-normal text-calm-400"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
                 dangerouslySetInnerHTML={{ 
                   __html: renderMarkdown(`Start typing your note here...
 
