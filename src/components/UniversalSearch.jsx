@@ -13,6 +13,7 @@ function UniversalSearch({
   placeholder = "Search all your tabs, notes, and items...",
   className,
   autoFocus = true,
+  variant = 'large', // 'large' | 'compact'
   ...props 
 }) {
   const inputRef = useRef(null);
@@ -43,10 +44,14 @@ function UniversalSearch({
     }
   };
 
+  const size = variant === 'compact' 
+    ? { iconPad: 'pl-3', inputPad: 'pl-10 pr-10', py: 'py-2', text: 'text-sm' }
+    : { iconPad: 'pl-4', inputPad: 'pl-12 pr-12', py: 'py-4', text: 'text-lg' };
+
   return (
     <div className={cn('relative w-full', className)} {...props}>
       {/* Search Icon */}
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+      <div className={cn('absolute inset-y-0 left-0 flex items-center pointer-events-none', size.iconPad)}>
         <Search className="h-5 w-5 text-calm-400 dark:text-calm-500" />
       </div>
 
@@ -60,11 +65,10 @@ function UniversalSearch({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={cn(
-          // Base styles
           'w-full',
-          'pl-12 pr-12',
-          'py-4',
-          'text-lg',
+          size.inputPad,
+          size.py,
+          size.text,
           'bg-white dark:bg-calm-800',
           'border',
           'border-calm-200 dark:border-calm-700',
