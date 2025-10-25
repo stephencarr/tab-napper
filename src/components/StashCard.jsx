@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
 
@@ -60,39 +61,57 @@ function StashCard({
     }
   };
 
+  // Special handling for notes
+  const isNote = item.type === 'note';
+  
+  // Get icon - use note icon for notes, favicon for tabs
+  const getIcon = () => {
+    if (isNote) {
+      return <FileText className="w-4 h-4 text-calm-600 dark:text-calm-400" />;
+    }
+    return getFavicon(item.url) || <div className="w-4 h-4 bg-calm-300 dark:bg-calm-600 rounded" />;
+  };
+
+  // Get subtitle - different for notes vs tabs
+  const getSubtitle = () => {
+    if (isNote) {
+      const wordCount = typeof item.wordCount === 'number' ? item.wordCount : 0;
+      return `Note • ${wordCount} words`;
+    }
+    return getDomain(item.url);
+  };
+
   return (
     <div 
       className={cn(
-        "w-full p-4 bg-white border border-calm-200 rounded-lg transition-all duration-200 ease-in-out hover:border-calm-300 hover:shadow-sm",
+        "w-full p-4 bg-white dark:bg-calm-800 border border-calm-200 dark:border-calm-700 rounded-lg transition-all duration-200 ease-in-out hover:border-calm-300 dark:hover:border-calm-600 hover:shadow-sm",
         onItemClick && "cursor-pointer",
         className
       )}
       onClick={onItemClick ? () => onItemClick(item) : undefined}
     >
       {/* Structured Card Layout with Three Zones */}
-      <div className="flex justify-between items-center w-full">
+      <div className="flex justify-between items-start w-full">
         
         {/* Zone 1: Identity - Favicon, Title, Creation Date */}
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          {/* Favicon */}
-          <div className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
-            {getFavicon(item.url) || (
-              <div className="w-4 h-4 bg-calm-300 rounded" />
-            )}
+        <div className="flex items-start space-x-3 flex-1 min-w-0">
+          {/* Icon (Favicon or Note icon) */}
+          <div className="flex-shrink-0 mt-1">
+            {getIcon()}
           </div>
           
           <div className="flex-1 min-w-0">
             {/* High Contrast Title */}
-            <h3 className="text-sm font-semibold text-gray-900 truncate">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-calm-200 truncate">
               {item.title || item.name || 'Untitled'}
             </h3>
             
-            {/* Metadata Row - Domain and Time */}
+            {/* Metadata Row - Domain/Type and Time */}
             <div className="flex items-center justify-between text-xs mt-0.5">
-              <span className="text-gray-500 truncate flex-1 mr-2">
-                {getDomain(item.url)}
+              <span className="text-gray-500 dark:text-calm-400 truncate flex-1 mr-2">
+                {getSubtitle()}
               </span>
-              <span className="text-gray-400 flex-shrink-0">
+              <span className="text-gray-400 dark:text-calm-500 flex-shrink-0">
                 {getTimeAgo(item.timestamp || item.createdAt)}
               </span>
             </div>
@@ -100,7 +119,7 @@ function StashCard({
             {/* Category/Type badge if available */}
             {(item.category || item.type) && (
               <div className="mt-1">
-                <span className="inline-block text-xs text-calm-600 bg-calm-100 px-2 py-0.5 rounded-full">
+                <span className="inline-block text-xs text-calm-600 dark:text-calm-300 bg-calm-100 dark:bg-calm-750 px-2 py-0.5 rounded-full">
                   {item.category || item.type}
                 </span>
               </div>
@@ -110,7 +129,7 @@ function StashCard({
 
         {/* Zone 2 & 3: Action Block - FidgetControl with proper containment */}
         {showFidgetControls && (
-          <div className="flex-shrink-0 ml-4">
+          <div className="flex-shrink-0 ml-4 flex flex-col items-end">
             <FidgetControl
               item={item}
               onAction={onItemAction}

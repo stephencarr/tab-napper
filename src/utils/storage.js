@@ -134,7 +134,8 @@ async function initializeBulkData() {
   const bulkDataKeys = [
     'triageHub_inbox',
     'triageHub_stashedTabs', 
-    'triageHub_trash'
+    'triageHub_trash',
+    'triageHub_notes'
   ];
   
   for (const key of bulkDataKeys) {

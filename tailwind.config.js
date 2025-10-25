@@ -4,11 +4,13 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
     "./triage_hub.html"
   ],
+  darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
       colors: {
         // ADHD-friendly calm color palette
         calm: {
+          25: '#fafbfc',
           50: '#f8fafc',
           100: '#f1f5f9',
           200: '#e2e8f0',
@@ -17,6 +19,7 @@ export default {
           500: '#64748b',
           600: '#475569',
           700: '#334155',
+          750: '#2a3441', // Added for dark mode
           800: '#1e293b',
           900: '#0f172a',
         }

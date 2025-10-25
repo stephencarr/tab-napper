@@ -232,7 +232,7 @@ function ContextualComponent({ className }) {
   if (error) {
     return (
       <div className={cn('space-y-4', className)}>
-        <div className="text-xs text-red-500 bg-red-50 p-2 rounded">
+        <div className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
           Unable to load contextual suggestions
         </div>
       </div>
@@ -250,11 +250,11 @@ function ContextualComponent({ className }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
-          <h3 className="text-sm font-medium text-calm-900">Stashed Context</h3>
+          <h3 className="text-sm font-medium text-calm-900 dark:text-calm-200">Stashed Context</h3>
         </div>
         <button
           onClick={handleToggleDismissed}
-          className="p-1 text-calm-400 hover:text-calm-600 transition-colors"
+          className="p-1 text-calm-400 hover:text-calm-600 dark:hover:text-calm-300 transition-colors"
           title={isDismissed ? "Show contextual suggestions" : "Hide contextual suggestions"}
         >
           {isDismissed ? (
@@ -267,35 +267,35 @@ function ContextualComponent({ className }) {
 
       {/* Contextual Item */}
       {contextualItem && !isDismissed && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-4">
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm font-medium text-amber-900">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
                 Did you need this?
               </p>
             </div>
             <button
               onClick={handleDismiss}
-              className="p-1 text-amber-400 hover:text-amber-600 transition-colors"
+              className="p-1 text-amber-400 dark:text-amber-500 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
               title="Dismiss suggestion"
             >
               <X className="h-3 w-3" />
             </button>
           </div>
           
-          <p className="text-xs text-amber-700 mb-3">
+          <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
             {contextualItem.matchReason}
           </p>
 
           <ListItem
             title={contextualItem.title}
             subtitle={
-              <div className="flex items-center justify-between text-xs text-calm-600">
+              <div className="flex items-center justify-between text-xs text-calm-600 dark:text-calm-400">
                 <span className="truncate">
                   {contextualItem.description || 'No description'}
                 </span>
-                <span className="ml-2 text-xs text-amber-600">
+                <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
                   Stashed
                 </span>
               </div>
@@ -318,9 +318,9 @@ function ContextualComponent({ className }) {
               console.log(`[Tab Napper] Contextual item clicked: ${contextualItem.title}`);
               handleContextualClick(contextualItem);
             }}
-            className="hover:bg-amber-100 border-amber-300 transition-colors cursor-pointer bg-white"
+            className="hover:bg-amber-100 dark:hover:bg-amber-900/30 border-amber-300 dark:border-amber-800/50 transition-colors cursor-pointer bg-white dark:bg-calm-800"
             badge={
-              <div className="flex items-center space-x-1 text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded-full">
+              <div className="flex items-center space-x-1 text-xs text-amber-700 dark:text-amber-200 bg-amber-200 dark:bg-amber-800/50 px-2 py-1 rounded-full">
                 <ExternalLink className="h-3 w-3" />
                 <span>Open</span>
               </div>
@@ -331,7 +331,7 @@ function ContextualComponent({ className }) {
 
       {/* Dismissed state */}
       {isDismissed && (
-        <div className="text-center py-4 text-calm-400">
+        <div className="text-center py-4 text-calm-400 dark:text-calm-500">
           <EyeOff className="h-6 w-6 mx-auto mb-2" />
           <p className="text-xs">Contextual suggestions hidden</p>
         </div>

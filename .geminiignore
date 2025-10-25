@@ -1,0 +1,107 @@
+# Dependencies and build artifacts
+node_modules/
+dist/
+build/
+vendor/
+.vite/
+.cache/
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment and config (keep package.json and source configs)
+.env
+.env.local
+.env.production
+.env.development
+
+# Logs and debugging
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Python cache (if any python scripts)
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE and editor files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Version control
+.git/
+.gitignore
+
+# Testing and coverage
+coverage/
+.nyc_output/
+.coverage
+*.lcov
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Non-code assets (images, videos, large files)
+assets/images/
+public/data/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp
+*.mp4
+*.mov
+*.avi
+*.pdf
+
+# Documentation artifacts (keep source markdown)
+docs/build/
+*.docx
+
+# Chrome extension specific
+*.crx
+*.pem
+web-ext-artifacts/
+
+# Minified/compiled files (keep source)
+*.min.js
+*.min.css
+*.bundle.js
+*.chunk.js
+
+# Large data files
+*.json.gz
+data/
+fixtures/
+samples/
+
+# Keep important config and source files by NOT ignoring:
+# package.json (dependencies info)
+# tailwind.config.js (styling config)
+# vite.config.js (build config)
+# manifest.json (extension config)
+# src/ (all source code)
+# *.md (documentation)

@@ -47,7 +47,7 @@ function UniversalSearch({
     <div className={cn('relative w-full', className)} {...props}>
       {/* Search Icon */}
       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <Search className="h-5 w-5 text-calm-400" />
+        <Search className="h-5 w-5 text-calm-400 dark:text-calm-500" />
       </div>
 
       {/* Search Input */}
@@ -65,28 +65,28 @@ function UniversalSearch({
           'pl-12 pr-12',
           'py-4',
           'text-lg',
-          'bg-white',
+          'bg-white dark:bg-calm-800',
           'border',
-          'border-calm-200',
+          'border-calm-200 dark:border-calm-700',
           'rounded-xl',
           'shadow-sm',
           
           // Focus styles
           'focus:outline-none',
           'focus:ring-2',
-          'focus:ring-calm-400',
-          'focus:border-calm-400',
+          'focus:ring-calm-400 dark:focus:ring-calm-500',
+          'focus:border-calm-400 dark:focus:border-calm-500',
           
           // Hover styles
-          'hover:border-calm-300',
+          'hover:border-calm-300 dark:hover:border-calm-600',
           
           // Transition
           'transition-all',
           'duration-200',
           
           // Typography
-          'placeholder:text-calm-400',
-          'text-calm-800'
+          'placeholder:text-calm-400 dark:placeholder:text-calm-500',
+          'text-calm-800 dark:text-calm-200'
         )}
       />
 
@@ -96,9 +96,9 @@ function UniversalSearch({
           onClick={handleClear}
           className={cn(
             'absolute inset-y-0 right-0 pr-4 flex items-center',
-            'text-calm-400 hover:text-calm-600',
+            'text-calm-400 dark:text-calm-500 hover:text-calm-600 dark:hover:text-calm-300',
             'transition-colors duration-200',
-            'focus:outline-none focus:text-calm-600'
+            'focus:outline-none focus:text-calm-600 dark:focus:text-calm-300'
           )}
           aria-label="Clear search"
         >
@@ -109,7 +109,7 @@ function UniversalSearch({
       {/* Search hint */}
       {!value && (
         <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-          <span className="text-xs text-calm-400 hidden sm:inline">
+          <span className="text-xs text-calm-400 dark:text-calm-500 hidden sm:inline">
             Press ESC to clear
           </span>
         </div>

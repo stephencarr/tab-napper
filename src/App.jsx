@@ -7,6 +7,8 @@ import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
+import { openNoteEditor } from './utils/navigation.js';
+import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -18,8 +20,12 @@ import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
 import DevConsole from './components/DevConsole.jsx';
+import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 
 function App() {
+  // Initialize dark mode detection
+  useDarkMode();
+  
   const [appState, setAppState] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -147,6 +153,12 @@ function App() {
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
     console.log('[Tab Napper] Search result clicked:', item);
+
+    // Notes: open in internal editor
+    if (item.isNote || item.type === 'note') {
+      openNoteEditor(item.id);
+      return;
+    }
 
     // If item has a URL, open it in a new tab
     if (item.url) {
@@ -307,11 +319,11 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-calm-50 flex items-center justify-center">
+      <div className="min-h-screen bg-calm-50 dark:bg-calm-900 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-calm-600 mx-auto mb-4" />
-          <p className="text-calm-600 text-lg">Initializing Tab Napper...</p>
-          <p className="text-calm-400 text-sm mt-2">Setting up encryption and loading your data</p>
+          <Loader2 className="h-8 w-8 animate-spin text-calm-600 dark:text-calm-400 mx-auto mb-4" />
+          <p className="text-calm-600 dark:text-calm-300 text-lg">Initializing Tab Napper...</p>
+          <p className="text-calm-400 dark:text-calm-500 text-sm mt-2">Setting up encryption and loading your data</p>
         </div>
       </div>
     );
@@ -319,11 +331,11 @@ function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-calm-50 flex items-center justify-center">
+      <div className="min-h-screen bg-calm-50 dark:bg-calm-900 flex items-center justify-center">
         <div className="calm-card p-8 max-w-md">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-center mb-4">Initialization Error</h1>
-          <p className="text-calm-600 text-center mb-6">{error}</p>
+          <h1 className="text-xl font-semibold text-center mb-4 text-calm-800 dark:text-calm-200">Initialization Error</h1>
+          <p className="text-calm-600 dark:text-calm-300 text-center mb-6">{error}</p>
           <button 
             onClick={() => window.location.reload()}
             className="calm-button-primary w-full px-4 py-2"
@@ -350,34 +362,42 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-calm-50">
+    <div className="min-h-screen bg-calm-50 dark:bg-calm-900 transition-colors">
       {/* Header */}
-      <header className="bg-white border-b border-calm-200 px-6 py-4">
+      <header className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-calm-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-calm-600 dark:bg-calm-500 rounded-lg flex items-center justify-center">
               <div className="grid grid-cols-1 gap-1">
                 <div className="w-1 h-1 bg-white rounded-full"></div>
                 <div className="w-1 h-1 bg-white rounded-full"></div>
                 <div className="w-1 h-1 bg-white rounded-full"></div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-calm-800">Tab Napper</h1>
-              <span className="text-xs text-calm-400 bg-calm-100 px-2 py-1 rounded-full">
-                {getFormattedVersion()}
+            <div className="flex items-center space-x-1">
+              <span className="font-medium text-calm-800 dark:text-calm-200">Tab Napper</span>
+              <span className="text-xs text-calm-400 dark:text-calm-500 bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded-full">
+                v{getFormattedVersion()}
               </span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-calm-600">Encrypted & Private</span>
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className="text-xs text-calm-500 hover:text-calm-700 dark:text-calm-400 dark:hover:text-calm-200 px-2 py-1 rounded"
+              title="Toggle dark mode"
+            >
+              🌙
+            </button>
+            <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <span className="text-sm text-calm-600 dark:text-calm-400">Encrypted & Private</span>
           </div>
         </div>
       </header>
 
       {/* Universal Search Bar */}
-      <div className="bg-white border-b border-calm-200 px-6 py-6">
+      <div className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-6">
         <div className="max-w-7xl mx-auto">
           <UniversalSearch
             value={searchTerm}
@@ -421,7 +441,13 @@ function App() {
                   emptyMessage="Your inbox is empty"
                   emptyDescription="Closed tabs and new items will appear here for you to triage and organize."
                   icon={Inbox}
-                  onItemClick={(item) => console.log('Inbox item clicked:', item)}
+                  onItemClick={(item) => {
+                    if (item.isNote || item.type === 'note') {
+                      openNoteEditor(item.id);
+                    } else if (item.url) {
+                      chrome.tabs.create({ url: item.url });
+                    }
+                  }}
                   onItemAction={handleItemAction}
                   triageButton={
                     <button
@@ -443,7 +469,13 @@ function App() {
                   emptyMessage="No stashed tabs"
                   emptyDescription="Tabs you've decided to keep for later will be organized here."
                   icon={Archive}
-                  onItemClick={(item) => console.log('Stashed tab clicked:', item)}
+                  onItemClick={(item) => {
+                    if (item.isNote || item.type === 'note') {
+                      openNoteEditor(item.id);
+                    } else if (item.url) {
+                      chrome.tabs.create({ url: item.url });
+                    }
+                  }}
                   onItemAction={handleItemAction}
                 />
               </div>
@@ -451,6 +483,16 @@ function App() {
 
             {/* Right Column - Action (40% width = 2/5 cols) */}
             <div className="lg:col-span-2 space-y-8">
+              
+              {/* Quick Note Capture */}
+              <div className="calm-card p-6">
+                <QuickNoteCapture 
+                  onNoteSaved={(note) => {
+                    console.log('[Tab Napper] Note saved to inbox:', note.title);
+                    // The reactive store handles UI updates automatically when storage changes
+                  }}
+                />
+              </div>
               
               {/* Quick Access Cards */}
               <div className="calm-card p-6">
@@ -486,7 +528,13 @@ function App() {
                   emptyMessage="Trash is empty"
                   emptyDescription="Deleted items can be recovered from here for a limited time."
                   icon={Trash2}
-                  onItemClick={(item) => console.log('Trash item clicked:', item)}
+                  onItemClick={(item) => {
+                    if (item.isNote || item.type === 'note') {
+                      openNoteEditor(item.id);
+                    } else if (item.url) {
+                      chrome.tabs.create({ url: item.url });
+                    }
+                  }}
                 />
               </div>
             </div>

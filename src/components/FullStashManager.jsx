@@ -90,32 +90,32 @@ function FullStashManager({ className, onNavigate }) {
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 gap-3 text-center">
-        <div className="bg-calm-50 border border-calm-200 rounded-lg p-3">
+        <div className="bg-calm-50 dark:bg-calm-800 border border-calm-200 dark:border-calm-700 rounded-lg p-3">
           <div className="flex items-center justify-center space-x-1 mb-1">
-            <Layers className="h-4 w-4 text-calm-500" />
-            <span className="text-xs font-medium text-calm-600">Stashed</span>
+            <Layers className="h-4 w-4 text-calm-500 dark:text-calm-400" />
+            <span className="text-xs font-medium text-calm-600 dark:text-calm-300">Stashed</span>
           </div>
-          <div className="text-lg font-bold text-calm-900">
+          <div className="text-lg font-bold text-calm-900 dark:text-calm-100">
             {isLoading ? '...' : stashCount}
           </div>
-          <div className="text-xs text-calm-500">items</div>
+          <div className="text-xs text-calm-500 dark:text-calm-400">items</div>
         </div>
         
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-3">
           <div className="flex items-center justify-center space-x-1 mb-1">
-            <Settings className="h-4 w-4 text-amber-500" />
-            <span className="text-xs font-medium text-amber-600">Categories</span>
+            <Settings className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-300">Categories</span>
           </div>
-          <div className="text-lg font-bold text-amber-900">
+          <div className="text-lg font-bold text-amber-900 dark:text-amber-100">
             {isLoading ? '...' : categoryCount}
           </div>
-          <div className="text-xs text-amber-500">types</div>
+          <div className="text-xs text-amber-500 dark:text-amber-400">types</div>
         </div>
       </div>
 
       {/* Helper text */}
       <div className="text-center">
-        <p className="text-xs text-calm-500 leading-relaxed">
+        <p className="text-xs text-calm-500 dark:text-calm-400 leading-relaxed">
           Access advanced stash organization, bulk operations, and detailed item management
         </p>
       </div>

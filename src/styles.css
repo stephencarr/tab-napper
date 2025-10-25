@@ -16,12 +16,17 @@
     @apply bg-calm-50 text-calm-700;
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
+
+  /* Dark theme base colors */
+  .dark body {
+    @apply bg-calm-900 text-calm-200;
+  }
 }
 
 /* Calm, uncluttered component styles */
 @layer components {
   .calm-card {
-    @apply bg-white border border-calm-200 rounded-lg shadow-sm;
+    @apply bg-white border border-calm-200 rounded-lg shadow-sm dark:bg-calm-800 dark:border-calm-700;
   }
   
   .calm-button {
@@ -31,10 +36,10 @@
   }
   
   .calm-button-primary {
-    @apply calm-button bg-calm-600 text-white hover:bg-calm-700;
+    @apply calm-button bg-calm-600 text-white hover:bg-calm-700 dark:bg-calm-600 dark:hover:bg-calm-500;
   }
   
   .calm-button-secondary {
-    @apply calm-button bg-calm-100 text-calm-900 hover:bg-calm-200;
+    @apply calm-button bg-calm-100 text-calm-900 hover:bg-calm-200 dark:bg-calm-700 dark:text-calm-100 dark:hover:bg-calm-600;
   }
 }
