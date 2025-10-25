@@ -167,9 +167,11 @@ async function handleStorageChanges(changes, namespace) {
           // - For arrays (inbox, stashed, etc.): defaults to []
           // - For userPreferences: defaults to DEFAULT_USER_PREFERENCES
           // This ensures a consistent state shape regardless of storage state.
-          updatedState[stateKey] = newValue === undefined
-            ? getDefaultValue(stateKey)
-            : newValue;
+          if (newValue === undefined) {
+            updatedState[stateKey] = getDefaultValue(stateKey);
+          } else {
+            updatedState[stateKey] = newValue;
+          }
           hasChanges = true;
         }
       }
