@@ -62,7 +62,7 @@ function StashCard({
   };
 
   // Special handling for notes
-  const isNote = item.isNote || item.type === 'note';
+  const isNote = item.type === 'note';
   
   // Get icon - use note icon for notes, favicon for tabs
   const getIcon = () => {
