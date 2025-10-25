@@ -8,6 +8,7 @@ import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
+import { calculateScheduledTime, setScheduledAlarm } from './utils/schedule.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import ListContainer from './components/ListContainer.jsx';
@@ -155,7 +156,7 @@ function App() {
   };
 
   // Handle FidgetControl actions
-  const handleItemAction = async (action, item) => {
+  const handleItemAction = async (action, item, actionData) => {
     try {
       
       switch (action) {
@@ -208,11 +209,39 @@ function App() {
           
           break;
           
-        case 'remind':
-        case 'follow-up':
+        case 'remind_me':
+        case 'follow_up':
         case 'review':
-          // For now, just log the scheduled action
-          // TODO: Implement reminder/scheduling system
+          // Stash and Schedule: Move to stashed tabs with scheduled reminder
+          console.log('[Tab Napper] Scheduling item:', { action, item: item.title, actionData });
+          
+          // Step 1: Calculate the scheduled time
+          const scheduledTime = calculateScheduledTime(actionData.when);
+          console.log('[Tab Napper] Scheduled time:', new Date(scheduledTime).toLocaleString());
+          
+          // Step 2: Remove from inbox
+          const currentInboxForSchedule = await loadAppState('triageHub_inbox', []);
+          const updatedInboxForSchedule = currentInboxForSchedule.filter(i => i.id !== item.id);
+          
+          // Step 3: Add to stashed tabs with scheduling metadata
+          const currentStashedForSchedule = await loadAppState('triageHub_stashedTabs', []);
+          const scheduledItem = {
+            ...item,
+            scheduledFor: scheduledTime,
+            scheduledAction: action,
+            scheduledWhen: actionData.when,
+            stashedAt: Date.now()
+          };
+          const updatedStashedForSchedule = [scheduledItem, ...currentStashedForSchedule];
+          
+          // Step 4: Save to storage
+          await saveAppState('triageHub_inbox', updatedInboxForSchedule);
+          await saveAppState('triageHub_stashedTabs', updatedStashedForSchedule);
+          
+          // Step 5: Set Chrome alarm
+          await setScheduledAlarm(item, action, scheduledTime);
+          
+          console.log('[Tab Napper] ✓ Item scheduled and stashed:', item.title);
           break;
           
         default:
