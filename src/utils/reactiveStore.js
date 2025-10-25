@@ -13,6 +13,12 @@
 import { loadAllAppData } from './storage.js';
 import { debugLog, debugSuccess } from './debug.js';
 
+// Default values for state properties
+const DEFAULT_USER_PREFERENCES = {
+  theme: 'light',
+  analogFidgetSensitivity: 'medium'
+};
+
 // Global store state and listeners
 let globalAppState = null;
 let stateChangeListeners = new Set();
@@ -142,10 +148,10 @@ async function handleStorageChanges(changes, namespace) {
         if (stateKey) {
           // Use the new value from changes (already available, no need to read!)
           const newValue = changes[storageKey].newValue;
-          // Use ?? instead of || to properly handle empty arrays/objects
-          updatedState[stateKey] = newValue ?? (stateKey === 'userPreferences'
-            ? { theme: 'light', analogFidgetSensitivity: 'medium' }
-            : []);
+          // Explicitly check for undefined to handle null values correctly
+          updatedState[stateKey] = newValue === undefined
+            ? (stateKey === 'userPreferences' ? DEFAULT_USER_PREFERENCES : [])
+            : newValue;
           hasChanges = true;
         }
       }
