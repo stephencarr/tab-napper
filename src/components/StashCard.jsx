@@ -129,7 +129,10 @@ function StashCard({
 
         {/* Zone 2 & 3: Action Block - FidgetControl with proper containment */}
         {showFidgetControls && (
-          <div className="flex-shrink-0 ml-4 flex flex-col items-end">
+          <div 
+            className="flex-shrink-0 ml-4 flex flex-col items-end"
+            onClick={(e) => e.stopPropagation()}
+          >
             <FidgetControl
               item={item}
               onAction={onItemAction}

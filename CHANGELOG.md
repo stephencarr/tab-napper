@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Background service worker to monitor note tab closures
+  - Automatically re-triages notes to Inbox when note.html tabs are closed
+  - Tracks note tabs via URL parsing and maintains tab-to-noteId mapping
+  - Completes Ticket 12: Note Tab Re-Triage on Close lifecycle
+
+### Fixed
+- Fidget Controls click interaction in StashCard component
+  - Added event.stopPropagation() to prevent card onClick from blocking Fidget buttons
+  - Users can now interact with action buttons (Stash, Delete, Remind) without opening the note
+
 ### Planned
 - Advanced filtering for search results
 - Full keyboard navigation support
