@@ -84,40 +84,75 @@ export async function initializeReactiveStore() {
 async function handleStorageChanges(changes, namespace) {
   try {
     debugLog('ReactiveStore', `Storage changes detected in ${namespace}:`, Object.keys(changes));
-    
+
     // All app-related storage keys that should trigger state updates
     const appDataKeys = [
       // Main data keys
       'triageHub_inbox',
-      'triageHub_stashedTabs', 
+      'triageHub_stashedTabs',
       'triageHub_trash',
       'triageHub_notes',
       'triageHub_suggestionMetadata',
-      
+
       // UI and preference keys
       'triageHub_quickAccessCards',
       'triageHub_userPreferences',
       'triageHub_encryptionKey',
-      
+
       // Mock data and dev keys
       'tabNapper_mockHistory',
-      
+
       // Any other triageHub_ prefixed keys
     ];
-    
+
     // Check for any app-related changes (including wildcard for triageHub_ prefix)
-    const relevantChanges = Object.keys(changes).filter(key => 
+    const relevantChanges = Object.keys(changes).filter(key =>
       appDataKeys.includes(key) || key.startsWith('triageHub_') || key.startsWith('tabNapper_')
     );
-    
+
     if (relevantChanges.length > 0) {
       debugLog('ReactiveStore', 'Relevant app data changes detected:', relevantChanges);
-      
-      // Reload the entire app state to ensure consistency
-      const newState = await loadAllAppData();
-      
-      debugSuccess('ReactiveStore', 'State refreshed from storage due to changes:', relevantChanges);
-      notifyStateChange(newState);
+
+      // PERFORMANCE: Only update changed keys instead of reloading everything
+      // This reduces storage I/O from 5 reads to 1-2 reads per change
+      if (!globalAppState) {
+        // If no state exists yet, load all data
+        const newState = await loadAllAppData();
+        debugSuccess('ReactiveStore', 'Initial state loaded');
+        notifyStateChange(newState);
+        return;
+      }
+
+      // Clone current state and update only changed keys
+      const updatedState = { ...globalAppState };
+      let hasChanges = false;
+
+      // Map storage keys to state property names
+      const keyMapping = {
+        'triageHub_inbox': 'inbox',
+        'triageHub_stashedTabs': 'stashedTabs',
+        'triageHub_trash': 'trash',
+        'triageHub_notes': 'notes',
+        'triageHub_quickAccessCards': 'quickAccessCards',
+        'triageHub_userPreferences': 'userPreferences',
+      };
+
+      for (const storageKey of relevantChanges) {
+        const stateKey = keyMapping[storageKey];
+        if (stateKey) {
+          // Use the new value from changes (already available, no need to read!)
+          const newValue = changes[storageKey].newValue;
+          updatedState[stateKey] = newValue || (stateKey === 'userPreferences'
+            ? { theme: 'light', analogFidgetSensitivity: 'medium' }
+            : []);
+          hasChanges = true;
+        }
+      }
+
+      if (hasChanges) {
+        debugSuccess('ReactiveStore', 'State updated with granular changes:', relevantChanges);
+        notifyStateChange(updatedState);
+      }
     } else {
       debugLog('ReactiveStore', 'No relevant changes detected, skipping state refresh');
     }

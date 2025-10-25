@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Star, ExternalLink, Clock, PinOff, Pin } from 'lucide-react';
-import { loadAppState, saveAppState } from '../utils/storage.js';
+import { saveAppState } from '../utils/storage.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { unpinItem } from '../utils/smartSuggestions.js';
@@ -13,25 +13,22 @@ import ListItem from './ListItem.jsx';
  */
 function QuickAccessCards({ className, maxItems = 6 }) {
   const { data: quickAccessData, isLoading, error } = useReactiveStorage('triageHub_quickAccessCards', []);
-  const [quickAccessItems, setQuickAccessItems] = useState([]);
 
-  // Process and sort quick access data when it changes
-  useEffect(() => {
-    if (quickAccessData) {
-      // Sort by access frequency and last accessed time
-      const sortedItems = quickAccessData
-        .sort((a, b) => {
-          // Primary sort: access count (descending)
-          if (b.accessCount !== a.accessCount) {
-            return b.accessCount - a.accessCount;
-          }
-          // Secondary sort: last accessed time (descending)
-          return b.lastAccessed - a.lastAccessed;
-        })
-        .slice(0, maxItems);
-      
-      setQuickAccessItems(sortedItems);
-    }
+  // PERFORMANCE: Use useMemo to avoid re-sorting on every render
+  const quickAccessItems = useMemo(() => {
+    if (!quickAccessData) return [];
+
+    // Sort by access frequency and last accessed time
+    return [...quickAccessData]
+      .sort((a, b) => {
+        // Primary sort: access count (descending)
+        if (b.accessCount !== a.accessCount) {
+          return b.accessCount - a.accessCount;
+        }
+        // Secondary sort: last accessed time (descending)
+        return b.lastAccessed - a.lastAccessed;
+      })
+      .slice(0, maxItems);
   }, [quickAccessData, maxItems]);
 
   // Handle clicking on a quick access item
@@ -74,11 +71,13 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     }
   };
 
+  // PERFORMANCE: Use useCallback to memoize this function
   // Update access count for an item
-  const updateAccessCount = async (item) => {
+  const updateAccessCount = useCallback(async (item) => {
     try {
-      const quickAccessData = await loadAppState('triageHub_quickAccessCards') || [];
-      
+      // PERFORMANCE: Use the reactive data we already have, don't reload it
+      if (!quickAccessData) return;
+
       const updatedData = quickAccessData.map(accessItem => {
         if (accessItem.id === item.id) {
           return {
@@ -89,14 +88,14 @@ function QuickAccessCards({ className, maxItems = 6 }) {
         }
         return accessItem;
       });
-      
-      // Save back to storage
+
+      // Save back to storage - reactiveStorage will update UI automatically
       await saveAppState('triageHub_quickAccessCards', updatedData);
-      
+
     } catch (error) {
       console.error('[Tab Napper] Error updating access count:', error);
     }
-  };
+  }, [quickAccessData]);
 
   // Get favicon URL with better error handling
   const getFaviconUrl = (url) => {
