@@ -12,6 +12,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full keyboard navigation support
 - Export/import functionality
 
+## [0.6.0] - 2025-10-25
+
+### Added – Quick Note Capture, Dark Mode, and UI Consistency
+- Quick Note Capture feature with markdown editor and live preview
+  - Saves to Inbox with `isNote: true` and integrates with triage flows
+  - Keyboard shortcuts: Ctrl+Enter to save, Ctrl+E to toggle preview
+  - Document-style preview typography for readability
+- System dark mode support with manual toggle preserved
+  - `useDarkMode` hook adds/removes the `dark` class and listens to `matchMedia`
+  - Tailwind dark mode enabled via `darkMode: 'class'`
+- Calm UI: shared component classes
+  - `calm-card`, `calm-button-primary`, `calm-button-secondary` now include dark variants
+  - App-wide visual consistency for cards, lists, and action buttons in both themes
+
+### Changed
+- Markdown rendering: replaced library parser usage with a lightweight, HTML-escaped custom renderer to prevent [object Object] issues and reduce bundle size
+- Styling updates across custom components for dark mode conformance:
+  - `App.jsx`, `UniversalSearch.jsx`, `SearchResults.jsx`, `StashManagerView.jsx`, `QuickAccessCards.jsx`,
+    `StashCard.jsx`, `RecentlyVisited.jsx`, `ListContainer.jsx`, `ListItem.jsx`, `SmartSuggestions.jsx`,
+    `ContextualComponent.jsx`, `FidgetControl.jsx`, and more
+- Tailwind theme extended with calm palette additions (including `calm-25`, `calm-750`)
+
+### Security
+- Removed inline dark-mode detection script from `triage_hub.html` to satisfy MV3 CSP; dark mode handled in React hook
+- Markdown preview is sanitized via HTML escaping to mitigate XSS vectors
+
+### Fixed
+- Resolved build-breaking JSX issue in `ContextualComponent.jsx` (missing container/return closure)
+- Corrected dark hover, text, and border states in several custom components
+
+### Tooling / DX
+- Added `.geminiignore` to reduce token usage during AI-assisted operations
+
+
 ## [0.5.1] - 2025-10-24
 
 ### Added - Enhanced Omnisearch & Performance Revolution
