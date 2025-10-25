@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Terminal, Database, Bell, Clock, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import {
@@ -27,14 +27,14 @@ function DevPanel({ isOpen, onClose, className }) {
     );
   };
 
-  const addLog = (message, type = 'info') => {
+  const addLog = useCallback((message, type = 'info') => {
     setLogs(prev => [...prev, {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       message,
       type,
       timestamp: new Date().toLocaleTimeString()
     }].slice(-50)); // Keep last 50 logs
-  };
+  }, []);
 
   const clearLogs = () => setLogs([]);
 
@@ -241,18 +241,18 @@ function DataTab({ addLog }) {
 function AlarmsTab({ addLog }) {
   const [alarms, setAlarms] = useState([]);
 
-  const loadAlarms = async () => {
+  const loadAlarms = useCallback(async () => {
     if (typeof chrome === 'undefined' || !chrome.alarms) return;
     
     chrome.alarms.getAll((alarmList) => {
-      setAlarms(alarmList);
-      addLog(`Found ${alarmList.length} active alarms`, 'info');
+      setAlarms(alarmList || []);
+      addLog(`Found ${alarmList?.length || 0} active alarms`, 'info');
     });
-  };
+  }, [addLog]);
 
   useEffect(() => {
     loadAlarms();
-  }, []);
+  }, [loadAlarms]);
 
   return (
     <div className="space-y-4">
