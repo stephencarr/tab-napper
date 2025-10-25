@@ -91,12 +91,12 @@ function StashCard({
       onClick={onItemClick ? () => onItemClick(item) : undefined}
     >
       {/* Structured Card Layout with Three Zones */}
-      <div className="flex justify-between items-center w-full">
+      <div className="flex justify-between items-start w-full">
         
         {/* Zone 1: Identity - Favicon, Title, Creation Date */}
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
+        <div className="flex items-start space-x-3 flex-1 min-w-0">
           {/* Icon (Favicon or Note icon) */}
-          <div className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
+          <div className="flex-shrink-0 mt-1">
             {getIcon()}
           </div>
           
