@@ -144,4 +144,4 @@ function UniversalSearch({
   );
 }
 
-export default UniversalSearch;
+export default React.memo(UniversalSearch);

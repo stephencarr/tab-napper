@@ -67,13 +67,24 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const debounceRef = React.useRef(null);
+  const mountedRef = React.useRef(false);
   
   // Watch for changes in stashed tabs to update history status
   const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
 
   // Load history on component mount and when stashed tabs change
   useEffect(() => {
-    loadHistory();
+    // Debounce rapid triggers so we don't hammer chrome.history.search
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      loadHistory();
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [maxItems, stashedTabs]); // Add stashedTabs as dependency
 
   const loadHistory = async () => {
@@ -82,15 +93,23 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       setError(null);
       
       const items = await getLightweightRecentHistory(maxItems);
+      if (!mountedRef.current) return;
       setHistoryItems(items);
       
     } catch (err) {
       console.error('[Tab Napper] Error loading history:', err);
       setError('Failed to load browsing history');
     } finally {
+      if (!mountedRef.current) return;
       setIsLoading(false);
     }
   };
+
+  // mounted flag to avoid setting state after unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {

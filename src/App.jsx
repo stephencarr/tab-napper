@@ -142,14 +142,14 @@ function App() {
     }
   };
 
-  // Handle search
-  const handleSearchChange = (value) => {
+  // Handle search (stabilized with useCallback to reduce rerenders downstream)
+  const handleSearchChange = React.useCallback((value) => {
     setSearchTerm(value);
-  };
+  }, []);
 
-  const handleSearchClear = () => {
+  const handleSearchClear = React.useCallback(() => {
     setSearchTerm('');
-  };
+  }, []);
 
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
