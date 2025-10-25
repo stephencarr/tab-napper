@@ -19,21 +19,44 @@ function StashManagerView({
 }) {
   // Tab state - derived from initialFilter prop
   const activeTab = initialFilter;
+  
+  console.log('[StashManagerView] Rendering with:', {
+    activeTab,
+    inboxLength: inboxData?.length,
+    stashedLength: stashedTabs?.length,
+    trashLength: trashData?.length,
+    inboxSample: inboxData?.[0]?.title,
+    stashedSample: stashedTabs?.[0]?.title,
+    trashSample: trashData?.[0]?.title
+  });
 
   // Get current tab data
   const getCurrentData = () => {
+    console.log('[StashManagerView] getCurrentData() called for tab:', activeTab);
+    
+    // Helper to sort items by timestamp (newest first)
+    const sortByTimestamp = (items) => {
+      return [...items].sort((a, b) => {
+        const timeA = a.deletedAt || a.timestamp || a.capturedAt || 0;
+        const timeB = b.deletedAt || b.timestamp || b.capturedAt || 0;
+        return timeB - timeA; // Descending (newest first)
+      });
+    };
+    
     switch (activeTab) {
       case 'inbox':
+        console.log('[StashManagerView] Returning inbox data:', inboxData?.length, 'items');
         return {
-          items: inboxData || [],
+          items: sortByTimestamp(inboxData || []),
           title: 'Inbox',
           description: 'Closed tabs and new items for you to triage and organize',
           emptyMessage: 'Your inbox is empty',
           emptyDescription: 'Closed tabs and new items will appear here for you to triage and organize.'
         };
       case 'trash':
+        console.log('[StashManagerView] Returning trash data:', trashData?.length, 'items');
         return {
-          items: trashData || [],
+          items: sortByTimestamp(trashData || []),
           title: 'Trash',
           description: 'Deleted items that can be recovered',
           emptyMessage: 'Trash is empty',
@@ -41,8 +64,9 @@ function StashManagerView({
         };
       case 'stashed':
       default:
+        console.log('[StashManagerView] Returning stashed data:', stashedTabs?.length, 'items');
         return {
-          items: stashedTabs || [],
+          items: sortByTimestamp(stashedTabs || []),
           title: 'All Stashed',
           description: 'All your saved and organized items',
           emptyMessage: 'No stashed items yet',
@@ -154,17 +178,27 @@ function StashManagerView({
           /* Items List */
           <div>
             <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
-              {currentData.items.map((item, index) => (
-                <li key={item.id || item.url || index} className="py-4">
-                  <StashCard
-                    item={item}
-                    onItemClick={() => handleItemClick(item)}
-                    onItemAction={onItemAction}
-                    showFidgetControls={activeTab !== 'trash'}
-                    isTrashView={activeTab === 'trash'}
-                  />
-                </li>
-              ))}
+              {currentData.items.map((item, index) => {
+                // Use index in key to guarantee uniqueness, especially for trash with duplicates
+                const itemKey = `${activeTab}-${item.id || item.url || index}-${index}`;
+                console.log(`[StashManagerView] Rendering item ${index} in ${activeTab}:`, {
+                  key: itemKey,
+                  title: item.title,
+                  id: item.id,
+                  url: item.url
+                });
+                return (
+                  <li key={itemKey} className="py-4">
+                    <StashCard
+                      item={item}
+                      onItemClick={() => handleItemClick(item)}
+                      onItemAction={onItemAction}
+                      showFidgetControls={activeTab !== 'trash'}
+                      isTrashView={activeTab === 'trash'}
+                    />
+                  </li>
+                );
+              })}
             </ul>
             
             {currentData.items.length > 10 && (

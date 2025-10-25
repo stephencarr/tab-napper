@@ -149,6 +149,32 @@ async function initializeBulkData() {
 }
 
 /**
+ * Deduplicate array by ID
+ * Keeps the first occurrence of each unique ID
+ */
+function deduplicateById(items) {
+  if (!Array.isArray(items)) return items;
+  
+  const seen = new Set();
+  const duplicates = [];
+  const result = items.filter(item => {
+    if (!item || !item.id) return true; // Keep items without IDs
+    if (seen.has(item.id)) {
+      duplicates.push({ id: item.id, title: item.title });
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
+  
+  if (duplicates.length > 0) {
+    console.warn('[Storage] Removed duplicates:', duplicates);
+  }
+  
+  return result;
+}
+
+/**
  * Load all application data into a single state object
  */
 async function loadAllAppData() {
@@ -170,6 +196,25 @@ async function loadAllAppData() {
     loadAppState('triageHub_trash')
   ]);
   
+  // Deduplicate arrays (especially trash which can accumulate duplicates)
+  const deduplicatedInbox = deduplicateById(inbox || []);
+  const deduplicatedStashed = deduplicateById(stashedTabs || []);
+  const deduplicatedTrash = deduplicateById(trash || []);
+  
+  // If we removed duplicates, save the cleaned data back to storage
+  if (deduplicatedInbox.length !== (inbox || []).length) {
+    console.log('[Storage] Deduplicating inbox:', (inbox || []).length, '→', deduplicatedInbox.length);
+    await saveAppState('triageHub_inbox', deduplicatedInbox);
+  }
+  if (deduplicatedStashed.length !== (stashedTabs || []).length) {
+    console.log('[Storage] Deduplicating stashed:', (stashedTabs || []).length, '→', deduplicatedStashed.length);
+    await saveAppState('triageHub_stashedTabs', deduplicatedStashed);
+  }
+  if (deduplicatedTrash.length !== (trash || []).length) {
+    console.log('[Storage] Deduplicating trash:', (trash || []).length, '→', deduplicatedTrash.length);
+    await saveAppState('triageHub_trash', deduplicatedTrash);
+  }
+  
   return {
     // Sync storage data (small, critical)
     quickAccessCards: quickAccessCards || [],
@@ -178,10 +223,10 @@ async function loadAllAppData() {
       analogFidgetSensitivity: 'medium'
     },
     
-    // Local storage data (bulk)
-    inbox: inbox || [],
-    stashedTabs: stashedTabs || [],
-    trash: trash || []
+    // Local storage data (bulk, now deduplicated)
+    inbox: deduplicatedInbox,
+    stashedTabs: deduplicatedStashed,
+    trash: deduplicatedTrash
   };
 }
 

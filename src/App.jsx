@@ -201,15 +201,31 @@ function App() {
           
         case 'delete':
           // Move item to trash
-          console.log('[Tab Napper] Moving item to trash:', item.title);
+          console.log('[Tab Napper] ===== DELETE ACTION =====');
+          console.log('[Tab Napper] Deleting item:', {
+            id: item.id,
+            title: item.title,
+            url: item.url
+          });
           
           const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
           const currentStashed = await loadAppState('triageHub_stashedTabs', []);
           const currentTrashForDelete = await loadAppState('triageHub_trash', []);
           
+          console.log('[Tab Napper] Current state before delete:', {
+            inboxCount: currentInboxForDelete.length,
+            stashedCount: currentStashed.length,
+            trashCount: currentTrashForDelete.length
+          });
+          
           // Remove from inbox or stashed
           const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
           const updatedStashed = currentStashed.filter(i => i.id !== item.id);
+          
+          console.log('[Tab Napper] After filtering:', {
+            inboxRemoved: currentInboxForDelete.length - updatedInboxForDelete.length,
+            stashedRemoved: currentStashed.length - updatedStashed.length
+          });
           
           // Add to trash with deletion timestamp
           const trashedItem = {
@@ -219,13 +235,21 @@ function App() {
           };
           const updatedTrashForDelete = [...currentTrashForDelete, trashedItem];
           
+          console.log('[Tab Napper] New trash count:', updatedTrashForDelete.length);
+          console.log('[Tab Napper] Trashed item:', {
+            id: trashedItem.id,
+            title: trashedItem.title,
+            deletedAt: trashedItem.deletedAt,
+            originalLocation: trashedItem.originalLocation
+          });
+          
           // Update storage
           await saveAppState('triageHub_inbox', updatedInboxForDelete);
           await saveAppState('triageHub_stashedTabs', updatedStashed);
           await saveAppState('triageHub_trash', updatedTrashForDelete);
           
-          // Chrome storage listener will automatically update the reactive store
-          console.log('[Tab Napper] Item moved to trash:', item.title);
+          console.log('[Tab Napper] Storage updated');
+          console.log('[Tab Napper] ===== END DELETE ACTION =====');
           break;
           
         case 'remind':
@@ -395,6 +419,15 @@ function App() {
     
     // Handler for tab changes within StashManagerView
     const handleTabChange = (tabId) => {
+      console.log('[App] ===== TAB CHANGE =====');
+      console.log('[App] Tab clicked:', tabId);
+      console.log('[App] Current view before change:', currentView);
+      console.log('[App] Current appState:', {
+        inbox: appState?.inbox?.length,
+        stashedTabs: appState?.stashedTabs?.length,
+        trash: appState?.trash?.length
+      });
+      
       // Map tab IDs to view names
       const tabToViewMap = {
         'stashed': 'All Stashed',
@@ -403,8 +436,10 @@ function App() {
       };
       const newView = tabToViewMap[tabId];
       if (newView) {
+        console.log('[App] Setting currentView to:', newView);
         setCurrentView(newView);
       }
+      console.log('[App] ===== END TAB CHANGE =====');
     };
     
     switch (currentView) {

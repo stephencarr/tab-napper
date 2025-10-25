@@ -18,15 +18,31 @@ export function useReactiveStore() {
   const [, forceUpdate] = useState(0);
   
   useEffect(() => {
+    console.log('[useReactiveStore] Setting up subscription');
+    
     // Subscribe to store changes and force re-render
-    const unsubscribe = subscribeToStateChanges(() => {
+    const unsubscribe = subscribeToStateChanges((newState) => {
+      console.log('[useReactiveStore] Store changed, forcing re-render', {
+        inbox: newState?.inbox?.length,
+        stashedTabs: newState?.stashedTabs?.length,
+        trash: newState?.trash?.length
+      });
       forceUpdate(prev => prev + 1);
     });
     
-    return unsubscribe;
+    return () => {
+      console.log('[useReactiveStore] Cleaning up subscription');
+      unsubscribe();
+    };
   }, []);
   
   // Always return the current state from the global store
   // This guarantees we get fresh data, not stale React state
-  return getCurrentAppState();
+  const currentState = getCurrentAppState();
+  console.log('[useReactiveStore] Returning current state', {
+    inbox: currentState?.inbox?.length,
+    stashedTabs: currentState?.stashedTabs?.length,
+    trash: currentState?.trash?.length
+  });
+  return currentState;
 }
