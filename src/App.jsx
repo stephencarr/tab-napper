@@ -43,31 +43,31 @@ function App() {
     
     async function initializeApp() {
       try {
-        console.log('[Triage Hub] Initializing application...');
+        console.log('[Tab Napper] Initializing application...');
         
         // Initialize E2EE key (will create if doesn't exist)
         await getOrCreateEncryptionKey();
-        console.log('[Triage Hub] Encryption key ready');
+        console.log('[Tab Napper] Encryption key ready');
         
         // Initialize reactive store and load data
         const data = await initializeReactiveStore();
-        console.log('[Triage Hub] Reactive store initialized with data:', data);
+        console.log('[Tab Napper] Reactive store initialized with data:', data);
         
         // Subscribe to state changes for automatic UI updates
         unsubscribe = subscribeToStateChanges((newState) => {
-          console.log('[Triage Hub] State change detected, updating UI:', newState);
+          console.log('[Tab Napper] State change detected, updating UI:', newState);
           setAppState(newState);
         });
         
         // Test direct state reading for individual keys
-        console.log('[Triage Hub] Testing direct state reading...');
+        console.log('[Tab Napper] Testing direct state reading...');
         const directInbox = await loadAppState('triageHub_inbox');
         const directStashed = await loadAppState('triageHub_stashedTabs');
         const directTrash = await loadAppState('triageHub_trash');
-        
-        console.log('[Triage Hub] Direct inbox read:', directInbox);
-        console.log('[Triage Hub] Direct stashed read:', directStashed);
-        console.log('[Triage Hub] Direct trash read:', directTrash);
+
+        console.log('[Tab Napper] Direct inbox read:', directInbox);
+        console.log('[Tab Napper] Direct stashed read:', directStashed);
+        console.log('[Tab Napper] Direct trash read:', directTrash);
         
         // Set up tab capture listeners
         setupTabCaptureListeners();
@@ -75,7 +75,7 @@ function App() {
         setAppState(data);
         setIsLoading(false);
       } catch (err) {
-        console.error('[Triage Hub] Initialization error:', err);
+        console.error('[Tab Napper] Initialization error:', err);
         setError(err.message);
         setIsLoading(false);
       }
@@ -112,7 +112,7 @@ function App() {
       await saveAppState(storageKey, value);
       // Note: Reactive store will automatically update React state
     } catch (err) {
-      console.error(`[Triage Hub] Error updating ${key}:`, err);
+      console.error(`[Tab Napper] Error updating ${key}:`, err);
       setError(`Failed to save ${key}`);
     }
   };
@@ -124,7 +124,7 @@ function App() {
       // Trigger reactive state refresh
       await refreshStateFromStorage();
     } catch (err) {
-      console.error('[Triage Hub] Error adding sample data:', err);
+      console.error('[Tab Napper] Error adding sample data:', err);
     }
   };
 
@@ -135,7 +135,7 @@ function App() {
       // Trigger reactive state refresh
       await refreshStateFromStorage();
     } catch (err) {
-      console.error('[Triage Hub] Error clearing data:', err);
+      console.error('[Tab Napper] Error clearing data:', err);
     }
   };
 
@@ -150,13 +150,13 @@ function App() {
 
   // Handle search result clicks
   const handleSearchResultClick = (item) => {
-    console.log('[Triage Hub] Search result clicked:', item);
-    
+    console.log('[Tab Napper] Search result clicked:', item);
+
     // If item has a URL, open it in a new tab
     if (item.url) {
       chrome.tabs.create({ url: item.url });
     } else {
-      console.log('[Triage Hub] Item has no URL to open:', item);
+      console.log('[Tab Napper] Item has no URL to open:', item);
     }
   };
 
@@ -173,7 +173,7 @@ function App() {
   // Handle FidgetControl actions
   const handleItemAction = async (action, item) => {
     try {
-      console.log('[Triage Hub] FidgetControl action:', action, 'for item:', item);
+      console.log('[Tab Napper] FidgetControl action:', action, 'for item:', item);
       
       switch (action) {
         case 'delete':
@@ -199,7 +199,7 @@ function App() {
           await updateAppState('stashedTabs', updatedStashed);
           await updateAppState('trash', updatedTrash);
           
-          console.log('[Triage Hub] Item moved to trash:', item.title);
+          console.log('[Tab Napper] Item moved to trash:', item.title);
           break;
           
         case 'remind':
@@ -207,14 +207,14 @@ function App() {
         case 'review':
           // For now, just log the scheduled action
           // TODO: Implement reminder/scheduling system
-          console.log('[Triage Hub] Scheduled action:', action, 'for item:', item.title);
+          console.log('[Tab Napper] Scheduled action:', action, 'for item:', item.title);
           break;
           
         default:
-          console.warn('[Triage Hub] Unknown FidgetControl action:', action);
+          console.warn('[Tab Napper] Unknown FidgetControl action:', action);
       }
     } catch (error) {
-      console.error('[Triage Hub] Error handling FidgetControl action:', error);
+      console.error('[Tab Napper] Error handling FidgetControl action:', error);
     }
   };
 
@@ -233,18 +233,18 @@ function App() {
       const testUrl = testUrls[urlIndex];
       const testTitle = `Test Tab ${urlIndex + 1} - ${new Date().toLocaleTimeString()}`;
       
-      console.log(`[Triage Hub] Simulating capture of: ${testUrl}`);
-      
+      console.log(`[Tab Napper] Simulating capture of: ${testUrl}`);
+
       const capturedItem = await simulateTabCapture(testUrl, testTitle);
-      
+
       // Trigger reactive state refresh
       await refreshStateFromStorage();
-      
+
       // Show user feedback
-      console.log(`[Triage Hub] Captured: ${capturedItem.title}`);
-      
+      console.log(`[Tab Napper] Captured: ${capturedItem.title}`);
+
     } catch (err) {
-      console.error('[Triage Hub] Error simulating capture:', err);
+      console.error('[Tab Napper] Error simulating capture:', err);
     }
   };
 
@@ -294,11 +294,11 @@ function App() {
       // Trigger reactive state refresh
       await refreshStateFromStorage();
       
-      console.log('[Triage Hub] Added test items to stashed tabs for deduplication testing');
+      console.log('[Tab Napper] Added test items to stashed tabs for deduplication testing');
       console.log('Now click "Simulate Tab Capture" to see deduplication in action!');
-      
+
     } catch (err) {
-      console.error('[Triage Hub] Error setting up dedupe test:', err);
+      console.error('[Tab Napper] Error setting up dedupe test:', err);
     }
   };
 
@@ -310,7 +310,7 @@ function App() {
       <div className="min-h-screen bg-calm-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-calm-600 mx-auto mb-4" />
-          <p className="text-calm-600 text-lg">Initializing Triage Hub...</p>
+          <p className="text-calm-600 text-lg">Initializing Tab Napper...</p>
           <p className="text-calm-400 text-sm mt-2">Setting up encryption and loading your data</p>
         </div>
       </div>
@@ -472,7 +472,7 @@ function App() {
               {/* Full Stash Manager */}
               <div className="calm-card p-6">
                 <FullStashManager onNavigate={(destination) => {
-                  console.log('[Triage Hub] Navigation requested to:', destination);
+                  console.log('[Tab Napper] Navigation requested to:', destination);
                   setCurrentView('stash-manager');
                   setStashManagerFilter('stashed');
                 }} />

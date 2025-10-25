@@ -1,5 +1,5 @@
 /**
- * Encryption utilities for Triage Hub
+ * Encryption utilities for Tab Napper
  * Implements E2EE with AES-GCM encryption using Web Crypto API
  */
 
@@ -58,7 +58,7 @@ async function getOrCreateEncryptionKey() {
       return await importKey(result[ENCRYPTION_KEY_STORAGE_KEY]);
     } else {
       // Generate new key
-      console.log('[Triage Hub] Generating new encryption key...');
+      console.log('[Tab Napper] Generating new encryption key...');
       const newKey = await generateEncryptionKey();
       
       // Export and store in sync storage
@@ -67,11 +67,11 @@ async function getOrCreateEncryptionKey() {
         [ENCRYPTION_KEY_STORAGE_KEY]: exportedKey
       });
       
-      console.log('[Triage Hub] Encryption key stored in sync storage');
+      console.log('[Tab Napper] Encryption key stored in sync storage');
       return newKey;
     }
   } catch (error) {
-    console.error('[Triage Hub] Error managing encryption key:', error);
+    console.error('[Tab Napper] Error managing encryption key:', error);
     throw error;
   }
 }
@@ -106,7 +106,7 @@ async function encryptString(plaintext) {
     // Convert to base64 for storage
     return btoa(String.fromCharCode(...result));
   } catch (error) {
-    console.error('[Triage Hub] Encryption error:', error);
+    console.error('[Tab Napper] Encryption error:', error);
     throw error;
   }
 }
@@ -143,7 +143,7 @@ async function decryptString(ciphertext) {
     const decoder = new TextDecoder();
     return decoder.decode(decrypted);
   } catch (error) {
-    console.error('[Triage Hub] Decryption error:', error);
+    console.error('[Tab Napper] Decryption error:', error);
     throw error;
   }
 }

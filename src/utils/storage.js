@@ -1,6 +1,15 @@
 /**
  * Storage utilities for Tab Napper
  * Implements hybrid storage model: sync for critical data, local for bulk data
+ *
+ * IMPORTANT: Storage Key Naming Convention
+ * =========================================
+ * All storage keys use the "triageHub_" prefix for historical reasons.
+ * This naming is PRESERVED for backward compatibility - changing these keys
+ * would break existing user data. The app is now called "Tab Napper" but
+ * internal storage keys remain as "triageHub_*".
+ *
+ * DO NOT CHANGE storage key names without implementing a data migration!
  */
 
 import { encryptString, decryptString } from './encryption.js';
@@ -31,7 +40,7 @@ function getStorageType(key) {
     return 'local';
   } else {
     // Default to local storage for unknown keys to avoid sync limits
-    console.warn(`[Triage Hub] Unknown storage key: ${key}, defaulting to local storage`);
+    console.warn(`[Tab Napper] Unknown storage key: ${key}, defaulting to local storage`);
     return 'local';
   }
 }
@@ -44,7 +53,7 @@ async function loadAppState(key) {
   try {
     // Check if Chrome storage is available
     if (typeof chrome === 'undefined' || !chrome.storage) {
-      console.warn(`[Triage Hub] Chrome storage not available for key: ${key}`);
+      console.warn(`[Tab Napper] Chrome storage not available for key: ${key}`);
       return null;
     }
     
@@ -65,7 +74,7 @@ async function loadAppState(key) {
         const decryptedJson = await decryptString(data);
         return JSON.parse(decryptedJson);
       } catch (error) {
-        console.error(`[Triage Hub] Error decrypting ${key}:`, error);
+        console.error(`[Tab Napper] Error decrypting ${key}:`, error);
         return null;
       }
     } else {
@@ -73,7 +82,7 @@ async function loadAppState(key) {
       return data;
     }
   } catch (error) {
-    console.error(`[Triage Hub] Error loading state for ${key}:`, error);
+    console.error(`[Tab Napper] Error loading state for ${key}:`, error);
     return null;
   }
 }
@@ -86,7 +95,7 @@ async function saveAppState(key, data) {
   try {
     // Check if Chrome storage is available
     if (typeof chrome === 'undefined' || !chrome.storage) {
-      console.warn(`[Triage Hub] Chrome storage not available for saving key: ${key}`);
+      console.warn(`[Tab Napper] Chrome storage not available for saving key: ${key}`);
       return false;
     }
     
@@ -102,7 +111,7 @@ async function saveAppState(key, data) {
         const jsonString = JSON.stringify(data);
         dataToStore = await encryptString(jsonString);
       } catch (error) {
-        console.error(`[Triage Hub] Error encrypting ${key}:`, error);
+        console.error(`[Tab Napper] Error encrypting ${key}:`, error);
         throw error;
       }
     }
@@ -133,7 +142,7 @@ async function initializeBulkData() {
     if (existingData === null) {
       // Initialize with empty array
       await saveAppState(key, []);
-      console.log(`[Triage Hub] Initialized ${key} with empty array`);
+      console.log(`[Tab Napper] Initialized ${key} with empty array`);
     }
   }
 }
