@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `calm-card`, `calm-button-primary`, `calm-button-secondary` now include dark variants
   - App-wide visual consistency for cards, lists, and action buttons in both themes
 
+- Live Note Editor
+  - Opens via internal route `chrome-extension://…/note.html?id=[NoteID]`
+  - View-first with formatting toolbar, emoji picker, and auto-save
+  - Editor hotkeys: Cmd/Ctrl+B (bold), Cmd/Ctrl+I (italic), Cmd/Ctrl+` (inline code), Cmd/Ctrl+K (link), Cmd/Ctrl+1/2 (H1/H2), Cmd/Ctrl+L (bulleted list)
+  - Global hotkey: Cmd/Ctrl+E toggles Preview/Edit
+
 ### Changed
 - Markdown rendering: replaced library parser usage with a lightweight, HTML-escaped custom renderer to prevent [object Object] issues and reduce bundle size
 - Styling updates across custom components for dark mode conformance:

@@ -303,6 +303,66 @@ export default function NoteEditor({ noteId }) {
     setShowEmojiPicker(false);
   }
 
+  // Editor hotkeys inside textarea
+  function handleEditorKeyDown(e) {
+    // Emoji shortcode replacement on space
+    if (e.key === ' ' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      replaceShortcodesOnSpace(e);
+      return; // let default space proceed
+    }
+
+    const isMod = e.metaKey || e.ctrlKey;
+    if (!isMod) return;
+
+    const key = e.key.toLowerCase();
+    // Avoid interfering with IME or alt combos
+    if (e.altKey) return;
+
+    if (key === 'b') {
+      e.preventDefault();
+      e.stopPropagation();
+      wrapSelection('**', '**');
+    } else if (key === 'i') {
+      e.preventDefault();
+      e.stopPropagation();
+      wrapSelection('*', '*');
+    } else if (key === 'k') {
+      e.preventDefault();
+      e.stopPropagation();
+      makeLink();
+    } else if (key === '1') {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleHeading(1);
+    } else if (key === '2') {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleHeading(2);
+    } else if (key === 'l') {
+      e.preventDefault();
+      e.stopPropagation();
+      makeList();
+    } else if (e.key === '`' || e.code === 'Backquote') {
+      e.preventDefault();
+      e.stopPropagation();
+      wrapSelection('`', '`');
+    }
+  }
+
+  // Global hotkey: toggle Preview/Edit with Cmd/Ctrl+E
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod || e.altKey) return;
+      if (e.key && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        setIsPreview((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-calm-50 dark:bg-calm-900 flex items-center justify-center">
@@ -410,7 +470,7 @@ export default function NoteEditor({ noteId }) {
               ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              onKeyDown={replaceShortcodesOnSpace}
+              onKeyDown={handleEditorKeyDown}
               placeholder="Start writing…"
               className="w-full min-h-[300px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 dark:text-calm-200 placeholder-calm-400 dark:placeholder-calm-500 bg-white dark:bg-calm-800"
               style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}

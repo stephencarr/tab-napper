@@ -67,9 +67,9 @@ function StashCard({
   // Get icon - use note icon for notes, favicon for tabs
   const getIcon = () => {
     if (isNote) {
-      return <FileText className="w-4 h-4 text-calm-600" />;
+      return <FileText className="w-4 h-4 text-calm-600 dark:text-calm-400" />;
     }
-    return getFavicon(item.url) || <div className="w-4 h-4 bg-calm-300 rounded" />;
+    return getFavicon(item.url) || <div className="w-4 h-4 bg-calm-300 dark:bg-calm-600 rounded" />;
   };
 
   // Get subtitle - different for notes vs tabs
@@ -129,7 +129,7 @@ function StashCard({
 
         {/* Zone 2 & 3: Action Block - FidgetControl with proper containment */}
         {showFidgetControls && (
-          <div className="flex-shrink-0 ml-4">
+          <div className="flex-shrink-0 ml-4 flex flex-col items-end">
             <FidgetControl
               item={item}
               onAction={onItemAction}
