@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fidget Controls click interaction in StashCard component
   - Added event.stopPropagation() to prevent card onClick from blocking Fidget buttons
   - Users can now interact with action buttons (Stash, Delete, Remind) without opening the note
+ - Note re-triage reliability in background service worker
+   - retriageNote now looks up notes in both triageHub_notes and triageHub_inbox (covers Quick Note Capture)
+   - Removed unused isNoteTab helper for maintainability
 
 ### Planned
 - Advanced filtering for search results
