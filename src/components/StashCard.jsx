@@ -65,7 +65,12 @@ function StashCard({
   // Handle navigation
   const handleNavigate = async (e) => {
     // Don't navigate if clicking on action buttons
-    if (e && (e.defaultPrevented || e.target.closest('button'))) {
+    if (
+      e &&
+      (e.defaultPrevented ||
+        e.target.tagName === 'BUTTON' ||
+        (e.target.closest('button') && e.target.closest('button') !== e.currentTarget))
+    ) {
       return;
     }
     
