@@ -18,6 +18,6 @@ if (isNotePage()) {
 
 root.render(
   <React.StrictMode>
-    {isNotePage() ? <NoteEditor noteId={noteId || `note-${crypto.randomUUID()}`}/> : <App />}
+    {isNotePage() ? <NoteEditor noteId={noteId}/> : <App />}
   </React.StrictMode>
 );
