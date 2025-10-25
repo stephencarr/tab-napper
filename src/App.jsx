@@ -351,11 +351,6 @@ function App() {
   // Routing logic
   const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Page Heading */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-calm-900 dark:text-calm-100">Dashboard</h1>
-      </div>
-
       {/* Widgets Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left column */}

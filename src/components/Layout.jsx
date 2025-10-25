@@ -32,6 +32,7 @@ export default function Layout({
           key={item.name}
           onClick={() => {
             setCurrentView(item.name);
+            onSearchClear?.(); // Clear search when clicking any menu item
             onClick?.();
           }}
           className={cx(

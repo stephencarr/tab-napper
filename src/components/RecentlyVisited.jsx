@@ -82,6 +82,7 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   
   // Watch for changes in stashed tabs to update history status
   const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
+  const stashedTabsLength = stashedTabs?.length || 0;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -91,20 +92,7 @@ function RecentlyVisited({ className, maxItems = 50 }) {
     };
   }, []);
 
-  // Load history on component mount and when stashed tabs change
-  useEffect(() => {
-    console.log('[RecentlyVisited] Effect triggered - maxItems:', maxItems, 'stashedTabs:', stashedTabs?.length);
-    // Debounce rapid triggers so we don't hammer chrome.history.search
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      console.log('[RecentlyVisited] Debounce expired, calling loadHistory');
-      loadHistory();
-    }, 400);
-  }, [maxItems, stashedTabs]); // Add stashedTabs as dependency
-
-  const loadHistory = async () => {
+  const loadHistory = React.useCallback(async () => {
     console.log('[RecentlyVisited] loadHistory called, mountedRef:', mountedRef.current);
     try {
       if (!mountedRef.current) {
@@ -138,7 +126,20 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       console.log('[RecentlyVisited] Setting loading to false');
       setIsLoading(false);
     }
-  };
+  }, [maxItems]);
+
+  // Load history on component mount and when stashed tabs change
+  useEffect(() => {
+    console.log('[RecentlyVisited] Effect triggered - maxItems:', maxItems, 'stashedTabsLength:', stashedTabsLength);
+    // Debounce rapid triggers so we don't hammer chrome.history.search
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      console.log('[RecentlyVisited] Debounce expired, calling loadHistory');
+      loadHistory();
+    }, 400);
+  }, [maxItems, stashedTabsLength, loadHistory]);
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {
@@ -272,13 +273,13 @@ function RecentlyVisited({ className, maxItems = 50 }) {
         </div>
       </div>
 
-      {/* History List */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      {/* History List - Tailwind UI Stack with dividers */}
+      <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
         {historyItems.map((item, index) => (
-          <ListItem
+          <li
             key={item.id || item.url || index}
             onClick={() => handleHistoryItemClick(item)}
-            className="hover:bg-calm-50 dark:hover:bg-calm-800 transition-colors"
+            className="py-3 hover:bg-calm-50 dark:hover:bg-calm-800/50 transition-colors cursor-pointer rounded-lg px-2 -mx-2"
           >
             <div className="flex items-start space-x-3">
               {/* Favicon */}
@@ -299,17 +300,15 @@ function RecentlyVisited({ className, maxItems = 50 }) {
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <p className="text-sm font-medium text-calm-800 dark:text-calm-200 truncate">
-                    {item.title}
-                  </p>
-                </div>
+                <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
+                  {item.title}
+                </p>
                 
-                <p className="text-xs text-calm-500 dark:text-calm-400 truncate mb-1">
+                <p className="text-xs text-calm-500 dark:text-calm-400 truncate mt-1">
                   {item.url}
                 </p>
                 
-                <div className="flex items-center justify-between text-xs text-calm-400 dark:text-calm-500">
+                <div className="flex items-center justify-between text-xs text-calm-400 dark:text-calm-500 mt-1">
                   <span>{getTimeAgo(item.lastVisitTime)}</span>
                   {item.visitCount > 1 && (
                     <span>{item.visitCount} visits</span>
@@ -317,12 +316,12 @@ function RecentlyVisited({ className, maxItems = 50 }) {
                 </div>
               </div>
             </div>
-          </ListItem>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {/* Simple footer */}
-      <div className="border-t border-calm-200 dark:border-calm-700 pt-3">
+      <div className="border-t border-calm-200 dark:border-calm-700 pt-3 mt-4">
         <div className="flex items-center justify-center text-xs text-calm-500 dark:text-calm-400">
           <span>Last {maxItems} items</span>
         </div>
