@@ -489,8 +489,7 @@ function App() {
                 <QuickNoteCapture 
                   onNoteSaved={(note) => {
                     console.log('[Tab Napper] Note saved to inbox:', note.title);
-                    // Trigger reactive state refresh to update UI
-                    refreshStateFromStorage();
+                    // The reactive store handles UI updates automatically when storage changes
                   }}
                 />
               </div>

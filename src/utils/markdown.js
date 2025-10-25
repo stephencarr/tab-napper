@@ -51,17 +51,13 @@ const renderer = {
 marked.use({ renderer });
 
 export function renderMarkdown(content) {
-  console.log('[markdown] input type:', typeof content, 'value:', content);
   try {
     // marked.parse returns a string in sync mode (default)
     const raw = marked.parse(content || '', { async: false });
-    console.log('[markdown] marked.parse output type:', typeof raw, 'value:', raw);
     // Ensure we have a string (marked can return Promise if async)
     const htmlString = typeof raw === 'string' ? raw : String(raw);
-    console.log('[markdown] htmlString type:', typeof htmlString, 'preview:', htmlString.substring(0, 100));
     // Allow class attributes for styling
     const clean = DOMPurify.sanitize(htmlString, { ALLOWED_ATTR: ['class', 'href', 'title', 'target', 'rel'] });
-    console.log('[markdown] sanitized output type:', typeof clean, 'preview:', clean.substring(0, 100));
     return clean;
   } catch (e) {
     console.error('[markdown] render failed', e);

@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Saves to Inbox with `isNote: true` and integrates with triage flows
   - Keyboard shortcuts: Ctrl+Enter to save, Ctrl+E to toggle preview
   - Document-style preview typography for readability
-  - Document-style preview typography for readability
 - System dark mode support with manual toggle preserved
   - `useDarkMode` hook adds/removes the `dark` class and listens to `matchMedia`
   - Tailwind dark mode enabled via `darkMode: 'class'`
