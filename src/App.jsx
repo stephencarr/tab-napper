@@ -6,9 +6,10 @@ import { addSampleData, clearSampleData, generateTestBrowsingHistory, testSmartS
 import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
-import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
+import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
+import { useReactiveStore } from './hooks/useReactiveStore.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -27,7 +28,9 @@ function App() {
   // Initialize dark mode detection
   useDarkMode();
   
-  const [appState, setAppState] = useState(null);
+  // Use the reactive store hook for guaranteed fresh data
+  const appState = useReactiveStore();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentView, setCurrentView] = useState('Dashboard'); // Sidebar-driven views
@@ -47,8 +50,6 @@ function App() {
 
   // Initialize the application with reactive store
   useEffect(() => {
-    let unsubscribe = null;
-    
     async function initializeApp() {
       try {
         console.log('[Tab Napper] Initializing application...');
@@ -65,17 +66,10 @@ function App() {
           trash: data.trash?.length ?? 'undefined',
           quickAccessCards: data.quickAccessCards?.length ?? 'undefined'
         });
-        
-        // Subscribe to state changes for automatic UI updates
-        unsubscribe = subscribeToStateChanges((newState) => {
-          console.log('[Tab Napper] State change detected, updating UI');
-          setAppState(newState);
-        });
 
         // Set up tab capture listeners
         setupTabCaptureListeners();
         
-        setAppState(data);
         setIsLoading(false);
       } catch (err) {
         console.error('[Tab Napper] Initialization error:', err);
@@ -85,13 +79,6 @@ function App() {
     }
 
     initializeApp();
-    
-    // Cleanup subscription on unmount
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
   }, []);
 
   // Handle search term changes
@@ -124,8 +111,7 @@ function App() {
   const handleAddSampleData = async () => {
     try {
       await addSampleData();
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
+      // Chrome storage listener will automatically update the reactive store
     } catch (err) {
       console.error('[Tab Napper] Error adding sample data:', err);
     }
@@ -135,8 +121,7 @@ function App() {
   const handleClearData = async () => {
     try {
       await clearSampleData();
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
+      // Chrome storage listener will automatically update the reactive store
     } catch (err) {
       console.error('[Tab Napper] Error clearing data:', err);
     }
@@ -210,9 +195,7 @@ function App() {
           
           await addToTriageInbox(restoredItem);
           
-          // Step 3: Force refresh state to ensure UI sync
-          await refreshStateFromStorage();
-          
+          // Chrome storage listener will automatically update the reactive store
           console.log('[Tab Napper] Item restored to inbox:', item.title);
           break;
           
@@ -241,9 +224,7 @@ function App() {
           await saveAppState('triageHub_stashedTabs', updatedStashed);
           await saveAppState('triageHub_trash', updatedTrashForDelete);
           
-          // Force refresh state to ensure UI sync
-          await refreshStateFromStorage();
-          
+          // Chrome storage listener will automatically update the reactive store
           console.log('[Tab Napper] Item moved to trash:', item.title);
           break;
           
@@ -282,10 +263,7 @@ function App() {
 
       const capturedItem = await simulateTabCapture(testUrl, testTitle);
 
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
-
-      // Show user feedback
+      // Chrome storage listener will automatically update the reactive store
       console.log(`[Tab Napper] Captured: ${capturedItem.title}`);
 
     } catch (err) {
@@ -336,9 +314,7 @@ function App() {
       
       await saveAppState('triageHub_stashedTabs', testStashedItems);
       
-      // Trigger reactive state refresh
-      await refreshStateFromStorage();
-      
+      // Chrome storage listener will automatically update the reactive store
       console.log('[Tab Napper] Added test items to stashed tabs for deduplication testing');
       console.log('Now click "Simulate Tab Capture" to see deduplication in action!');
 
