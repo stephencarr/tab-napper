@@ -79,16 +79,6 @@ function isNoteTab(url) {
   }
 }
 
-// Listen for tab removal (closure)
-chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-  try {
-    // We need to track the tab URL before it closes
-    // Unfortunately, by the time onRemoved fires, we can't get the URL
-    // We'll need to track tabs as they're updated
-  } catch (error) {
-    console.error('[Tab Napper] Error in tab removal handler:', error);
-  }
-});
 
 // Track note tabs so we know their URLs when they close
 const noteTabTracker = new Map(); // Map<tabId, noteId>
