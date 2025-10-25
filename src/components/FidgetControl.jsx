@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -8,7 +8,7 @@ import { cn } from '../utils/cn.js';
  * A tactile, low-friction interface for scheduling and managing stashed items.
  * Features button group design with action/timing pills and execute button.
  */
-function FidgetControl({ item, onAction, onNavigate, className }) {
+function FidgetControl({ item, onAction, className }) {
   // Control states - simplified to just action and when
   const [actionState, setActionState] = useState('Remind Me');
   const [whenState, setWhenState] = useState('In 1 hour');
@@ -101,14 +101,6 @@ function FidgetControl({ item, onAction, onNavigate, className }) {
     }
   }, [actionState, whenState, deleteConfirmation, onAction, item, cycleAction]);
 
-  // Handle navigate/go action
-  const handleNavigate = useCallback((e) => {
-    e.stopPropagation();
-    if (onNavigate) {
-      onNavigate(item);
-    }
-  }, [item, onNavigate]);
-
   // Generate friendly preview text
   const getPreviewText = useCallback(() => {
     const action = actionState.toLowerCase();
@@ -127,17 +119,6 @@ function FidgetControl({ item, onAction, onNavigate, className }) {
     <div className={cn("flex flex-col space-y-2", className)}>
       {/* Action Group: Button Group Pattern */}
       <div className="flex items-center justify-end space-x-2">
-        {/* Navigate/Go Button - Icon only */}
-        {item.url && (
-          <button
-            onClick={handleNavigate}
-            className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
-            title="Open link"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </button>
-        )}
-
         {/* Fidget Pills Button Group */}
         <div className="inline-flex rounded-md shadow-sm" role="group">
           {/* Action Pill */}

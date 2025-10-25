@@ -63,9 +63,21 @@ function StashCard({
   };
 
   // Handle navigation
-  const handleNavigate = async (item) => {
-    if (item.url) {
-      console.log('[Tab Napper] Navigating to stashed item:', item.title);
+  const handleNavigate = async (e) => {
+    // Don't navigate if clicking on action buttons
+    if (e && (e.defaultPrevented || e.target.closest('button'))) {
+      return;
+    }
+    
+    if (isNote) {
+      // Open note editor
+      console.log('[Tab Napper] Opening note:', item.title);
+      if (onItemClick) {
+        onItemClick(item);
+      }
+    } else if (item.url) {
+      // Open URL in new tab
+      console.log('[Tab Napper] Navigating to:', item.title);
       try {
         await navigateToUrl(item.url, item.title);
       } catch (error) {
@@ -104,9 +116,10 @@ function StashCard({
   return (
     <div 
       className={cn(
-        "flex items-start justify-between w-full",
+        "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors",
         className
       )}
+      onClick={handleNavigate}
     >
       {/* Left side: Icon + Content */}
       <div className="flex items-start space-x-3 flex-1 min-w-0">
@@ -118,7 +131,7 @@ function StashCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <p className="text-sm font-semibold text-calm-900 dark:text-calm-100 truncate">
+          <p className="text-sm font-semibold text-calm-900 dark:text-calm-100 truncate group-hover:text-calm-700 dark:group-hover:text-calm-200">
             {item.title || item.name || 'Untitled'}
           </p>
           
@@ -180,7 +193,6 @@ function StashCard({
           <FidgetControl
             item={item}
             onAction={onItemAction}
-            onNavigate={handleNavigate}
             className="w-full"
           />
         </div>

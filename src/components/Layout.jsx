@@ -123,7 +123,7 @@ export default function Layout({
 
         {/* Sticky header with global search */}
         <header className="sticky top-0 z-30 bg-white/90 dark:bg-calm-800/90 backdrop-blur border-b border-calm-200 dark:border-calm-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 h-14 flex items-center gap-3">
+          <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center gap-3">
             <div className="flex-1">
               <UniversalSearch
                 value={searchTerm}
@@ -137,7 +137,7 @@ export default function Layout({
             </div>
             <button
               onClick={toggleDarkMode}
-              className="ml-2 text-xs text-calm-500 hover:text-calm-700 dark:text-calm-400 dark:hover:text-calm-200 px-2 py-1 rounded"
+              className="flex-shrink-0 text-xs text-calm-500 hover:text-calm-700 dark:text-calm-400 dark:hover:text-calm-200 px-2 py-1 rounded"
               title="Toggle dark mode"
             >
               🌙
@@ -145,9 +145,9 @@ export default function Layout({
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
+        {/* Content - full width */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="px-4 sm:px-6 lg:px-8 py-6">
             {children}
           </div>
         </main>
