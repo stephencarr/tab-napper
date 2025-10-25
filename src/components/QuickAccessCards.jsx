@@ -169,17 +169,17 @@ function QuickAccessCards({ className, maxItems = 6 }) {
       <div className={cn('space-y-4', className)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Star className="h-5 w-5 text-calm-500" />
-            <h2 className="text-lg font-medium text-calm-900">Quick Access</h2>
+            <Star className="h-5 w-5 text-calm-500 dark:text-calm-400" />
+            <h2 className="text-lg font-medium text-calm-900 dark:text-calm-200">Quick Access</h2>
           </div>
           <div className="animate-pulse">
-            <Star className="h-4 w-4 text-calm-400" />
+            <Star className="h-4 w-4 text-calm-400 dark:text-calm-500" />
           </div>
         </div>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-12 bg-calm-100 rounded-lg"></div>
+              <div className="h-12 bg-calm-100 dark:bg-calm-700 rounded-lg"></div>
             </div>
           ))}
         </div>

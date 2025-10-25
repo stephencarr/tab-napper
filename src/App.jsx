@@ -351,34 +351,34 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-calm-50">
+    <div className="min-h-screen bg-calm-50 dark:bg-calm-900 transition-colors">
       {/* Header */}
-      <header className="bg-white border-b border-calm-200 px-6 py-4">
+      <header className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-calm-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-calm-600 dark:bg-calm-500 rounded-lg flex items-center justify-center">
               <div className="grid grid-cols-1 gap-1">
                 <div className="w-1 h-1 bg-white rounded-full"></div>
                 <div className="w-1 h-1 bg-white rounded-full"></div>
                 <div className="w-1 h-1 bg-white rounded-full"></div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-calm-800">Tab Napper</h1>
-              <span className="text-xs text-calm-400 bg-calm-100 px-2 py-1 rounded-full">
-                {getFormattedVersion()}
+            <div className="flex items-center space-x-1">
+              <span className="font-medium text-calm-800 dark:text-calm-200">Tab Napper</span>
+              <span className="text-xs text-calm-400 dark:text-calm-500 bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded-full">
+                v{getFormattedVersion()}
               </span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-calm-600">Encrypted & Private</span>
+            <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <span className="text-sm text-calm-600 dark:text-calm-400">Encrypted & Private</span>
           </div>
         </div>
       </header>
 
       {/* Universal Search Bar */}
-      <div className="bg-white border-b border-calm-200 px-6 py-6">
+      <div className="bg-white dark:bg-calm-800 border-b border-calm-200 dark:border-calm-700 px-6 py-6">
         <div className="max-w-7xl mx-auto">
           <UniversalSearch
             value={searchTerm}

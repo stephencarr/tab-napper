@@ -2,8 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Save, Edit, Eye, EyeOff, FileText } from 'lucide-react';
 import { saveAppState, loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 
 /**
  * Quick Note Capture Component
@@ -42,63 +40,67 @@ function QuickNoteCapture({ className, onNoteSaved }) {
     return content.trim().substring(0, 50) + (content.trim().length > 50 ? '...' : '');
   };
 
-  // Secure markdown to HTML conversion with proper parsing and sanitization
+  // Simple and reliable markdown to HTML conversion
   const renderMarkdown = (content) => {
     try {
-      // Configure marked with custom renderer for Tailwind classes
-      const renderer = new marked.Renderer();
+      // Simple regex-based markdown conversion that works reliably
+      let html = content
+        // Escape HTML first
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        
+        // Convert markdown to HTML
+        .replace(/^### (.*$)/gm, '<h3 class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2 class="text-lg font-semibold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">$1</h1>')
+        
+        // Bold and italic (do these before other formatting)
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-calm-900 dark:text-calm-100">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em class="italic text-calm-800 dark:text-calm-200">$1</em>')
+        
+        // Code spans
+        .replace(/`(.*?)`/g, '<code class="bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded text-sm font-mono text-calm-900 dark:text-calm-100 border dark:border-calm-600">$1</code>')
+        
+        // Convert line breaks to HTML
+        .replace(/\n\n/g, '</p><p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">')
+        .replace(/\n/g, '<br>');
+
+      // Handle lists separately to avoid nesting issues
+      const lines = html.split('<br>');
+      const processedLines = [];
+      let inList = false;
       
-      renderer.heading = (text, level) => {
-        const classes = {
-          1: 'text-xl font-bold text-calm-900 mb-3 mt-4 leading-tight',
-          2: 'text-lg font-semibold text-calm-900 mb-3 mt-4 leading-tight', 
-          3: 'text-base font-semibold text-calm-900 mb-2 mt-3 leading-tight'
-        };
-        const className = classes[level] || 'text-sm font-medium text-calm-900 mb-2 mt-2 leading-tight';
-        return `<h${level} class="${className}">${text}</h${level}>`;
-      };
+      for (let line of lines) {
+        const listMatch = line.match(/^- (.*)$/);
+        if (listMatch) {
+          if (!inList) {
+            processedLines.push('<ul class="list-disc ml-5 mb-3 text-calm-800 dark:text-calm-200 leading-relaxed space-y-1">');
+            inList = true;
+          }
+          processedLines.push(`<li class="pl-1">${listMatch[1]}</li>`);
+        } else {
+          if (inList) {
+            processedLines.push('</ul>');
+            inList = false;
+          }
+          if (line.trim()) {
+            processedLines.push(line);
+          }
+        }
+      }
       
-      renderer.paragraph = (text) => {
-        return `<p class="mb-3 text-calm-800 leading-relaxed">${text}</p>`;
-      };
+      if (inList) {
+        processedLines.push('</ul>');
+      }
       
-      renderer.list = (body, ordered) => {
-        const tag = ordered ? 'ol' : 'ul';
-        const listClass = ordered ? 'list-decimal' : 'list-disc';
-        return `<${tag} class="${listClass} ml-5 mb-3 text-calm-800 leading-relaxed space-y-1">${body}</${tag}>`;
-      };
+      // Wrap in paragraphs if not already wrapped
+      html = processedLines.join('<br>');
+      if (!html.startsWith('<h') && !html.startsWith('<ul') && !html.startsWith('<p')) {
+        html = `<p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">${html}</p>`;
+      }
       
-      renderer.listitem = (text) => {
-        return `<li class="pl-1">${text}</li>`;
-      };
-      
-      renderer.strong = (text) => {
-        return `<strong class="font-semibold text-calm-900">${text}</strong>`;
-      };
-      
-      renderer.em = (text) => {
-        return `<em class="italic text-calm-800">${text}</em>`;
-      };
-      
-      renderer.codespan = (text) => {
-        return `<code class="bg-calm-100 px-2 py-1 rounded text-sm font-mono text-calm-900 border">${text}</code>`;
-      };
-      
-      // Set marked options
-      marked.setOptions({
-        renderer: renderer,
-        gfm: true,
-        breaks: true
-      });
-      
-      // Parse markdown synchronously 
-      const rawHtml = marked.parse(content);
-      
-      // Sanitize the HTML to prevent XSS attacks
-      return DOMPurify.sanitize(rawHtml, {
-        ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'br'],
-        ALLOWED_ATTR: ['class']
-      });
+      return html;
     } catch (error) {
       console.error('Markdown rendering error:', error);
       return content; // Fallback to plain text
@@ -174,10 +176,10 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <FileText className="h-5 w-5 text-calm-600" />
-          <h2 className="text-lg font-semibold text-calm-800">Quick Note</h2>
+          <FileText className="h-5 w-5 text-calm-600 dark:text-calm-400" />
+          <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">Quick Note</h2>
           {lastSaved && (
-            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+            <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900 px-2 py-1 rounded-full">
               Saved {new Date(lastSaved).toLocaleTimeString()}
             </span>
           )}
@@ -185,10 +187,10 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       </div>
 
       {/* Editor/Preview Area */}
-      <div className="bg-white border border-calm-200 rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-calm-800 border border-calm-200 dark:border-calm-700 rounded-lg overflow-hidden">
         {isPreviewMode ? (
           /* Preview Mode */
-          <div className="p-6 min-h-[200px] bg-white">
+          <div className="p-6 min-h-[200px] bg-white dark:bg-calm-800">
             {noteContent.trim() ? (
               <div 
                 className="markdown-content max-w-none text-base leading-relaxed font-normal"
@@ -222,16 +224,16 @@ Ctrl+Enter to save • Ctrl+E to preview`)
 
 Use **bold** and *italic* text, `inline code`, # headers, and - lists
 Ctrl+Enter to save • Ctrl+E to preview"
-              className="w-full min-h-[200px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 placeholder-calm-400"
+              className="w-full min-h-[200px] p-4 border-0 focus:outline-none resize-none font-mono text-sm leading-relaxed text-calm-800 dark:text-calm-200 placeholder-calm-400 dark:placeholder-calm-500 bg-white dark:bg-calm-800"
               style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
             />
           </div>
         )}
         
         {/* Footer with Controls */}
-        <div className="border-t border-calm-100 px-4 py-3 bg-calm-25">
+        <div className="border-t border-calm-100 dark:border-calm-700 px-4 py-3 bg-calm-25 dark:bg-calm-750">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-xs text-calm-500">
+            <div className="flex items-center space-x-4 text-xs text-calm-500 dark:text-calm-400">
               {noteContent.trim() && (
                 <span>{noteContent.trim().split(/\s+/).length} words</span>
               )}
@@ -244,8 +246,8 @@ Ctrl+Enter to save • Ctrl+E to preview"
                 className={cn(
                   'flex items-center space-x-1 px-3 py-1.5 text-xs rounded-md transition-colors',
                   isPreviewMode
-                    ? 'bg-calm-600 text-white'
-                    : 'text-calm-600 hover:bg-calm-100'
+                    ? 'bg-calm-600 dark:bg-calm-500 text-white'
+                    : 'text-calm-600 dark:text-calm-400 hover:bg-calm-100 dark:hover:bg-calm-700'
                 )}
                 title="Toggle Preview (Ctrl+E)"
               >
@@ -260,8 +262,8 @@ Ctrl+Enter to save • Ctrl+E to preview"
                 className={cn(
                   'flex items-center space-x-2 px-3 py-1.5 text-xs rounded-md transition-colors',
                   !noteContent.trim() || isSaving
-                    ? 'bg-calm-200 text-calm-400 cursor-not-allowed'
-                    : 'bg-calm-600 text-white hover:bg-calm-700'
+                    ? 'bg-calm-200 dark:bg-calm-700 text-calm-400 dark:text-calm-500 cursor-not-allowed'
+                    : 'bg-calm-600 dark:bg-calm-500 text-white hover:bg-calm-700 dark:hover:bg-calm-400'
                 )}
                 title="Save Note (Ctrl+Enter)"
               >
