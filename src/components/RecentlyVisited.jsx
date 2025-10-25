@@ -19,7 +19,7 @@ async function getLightweightRecentHistory(maxResults = 50) {
       chrome.history.search(
         {
           text: '',
-          maxResults: maxResults
+          maxResults: maxResults,
           // Removed startTime to get most recent items regardless of date
         },
         (results) => {
