@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } f
 import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData, generateTestBrowsingHistory, testSmartSuggestions } from './utils/devUtils.js';
-import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js';
+import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
@@ -190,33 +190,39 @@ function App() {
       
       switch (action) {
         case 'restore':
-          // Restore item from trash back to inbox
-          const currentTrash = appState.trash || [];
-          const currentInbox = appState.inbox || [];
+          // Restore item from trash back to inbox using the proper capture API
+          console.log('[Tab Napper] Restoring item from trash:', item.title);
           
-          // Remove from trash
+          // Step 1: Remove from trash
+          const currentTrash = await loadAppState('triageHub_trash', []);
           const updatedTrash = currentTrash.filter(i => i.id !== item.id);
+          await saveAppState('triageHub_trash', updatedTrash);
           
-          // Add back to inbox (remove trash-specific properties)
+          // Step 2: Add to inbox using the proper API with deduplication
+          // This will handle deduplication across all collections and add to top
           const restoredItem = {
-            ...item,
-            deletedAt: undefined,
-            originalLocation: undefined
+            title: item.title,
+            description: item.description || `Restored from trash`,
+            url: item.url,
+            favicon: item.favicon,
+            type: item.type || 'tab'
           };
-          const updatedInbox = [...currentInbox, restoredItem];
           
-          // Update storage
-          await updateAppState('trash', updatedTrash);
-          await updateAppState('inbox', updatedInbox);
+          await addToTriageInbox(restoredItem);
+          
+          // Step 3: Force refresh state to ensure UI sync
+          await refreshStateFromStorage();
           
           console.log('[Tab Napper] Item restored to inbox:', item.title);
           break;
           
         case 'delete':
           // Move item to trash
-          const currentInboxForDelete = appState.inbox || [];
-          const currentStashed = appState.stashedTabs || [];
-          const currentTrashForDelete = appState.trash || [];
+          console.log('[Tab Napper] Moving item to trash:', item.title);
+          
+          const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
+          const currentStashed = await loadAppState('triageHub_stashedTabs', []);
+          const currentTrashForDelete = await loadAppState('triageHub_trash', []);
           
           // Remove from inbox or stashed
           const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
@@ -231,9 +237,12 @@ function App() {
           const updatedTrashForDelete = [...currentTrashForDelete, trashedItem];
           
           // Update storage
-          await updateAppState('inbox', updatedInboxForDelete);
-          await updateAppState('stashedTabs', updatedStashed);
-          await updateAppState('trash', updatedTrashForDelete);
+          await saveAppState('triageHub_inbox', updatedInboxForDelete);
+          await saveAppState('triageHub_stashedTabs', updatedStashed);
+          await saveAppState('triageHub_trash', updatedTrashForDelete);
+          
+          // Force refresh state to ensure UI sync
+          await refreshStateFromStorage();
           
           console.log('[Tab Napper] Item moved to trash:', item.title);
           break;
