@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Save, Edit, Eye, EyeOff, FileText } from 'lucide-react';
 import { saveAppState, loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
+import { renderMarkdown as renderMarkdownLib } from '../utils/markdown.js';
 
 /**
  * Quick Note Capture Component
@@ -40,71 +41,9 @@ function QuickNoteCapture({ className, onNoteSaved }) {
     return content.trim().substring(0, 50) + (content.trim().length > 50 ? '...' : '');
   };
 
-  // Simple and reliable markdown to HTML conversion
+  // Markdown to HTML conversion using a robust library + sanitization
   const renderMarkdown = (content) => {
-    try {
-      // Simple regex-based markdown conversion that works reliably
-      let html = content
-        // Escape HTML first
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        
-        // Convert markdown to HTML
-        .replace(/^### (.*$)/gm, '<h3 class="text-base font-semibold text-calm-900 dark:text-calm-100 mb-2 mt-3 leading-tight">$1</h3>')
-        .replace(/^## (.*$)/gm, '<h2 class="text-lg font-semibold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">$1</h2>')
-        .replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-calm-900 dark:text-calm-100 mb-3 mt-4 leading-tight">$1</h1>')
-        
-        // Bold and italic (do these before other formatting)
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-calm-900 dark:text-calm-100">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em class="italic text-calm-800 dark:text-calm-200">$1</em>')
-        
-        // Code spans
-        .replace(/`(.*?)`/g, '<code class="bg-calm-100 dark:bg-calm-800 px-2 py-1 rounded text-sm font-mono text-calm-900 dark:text-calm-100 border dark:border-calm-600">$1</code>')
-        
-        // Convert line breaks to HTML
-        .replace(/\n\n/g, '</p><p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">')
-        .replace(/\n/g, '<br>');
-
-      // Handle lists separately to avoid nesting issues
-      const lines = html.split('<br>');
-      const processedLines = [];
-      let inList = false;
-      
-      for (let line of lines) {
-        const listMatch = line.match(/^- (.*)$/);
-        if (listMatch) {
-          if (!inList) {
-            processedLines.push('<ul class="list-disc ml-5 mb-3 text-calm-800 dark:text-calm-200 leading-relaxed space-y-1">');
-            inList = true;
-          }
-          processedLines.push(`<li class="pl-1">${listMatch[1]}</li>`);
-        } else {
-          if (inList) {
-            processedLines.push('</ul>');
-            inList = false;
-          }
-          if (line.trim()) {
-            processedLines.push(line);
-          }
-        }
-      }
-      
-      if (inList) {
-        processedLines.push('</ul>');
-      }
-      
-      // Wrap in paragraphs if not already wrapped
-      html = processedLines.join('<br>');
-      if (!html.startsWith('<h') && !html.startsWith('<ul') && !html.startsWith('<p')) {
-        html = `<p class="mb-3 text-calm-800 dark:text-calm-200 leading-relaxed">${html}</p>`;
-      }
-      
-      return html;
-    } catch (error) {
-      console.error('Markdown rendering error:', error);
-      return content; // Fallback to plain text
-    }
+    return renderMarkdownLib(content || '');
   };
 
   // Handle save note
