@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Square, Pin, ExternalLink } from 'lucide-react';
+import { Clock, ExternalLink } from 'lucide-react';
 import { navigateToUrl } from '../utils/navigation.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { cn } from '../utils/cn.js';
@@ -46,9 +46,7 @@ async function getLightweightRecentHistory(maxResults = 20) {
       .map(item => ({
         ...item,
         id: `history-${item.url}`,
-        description: item.url,
-        isCurrentlyOpen: false,
-        isPreviouslyStashed: false
+        description: item.url
       }));
     
   } catch (error) {
@@ -94,9 +92,7 @@ function RecentlyVisited({ className, maxItems = 20 }) {
   const handleHistoryItemClick = async (item) => {
     console.log('[Tab Napper] 🖱️ History item clicked:', {
       title: item.title,
-      url: item.url,
-      isCurrentlyOpen: item.isCurrentlyOpen,
-      isPreviouslyStashed: item.isPreviouslyStashed
+      url: item.url
     });
 
     try {
@@ -255,22 +251,6 @@ function RecentlyVisited({ className, maxItems = 20 }) {
                   <p className="text-sm font-medium text-calm-800 truncate">
                     {item.title}
                   </p>
-                  
-                  {/* Status Indicators */}
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    {item.isCurrentlyOpen && (
-                      <Square 
-                        className="w-3 h-3 text-blue-500 fill-current" 
-                        title="Currently open"
-                      />
-                    )}
-                    {item.isPreviouslyStashed && (
-                      <Pin 
-                        className="w-3 h-3 text-green-500 fill-current" 
-                        title="Previously stashed"
-                      />
-                    )}
-                  </div>
                 </div>
                 
                 <p className="text-xs text-calm-500 truncate mb-1">
@@ -289,19 +269,9 @@ function RecentlyVisited({ className, maxItems = 20 }) {
         ))}
       </div>
 
-      {/* Legend */}
+      {/* Simple footer */}
       <div className="border-t border-calm-200 pt-3">
-        <div className="flex items-center justify-between text-xs text-calm-500">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <Square className="w-3 h-3 text-blue-500 fill-current" />
-              <span>Currently open</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Pin className="w-3 h-3 text-green-500 fill-current" />
-              <span>Previously stashed</span>
-            </div>
-          </div>
+        <div className="flex items-center justify-center text-xs text-calm-500">
           <span>Last 7 days</span>
         </div>
       </div>
