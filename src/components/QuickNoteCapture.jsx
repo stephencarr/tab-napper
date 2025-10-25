@@ -59,19 +59,14 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       
       // Create note item
       const noteItem = {
-        id: `note-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-        title: generateTitle(noteContent),
-        description: noteContent, // Store full markdown content
-        content: noteContent, // Also store in content field for search
-        url: '', // Notes don't have URLs
-        timestamp: Date.now(),
+        id: `note-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
+        title: noteTitle,
+        content: noteContent,
+        timestamp: timestamp,
+        lastModified: timestamp,
         type: 'note',
-        source: 'quick-capture',
-        isNote: true, // Flag to identify as note
         wordCount: noteContent.trim().split(/\s+/).length
-      };
-
-      // Add to beginning of inbox (most recent first)
+      };      // Add to beginning of inbox (most recent first)
       const updatedInbox = [noteItem, ...currentInbox];
       
       // Save to storage

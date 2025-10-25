@@ -24,6 +24,7 @@ export default function NoteEditor({ noteId }) {
   const lastSavedContentRef = useRef('');
   const currentCollectionsRef = useRef({ inInbox: false, inNotes: false });
   const textareaRef = useRef(null);
+  const savedToastTimeoutRef = useRef(null);
 
   // Derive title from first non-empty line
   const generateTitle = (text) => {
@@ -137,8 +138,12 @@ export default function NoteEditor({ noteId }) {
 
       lastSavedContentRef.current = content;
       setLastSavedAt(Date.now());
-  setShowSavedToast(true);
-  setTimeout(() => setShowSavedToast(false), 1200);
+      setShowSavedToast(true);
+      // Clear any existing timeout before setting a new one
+      if (savedToastTimeoutRef.current) {
+        clearTimeout(savedToastTimeoutRef.current);
+      }
+      savedToastTimeoutRef.current = setTimeout(() => setShowSavedToast(false), 1200);
       console.log(`[NoteEditor] Saved (${reason})`);
     } catch (err) {
       console.error('[NoteEditor] Save failed:', err);
@@ -320,7 +325,13 @@ export default function NoteEditor({ noteId }) {
       }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      // Cleanup toast timeout on unmount
+      if (savedToastTimeoutRef.current) {
+        clearTimeout(savedToastTimeoutRef.current);
+      }
+    };
   }, []);
 
   if (loading) {

@@ -75,7 +75,7 @@ function StashCard({
   // Get subtitle - different for notes vs tabs
   const getSubtitle = () => {
     if (isNote) {
-      const wordCount = item.wordCount || (item.description ? item.description.trim().split(/\s+/).length : 0);
+      const wordCount = typeof item.wordCount === 'number' ? item.wordCount : 0;
       return `Note • ${wordCount} words`;
     }
     return getDomain(item.url);
