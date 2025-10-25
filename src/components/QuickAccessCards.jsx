@@ -79,7 +79,11 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     try {
       // PERFORMANCE: Use the reactive data we already have, don't reload it
       if (!quickAccessData) {
-        console.error('[Tab Napper] ❌ Cannot update access count: quickAccessData is null or undefined');
+        console.error('[Tab Napper] ❌ Cannot update access count: quickAccessData is null or undefined for item', { 
+          id: item?.id, 
+          title: item?.title, 
+          url: item?.url 
+        });
         return;
       }
 

@@ -23,6 +23,16 @@ const DEFAULT_USER_PREFERENCES = {
 let globalAppState = null;
 let stateChangeListeners = new Set();
 
+// Storage key to state property mapping (constant to avoid recreation)
+const STORAGE_KEY_MAPPING = {
+  'triageHub_inbox': 'inbox',
+  'triageHub_stashedTabs': 'stashedTabs',
+  'triageHub_trash': 'trash',
+  'triageHub_notes': 'notes',
+  'triageHub_quickAccessCards': 'quickAccessCards',
+  'triageHub_userPreferences': 'userPreferences',
+};
+
 /**
  * Subscribe to app state changes
  * @param {Function} listener - Function to call when state changes
@@ -133,18 +143,8 @@ async function handleStorageChanges(changes, namespace) {
       const updatedState = { ...globalAppState };
       let hasChanges = false;
 
-      // Map storage keys to state property names
-      const keyMapping = {
-        'triageHub_inbox': 'inbox',
-        'triageHub_stashedTabs': 'stashedTabs',
-        'triageHub_trash': 'trash',
-        'triageHub_notes': 'notes',
-        'triageHub_quickAccessCards': 'quickAccessCards',
-        'triageHub_userPreferences': 'userPreferences',
-      };
-
       for (const storageKey of relevantChanges) {
-        const stateKey = keyMapping[storageKey];
+        const stateKey = STORAGE_KEY_MAPPING[storageKey];
         if (stateKey) {
           // Use the new value from changes (already available, no need to read!)
           const newValue = changes[storageKey].newValue;
