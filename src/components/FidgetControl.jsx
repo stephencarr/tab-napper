@@ -126,6 +126,8 @@ function FidgetControl({ item, onAction, className }) {
             onClick={cycleAction}
             className={cn(
               "relative inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
+              // The z-10 ensures the delete button appears above adjacent buttons when in confirmation state,
+              // since these buttons are siblings in a flex container and may have overlapping effects (e.g., focus ring).
               actionState === 'DELETE NOW' 
                 ? deleteConfirmation
                   ? "border-red-600 bg-red-600 text-white hover:bg-red-700 z-10"
