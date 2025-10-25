@@ -84,11 +84,9 @@ function QuickAccessCards({ className, maxItems = 6 }) {
           title: item?.title, 
           url: item?.url,
           quickAccessDataType: typeof quickAccessData,
-          quickAccessDataLength: Array.isArray(quickAccessData)
-            ? quickAccessData.length
-            : (quickAccessData && typeof quickAccessData === 'object'
-                ? Object.keys(quickAccessData).length
-                : undefined)
+          quickAccessDataLength: (quickAccessData && typeof quickAccessData === 'object')
+            ? Object.keys(quickAccessData).length
+            : undefined
         });
         return;
       }
