@@ -34,6 +34,18 @@ const STORAGE_KEY_MAPPING = {
 };
 
 /**
+ * Get default value for a state key when storage value is undefined
+ * @param {string} stateKey - The state property key
+ * @returns {*} - Default value for the key
+ */
+function getDefaultValue(stateKey) {
+  if (stateKey === 'userPreferences') {
+    return DEFAULT_USER_PREFERENCES;
+  }
+  return []; // Default for arrays (inbox, stashed, etc.)
+}
+
+/**
  * Subscribe to app state changes
  * @param {Function} listener - Function to call when state changes
  * @returns {Function} - Unsubscribe function
@@ -156,7 +168,7 @@ async function handleStorageChanges(changes, namespace) {
           // - For userPreferences: defaults to DEFAULT_USER_PREFERENCES
           // This ensures a consistent state shape regardless of storage state.
           updatedState[stateKey] = newValue === undefined
-            ? (stateKey === 'userPreferences' ? DEFAULT_USER_PREFERENCES : [])
+            ? getDefaultValue(stateKey)
             : newValue;
           hasChanges = true;
         }

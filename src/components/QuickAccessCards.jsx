@@ -78,11 +78,13 @@ function QuickAccessCards({ className, maxItems = 6 }) {
   const updateAccessCount = async (item) => {
     try {
       // PERFORMANCE: Use the reactive data we already have, don't reload it
-      if (!quickAccessData) {
-        console.error('[Tab Napper] ❌ Cannot update access count: quickAccessData is null or undefined for item', { 
+      if (!Array.isArray(quickAccessData)) {
+        console.error('[Tab Napper] ❌ Cannot update access count: quickAccessData is not a valid array for item', { 
           id: item?.id, 
           title: item?.title, 
-          url: item?.url 
+          url: item?.url,
+          quickAccessDataType: typeof quickAccessData,
+          quickAccessDataValue: quickAccessData
         });
         return;
       }
