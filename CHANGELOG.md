@@ -14,10 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0] - 2025-10-25
 
-### Added – Quick Note Capture, Dark Mode, and UI Consistency
+### Added – Quick Note Capture, Live Note Editor, Dark Mode, and UI Consistency
 - Quick Note Capture feature with markdown editor and live preview
   - Saves to Inbox with `isNote: true` and integrates with triage flows
   - Keyboard shortcuts: Ctrl+Enter to save, Ctrl+E to toggle preview
+  - Document-style preview typography for readability
   - Document-style preview typography for readability
 - System dark mode support with manual toggle preserved
   - `useDarkMode` hook adds/removes the `dark` class and listens to `matchMedia`
@@ -33,7 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Global hotkey: Cmd/Ctrl+E toggles Preview/Edit
 
 ### Changed
-- Markdown rendering: replaced library parser usage with a lightweight, HTML-escaped custom renderer to prevent [object Object] issues and reduce bundle size
+- Markdown rendering: consolidated to `marked` + `DOMPurify` library for robust parsing and XSS protection
+  - Replaced fragile regex-based renderers in QuickNoteCapture and NoteEditor
+  - Custom token-based renderer adds Calm UI classes to all markdown elements
+  - Proper handling of nested formatting, multi-line content, and list grouping
 - Styling updates across custom components for dark mode conformance:
   - `App.jsx`, `UniversalSearch.jsx`, `SearchResults.jsx`, `StashManagerView.jsx`, `QuickAccessCards.jsx`,
     `StashCard.jsx`, `RecentlyVisited.jsx`, `ListContainer.jsx`, `ListItem.jsx`, `SmartSuggestions.jsx`,
@@ -42,11 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Removed inline dark-mode detection script from `triage_hub.html` to satisfy MV3 CSP; dark mode handled in React hook
-- Markdown preview is sanitized via HTML escaping to mitigate XSS vectors
+- Markdown preview sanitized via DOMPurify to prevent XSS attacks while preserving styling classes
 
 ### Fixed
 - Resolved build-breaking JSX issue in `ContextualComponent.jsx` (missing container/return closure)
 - Corrected dark hover, text, and border states in several custom components
+- Fixed `[object Object]` rendering issue by using token-based marked renderer API
 
 ### Tooling / DX
 - Added `.geminiignore` to reduce token usage during AI-assisted operations

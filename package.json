@@ -1,7 +1,7 @@
 {
   "name": "triage-hub",
-  "version": "0.5.1",
-  "description": "ADHD-friendly Chrome extension with enhanced omnisearch and intelligent suggestions",
+  "version": "0.6.0",
+  "description": "ADHD-friendly Chrome extension with quick note capture, enhanced omnisearch, and intelligent suggestions",
   "private": true,
   "type": "module",
   "scripts": {
