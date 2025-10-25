@@ -7,6 +7,7 @@ import { simulateTabCapture, setupTabCaptureListeners } from './utils/capture.js
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore, subscribeToStateChanges, refreshStateFromStorage } from './utils/reactiveStore.js';
+import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -21,6 +22,9 @@ import DevConsole from './components/DevConsole.jsx';
 import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 
 function App() {
+  // Initialize dark mode detection
+  useDarkMode();
+  
   const [appState, setAppState] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -371,6 +375,14 @@ function App() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className="text-xs text-calm-500 hover:text-calm-700 dark:text-calm-400 dark:hover:text-calm-200 px-2 py-1 rounded"
+              title="Toggle dark mode"
+            >
+              🌙
+            </button>
             <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
             <span className="text-sm text-calm-600 dark:text-calm-400">Encrypted & Private</span>
           </div>
