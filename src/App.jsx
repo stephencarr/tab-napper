@@ -186,11 +186,8 @@ function App() {
           // Step 2: Add to inbox using the proper API with deduplication
           // This will handle deduplication across all collections and add to top
           const restoredItem = {
-            title: item.title,
+            ...item,
             description: item.description || `Restored from trash`,
-            url: item.url,
-            favicon: item.favicon,
-            type: item.type || 'tab'
           };
           
           await addToTriageInbox(restoredItem);
