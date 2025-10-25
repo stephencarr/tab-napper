@@ -243,9 +243,30 @@ export default function NoteEditor({ noteId }) {
 
   function replaceShortcodesOnSpace(e) {
     if (e.key !== ' ') return;
-    const replaced = content.replace(/:([a-z0-9_+\-]+):/gi, (m, name) => EMOJI_MAP[name] || m);
-    if (replaced !== content) {
-      setContent(replaced);
+    const el = textareaRef.current;
+    if (!el) return;
+    const pos = el.selectionStart ?? 0;
+    // Find the word before the cursor (ending at pos-1)
+    const before = content.slice(0, pos);
+    // Match :shortcode: at the end of 'before'
+    const match = before.match(/(:[a-z0-9_+\-]+:)$/i);
+    if (match) {
+      const shortcode = match[1];
+      const emojiName = shortcode.slice(1, -1); // remove leading/trailing ':'
+      const emoji = EMOJI_MAP[emojiName];
+      if (emoji) {
+        // Replace the shortcode with the emoji
+        const newBefore = before.slice(0, -shortcode.length) + emoji;
+        const after = content.slice(pos);
+        const updated = newBefore + after;
+        setContent(updated);
+        // Move cursor to after the emoji
+        requestAnimationFrame(() => {
+          el.focus();
+          const newPos = newBefore.length;
+          el.setSelectionRange(newPos, newPos);
+        });
+      }
     }
   }
 
