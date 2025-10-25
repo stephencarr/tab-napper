@@ -68,10 +68,18 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const debounceRef = useRef(null);
-  const mountedRef = useRef(false);
+  const mountedRef = useRef(true); // Start as true since we're in the component
   
   // Watch for changes in stashed tabs to update history status
   const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { 
+      mountedRef.current = false;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   // Load history on component mount and when stashed tabs change
   useEffect(() => {
@@ -82,13 +90,11 @@ function RecentlyVisited({ className, maxItems = 50 }) {
     debounceRef.current = setTimeout(() => {
       loadHistory();
     }, 400);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
   }, [maxItems, stashedTabs]); // Add stashedTabs as dependency
 
   const loadHistory = async () => {
     try {
+      if (!mountedRef.current) return;
       setIsLoading(true);
       setError(null);
       
@@ -98,18 +104,13 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       
     } catch (err) {
       console.error('[Tab Napper] Error loading history:', err);
+      if (!mountedRef.current) return;
       setError('Failed to load browsing history');
     } finally {
       if (!mountedRef.current) return;
       setIsLoading(false);
     }
   };
-
-  // mounted flag to avoid setting state after unmount
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {
