@@ -417,6 +417,11 @@ function App() {
           </div>
         </div>
       </div>
+      
+      {/* Smart Suggestions - Full width below */}
+      <div className="calm-card p-6">
+        <SmartSuggestions />
+      </div>
     </div>
   );
 
