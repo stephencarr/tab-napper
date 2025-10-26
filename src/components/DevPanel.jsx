@@ -428,7 +428,7 @@ function AlarmsTab({ addLog, showToast }) {
           // remind_me_inbox-1761419209071-ep2vhqiz5
           
           // Find where the itemId starts (look for pattern: _[category]-)
-          const itemIdMatch = nameWithoutPrefix.match(/_(inbox-|stashed-|archived-|fidget-)/);
+          const itemIdMatch = nameWithoutPrefix.match(/_(inbox-|stashed-|trash-)/);
           
           if (!itemIdMatch) {
             console.error('[DevPanel] Could not parse alarm name:', alarm.name);
