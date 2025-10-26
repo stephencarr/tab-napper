@@ -54,8 +54,9 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
       setError(null);
       
       console.log('[SmartSuggestions] 🔄 Loading suggestions...');
-      console.log('[SmartSuggestions] Mock data available?', typeof window !== 'undefined' && !!window._mockHistoryData);
-      if (typeof window !== 'undefined' && window._mockHistoryData) {
+      const hasWindow = typeof window !== 'undefined';
+      console.log('[SmartSuggestions] Mock data available?', hasWindow && !!window._mockHistoryData);
+      if (hasWindow && window._mockHistoryData) {
         console.log('[SmartSuggestions] Mock data count:', window._mockHistoryData.length);
       }
       
