@@ -534,7 +534,10 @@ export async function generateSmartSuggestions() {
           console.log(`     Reason: ${candidate.suggestionReason}`);
           console.log(`     Metrics: ${candidate.metrics.uniqueDaysVisited}d visited, ${candidate.metrics.totalVisits} total visits, ${candidate.metrics.daysSinceRecent}d since recent`);
           if (index >= SUGGESTION_CONFIG.MAX_SUGGESTIONS - 1 && index < candidates.length - 1) {
-            console.log(`     ${index >= SUGGESTION_CONFIG.MAX_SUGGESTIONS ? '❌ Not shown (below top ' + SUGGESTION_CONFIG.MAX_SUGGESTIONS + ')' : '✅ Will be shown'}`);
+            const shownStatus = index >= SUGGESTION_CONFIG.MAX_SUGGESTIONS
+              ? `❌ Not shown (below top ${SUGGESTION_CONFIG.MAX_SUGGESTIONS})`
+              : '✅ Will be shown';
+            console.log(`     ${shownStatus}`);
           }
         });
     }
