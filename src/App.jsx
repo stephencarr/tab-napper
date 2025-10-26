@@ -8,8 +8,10 @@ import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
+import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
+import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -20,13 +22,17 @@ import SmartSuggestions from './components/SmartSuggestions.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
-import DevConsole from './components/DevConsole.jsx';
+import DevPanel from './components/DevPanel.jsx';
 import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 import Layout from './components/Layout.jsx';
 
 function App() {
   // Initialize dark mode detection
   useDarkMode();
+  
+  // Dev mode state
+  const { isDevMode, toggleDevMode } = useDevMode();
+  const [showDevPanel, setShowDevPanel] = useState(false);
   
   // Use the reactive store hook for guaranteed fresh data
   const appState = useReactiveStore();
@@ -40,6 +46,25 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Set up easter egg for dev mode
+  useEffect(() => {
+    const cleanup = setupDevModeEasterEgg(() => {
+      toggleDevMode();
+      setShowDevPanel(true);
+    });
+    
+    // Expose dev mode toggle globally for console access
+    if (typeof window !== 'undefined') {
+      window.TabNapper_toggleDevMode = () => {
+        toggleDevMode();
+        setShowDevPanel(true);
+        console.log('🎉 Dev Mode:', !isDevMode ? 'ENABLED' : 'DISABLED');
+      };
+    }
+    
+    return cleanup;
+  }, [toggleDevMode, isDevMode]);
 
   // PERFORMANCE: Create debounced search function only once
   // useMemo instead of useCallback because createDebouncedSearch returns a function
@@ -155,7 +180,7 @@ function App() {
   };
 
   // Handle FidgetControl actions
-  const handleItemAction = async (action, item) => {
+  const handleItemAction = async (action, item, actionData) => {
     try {
       
       switch (action) {
@@ -191,6 +216,9 @@ function App() {
           const updatedInboxForDelete = currentInboxForDelete.filter(i => i.id !== item.id);
           const updatedStashed = currentStashed.filter(i => i.id !== item.id);
           
+          // Clear any scheduled alarms (check all possible action types)
+          console.log('[Tab Napper] Clearing any alarms for deleted item:', item.title);
+          await clearAllAlarmsForItem(item);
           
           // Add to trash with deletion timestamp
           const trashedItem = {
@@ -208,18 +236,56 @@ function App() {
           
           break;
           
-        case 'remind':
-        case 'follow-up':
+        case 'remind_me':
+        case 'follow_up':
         case 'review':
-          // For now, just log the scheduled action
-          // TODO: Implement reminder/scheduling system
+          // Stash and Schedule: Move to stashed tabs with scheduled reminder
+          console.log('[Tab Napper] Scheduling item:', { action, item: item.title, actionData });
+          
+          // Step 1: Calculate the scheduled time
+          const scheduledTime = calculateScheduledTime(actionData.when);
+          console.log('[Tab Napper] Scheduled time:', new Date(scheduledTime).toLocaleString());
+          
+          // Step 2: If item was previously scheduled, clear the old alarm
+          if (item.scheduledFor && item.scheduledAction) {
+            await clearScheduledAlarm(item, item.scheduledAction);
+            console.log('[Tab Napper] Cleared previous alarm');
+          }
+          
+          // Step 3: Remove from inbox (if present)
+          const currentInboxForSchedule = await loadAppState('triageHub_inbox', []);
+          const updatedInboxForSchedule = currentInboxForSchedule.filter(i => i.id !== item.id);
+          
+          // Step 4: Update in stashed tabs with new scheduling metadata
+          const currentStashedForSchedule = await loadAppState('triageHub_stashedTabs', []);
+          
+          // Remove old version from stashed (if it was already there)
+          const filteredStashed = currentStashedForSchedule.filter(i => i.id !== item.id);
+          
+          const scheduledItem = {
+            ...item,
+            scheduledFor: scheduledTime,
+            scheduledAction: action,
+            scheduledWhen: actionData.when,
+            stashedAt: item.stashedAt || Date.now()
+          };
+          const updatedStashedForSchedule = [scheduledItem, ...filteredStashed];
+          
+          // Step 5: Save to storage
+          await saveAppState('triageHub_inbox', updatedInboxForSchedule);
+          await saveAppState('triageHub_stashedTabs', updatedStashedForSchedule);
+          
+          // Step 6: Set new Chrome alarm
+          await setScheduledAlarm(item, action, scheduledTime);
+          
+          console.log('[Tab Napper] ✓ Item scheduled and stashed:', item.title);
           break;
           
         default:
           console.warn('[Tab Napper] Unknown FidgetControl action:', action);
       }
     } catch (error) {
-      console.error('[Tab Napper] Error handling FidgetControl action:', error);
+      console.error(`[Tab Napper] Error handling action '${action}':`, error);
     }
   };
 
@@ -422,17 +488,40 @@ function App() {
   };
 
   return (
-    <Layout
-      currentView={currentView}
-      setCurrentView={setCurrentView}
-      searchTerm={searchTerm}
-      onSearchChange={handleSearchChange}
-      onSearchClear={handleSearchClear}
-      searchLoading={isSearching}
-    >
-      {renderContent()}
-      {!isSearchMode && <DevConsole isEnabled={true} />}
-    </Layout>
+    <>
+      <Layout
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        searchLoading={isSearching}
+      >
+        {renderContent()}
+      </Layout>
+      
+      {/* Dev Panel - Only show when dev mode is enabled */}
+      {isDevMode && (
+        <>
+          <DevPanel 
+            isOpen={showDevPanel}
+            onClose={() => setShowDevPanel(false)}
+          />
+          
+          {/* Floating Dev Mode Toggle */}
+          <button
+            onClick={() => setShowDevPanel(!showDevPanel)}
+            className="fixed bottom-4 left-4 p-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all z-40 group"
+            title="Toggle Developer Panel"
+          >
+            <TestTube className="h-5 w-5" />
+            <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Dev Panel
+            </span>
+          </button>
+        </>
+      )}
+    </>
   );
 }
 

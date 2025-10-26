@@ -388,17 +388,139 @@ async function testSmartSuggestions() {
   }
 }
 
+/**
+ * List all active Chrome alarms for debugging
+ */
+async function listActiveAlarms() {
+  if (typeof chrome === 'undefined' || !chrome.alarms) {
+    console.warn('[Tab Napper] Chrome alarms API not available');
+    return;
+  }
+  
+  try {
+    chrome.alarms.getAll((alarms) => {
+      console.log(`[Tab Napper] Active alarms: ${alarms.length}`);
+      
+      if (alarms.length === 0) {
+        console.log('[Tab Napper] No active alarms found');
+        console.log('[Tab Napper] 💡 TIP: Schedule some items to see alarms here');
+        return;
+      }
+      
+      const now = Date.now();
+      alarms.forEach((alarm, index) => {
+        const scheduledTime = alarm.scheduledTime;
+        const timeUntil = scheduledTime - now;
+        const minutesUntil = Math.floor(timeUntil / 60000);
+        const hoursUntil = Math.floor(minutesUntil / 60);
+        
+        console.log(`\n${index + 1}. ${alarm.name}`);
+        console.log(`   Scheduled for: ${new Date(scheduledTime).toLocaleString()}`);
+        
+        if (timeUntil < 0) {
+          console.log(`   ⚠️ OVERDUE by ${Math.abs(minutesUntil)} minutes`);
+        } else if (minutesUntil < 60) {
+          console.log(`   ⏰ Fires in ${minutesUntil} minutes`);
+        } else {
+          console.log(`   ⏰ Fires in ${hoursUntil} hours (${minutesUntil} minutes)`);
+        }
+        
+        if (alarm.periodInMinutes) {
+          console.log(`   🔄 Repeats every ${alarm.periodInMinutes} minutes`);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('[Tab Napper] Error listing alarms:', error);
+  }
+}
+
+/**
+ * Test the notification system
+ */
+async function testNotification() {
+  if (typeof chrome === 'undefined' || !chrome.notifications) {
+    console.warn('[Tab Napper] Chrome notifications API not available');
+    return;
+  }
+  
+  try {
+    console.log('[Tab Napper] Creating test notification...');
+    
+    // Simple 1x1 transparent PNG as data URI (minimal valid icon)
+    const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    
+    const notificationOptions = {
+      type: 'basic',
+      iconUrl: iconDataUri,
+      title: 'Tab Napper Test Notification',
+      message: 'This is a test notification. It should be sticky and require interaction.',
+      priority: 2,
+      requireInteraction: true,
+      buttons: [
+        { title: 'Open Tab Napper' },
+        { title: 'Dismiss' }
+      ]
+    };
+    
+    chrome.notifications.create('test-notification', notificationOptions, (notificationId) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Tab Napper] ❌ Error creating notification:', chrome.runtime.lastError);
+      } else {
+        console.log('[Tab Napper] ✅ Test notification created:', notificationId);
+        console.log('[Tab Napper] Check your system notifications!');
+      }
+    });
+  } catch (error) {
+    console.error('[Tab Napper] Error testing notification:', error);
+  }
+}
+
+/**
+ * Test alarm system by creating a test alarm that fires in 10 seconds
+ */
+async function testAlarm() {
+  if (typeof chrome === 'undefined' || !chrome.alarms) {
+    console.warn('[Tab Napper] Chrome alarms API not available');
+    throw new Error('Chrome alarms API not available');
+  }
+  
+  return new Promise((resolve, reject) => {
+    console.log('[Tab Napper] Creating test alarm (fires in 10 seconds)...');
+    
+    chrome.alarms.create('test-alarm', {
+      delayInMinutes: 0.167 // 10 seconds
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[Tab Napper] ❌ Error creating test alarm:', chrome.runtime.lastError);
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        console.log('[Tab Napper] ✅ Test alarm created');
+        console.log('[Tab Napper] Watch the console for alarm firing in ~10 seconds');
+        console.log('[Tab Napper] You should also see a notification when it fires');
+        resolve();
+      }
+    });
+  });
+}
+
 // Expose functions globally for easy testing in console
 if (typeof window !== 'undefined') {
   window.TriageHub_addSampleData = addSampleData;
   window.TriageHub_clearSampleData = clearSampleData;
   window.TriageHub_generateTestHistory = generateTestBrowsingHistory;
   window.TriageHub_testSmartSuggestions = testSmartSuggestions;
+  window.TriageHub_listAlarms = listActiveAlarms;
+  window.TriageHub_testNotification = testNotification;
+  window.TriageHub_testAlarm = testAlarm;
 }
 
 export {
   addSampleData,
   clearSampleData,
   generateTestBrowsingHistory,
-  testSmartSuggestions
+  testSmartSuggestions,
+  listActiveAlarms,
+  testNotification,
+  testAlarm
 };

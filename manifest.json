@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Tab Napper",
-  "version": "0.6.0",
-  "description": "ADHD-friendly tab management with quick note capture, markdown editor, and intelligent suggestions",
+  "version": "0.7.0",
+  "description": "ADHD-friendly tab management with stash & schedule, markdown editor, and intelligent notifications",
   "permissions": [
     "tabs",
     "storage",
     "notifications",
     "activeTab",
-    "history"
+    "history",
+    "alarms"
   ],
   "background": {
     "service_worker": "background.js"
