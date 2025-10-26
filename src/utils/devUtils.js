@@ -449,7 +449,7 @@ async function testNotification() {
     
     const notificationOptions = {
       type: 'basic',
-      iconUrl: '/icons/icon128.svg',
+      iconUrl: chrome.runtime.getURL('icons/icon128.svg'),
       title: 'Tab Napper Test Notification',
       message: 'This is a test notification. It should be sticky and require interaction.',
       priority: 2,
