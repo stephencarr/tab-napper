@@ -447,9 +447,12 @@ async function testNotification() {
   try {
     console.log('[Tab Napper] Creating test notification...');
     
+    // Simple 1x1 transparent PNG as data URI (minimal valid icon)
+    const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    
     const notificationOptions = {
       type: 'basic',
-      // Omit iconUrl - Chrome will use the extension's default icon from manifest
+      iconUrl: iconDataUri,
       title: 'Tab Napper Test Notification',
       message: 'This is a test notification. It should be sticky and require interaction.',
       priority: 2,

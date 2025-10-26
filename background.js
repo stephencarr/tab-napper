@@ -274,10 +274,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === 'test-alarm') {
       console.log('[Tab Napper] ✅ Test alarm fired successfully!');
       
+      // Simple 1x1 transparent PNG as data URI (minimal valid icon)
+      const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      
       // Create test notification
       chrome.notifications.create('test-alarm-notification', {
         type: 'basic',
-        // Omit iconUrl - Chrome will use the extension's default icon from manifest
+        iconUrl: iconDataUri,
         title: 'Tab Napper Test Alarm',
         message: 'Test alarm fired successfully! The alarm system is working.',
         priority: 2,
@@ -350,9 +353,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const actionLabel = action === 'remind_me' ? 'Reminder' : 
                        action === 'follow_up' ? 'Follow-up' : 'Review';
     
+    // Simple 1x1 transparent PNG as data URI (minimal valid icon)
+    const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    
     const notificationOptions = {
       type: 'basic',
-      // Omit iconUrl - Chrome will use the extension's default icon from manifest
+      iconUrl: iconDataUri,
       title: `Tab Napper ${actionLabel}`,
       message: item.title || 'Scheduled item ready for review',
       priority: 2, // High priority
