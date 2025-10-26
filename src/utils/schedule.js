@@ -56,6 +56,7 @@ export function calculateScheduledTime(whenText) {
       break;
     case 'This weekend':
       // Set to Saturday 10 AM
+      // Calculates days until Saturday (where Sunday=0, Saturday=6); the `|| 7` ensures that if today is Saturday, it schedules for next Saturday.
       const daysUntilSaturday = (6 - result.getDay() + 7) % 7 || 7;
       result.setDate(result.getDate() + daysUntilSaturday);
       result.setHours(10, 0, 0, 0);
