@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FileText, RotateCcw, Clock } from 'lucide-react';
+import { FileText, RotateCcw, Clock, AlertCircle } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
 import { navigateToUrl, openNoteEditor } from '../utils/navigation.js';
@@ -29,6 +29,12 @@ function StashCard({
   const isScheduled = useMemo(
     () => item.scheduledFor && !showingReschedule,
     [item.scheduledFor, showingReschedule]
+  );
+  
+  // Check if scheduled item is past due
+  const isPastDue = useMemo(
+    () => isScheduled && item.scheduledFor < Date.now(),
+    [isScheduled, item.scheduledFor]
   );
   // Get favicon or fallback
   const getFavicon = (url) => {
@@ -212,8 +218,17 @@ function StashCard({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-calm-500 dark:text-calm-400" />
-            <span className="text-calm-700 dark:text-calm-300 font-medium">
+            {isPastDue ? (
+              <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+            ) : (
+              <Clock className="h-4 w-4 text-calm-500 dark:text-calm-400" />
+            )}
+            <span className={cn(
+              "font-medium",
+              isPastDue 
+                ? "text-orange-700 dark:text-orange-400" 
+                : "text-calm-700 dark:text-calm-300"
+            )}>
               {getDetailedScheduledTime(item.scheduledFor)}
             </span>
           </div>
@@ -222,9 +237,14 @@ function StashCard({
               console.log('[Tab Napper] Rescheduling item:', item.title);
               setShowingReschedule(true);
             }}
-            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+            className={cn(
+              "inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border transition-colors",
+              isPastDue
+                ? "border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                : "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750"
+            )}
           >
-            Reschedule
+            {isPastDue ? 'Reschedule Now' : 'Reschedule'}
           </button>
         </div>
       ) : showingReschedule ? (
