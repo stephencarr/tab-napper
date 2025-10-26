@@ -217,7 +217,7 @@ function calculateSuggestionScore(metrics) {
   // The boost factor 1.2 was chosen based on empirical testing: it provides a noticeable but not overwhelming preference for items visited today,
   // helping recent activity surface in suggestions without dominating the score. Adjust if user feedback indicates the boost is too strong or weak.
   const recencyBoost = metrics.daysSinceRecent === 0 ? 1.2 : 1.0;
-  
+  const normalizedConsistency = Math.min(1, metrics.consistency * 3); // Scale consistency by 3x to amplify daily usage patterns (e.g., 0.33 consistency → 1.0 score)
   // Normalize scores to 0-1 range
   const normalizedConsistency = Math.min(1, metrics.consistency * 3); // More aggressive consistency scoring (3x) to better reward daily usage patterns
   const normalizedRecency = metrics.recency;
