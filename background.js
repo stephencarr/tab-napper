@@ -277,7 +277,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       // Create test notification
       chrome.notifications.create('test-alarm-notification', {
         type: 'basic',
-        iconUrl: chrome.runtime.getURL('icons/icon128.svg'),
+        // Omit iconUrl - Chrome will use the extension's default icon from manifest
         title: 'Tab Napper Test Alarm',
         message: 'Test alarm fired successfully! The alarm system is working.',
         priority: 2,
@@ -352,7 +352,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     
     const notificationOptions = {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('icons/icon128.svg'),
+      // Omit iconUrl - Chrome will use the extension's default icon from manifest
       title: `Tab Napper ${actionLabel}`,
       message: item.title || 'Scheduled item ready for review',
       priority: 2, // High priority

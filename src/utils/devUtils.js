@@ -449,7 +449,7 @@ async function testNotification() {
     
     const notificationOptions = {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('icons/icon128.svg'),
+      // Omit iconUrl - Chrome will use the extension's default icon from manifest
       title: 'Tab Napper Test Notification',
       message: 'This is a test notification. It should be sticky and require interaction.',
       priority: 2,
