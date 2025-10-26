@@ -45,6 +45,45 @@ function DevPanel({ isOpen, onClose, className }) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  // Intercept console.log to capture logs
+  useEffect(() => {
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    console.log = (...args) => {
+      originalLog(...args);
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      if (message.includes('[Tab Napper]') || message.includes('[DevPanel]')) {
+        addLog(message, 'info');
+      }
+    };
+
+    console.error = (...args) => {
+      originalError(...args);
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      addLog(message, 'error');
+    };
+
+    console.warn = (...args) => {
+      originalWarn(...args);
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      addLog(message, 'warn');
+    };
+
+    return () => {
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+    };
+  }, [addLog]);
+
   // Quick action buttons
   const quickActions = [
     {
@@ -268,6 +307,76 @@ function AlarmsTab({ addLog, showToast }) {
     loadAlarms();
   }, [loadAlarms]);
 
+  const flushAllStashed = async () => {
+    if (!confirm('⚠️ FLUSH ALL STASHED ITEMS?\n\nThis will:\n- Clear ALL alarms\n- Move ALL stashed items to inbox\n- Cannot be undone!\n\nContinue?')) {
+      return;
+    }
+
+    try {
+      addLog('🗑️ Starting flush of all stashed items...', 'info');
+      showToast('⏳ Flushing...', 'info');
+
+      // Get all data
+      const result = await chrome.storage.local.get(['triageHub_stashedTabs', 'triageHub_inbox']);
+      const stashedTabs = result.triageHub_stashedTabs || [];
+      const inbox = result.triageHub_inbox || [];
+
+      console.log('[DevPanel] Flushing', stashedTabs.length, 'stashed items');
+      addLog(`📋 Found ${stashedTabs.length} stashed items`, 'info');
+
+      if (stashedTabs.length === 0) {
+        showToast('Nothing to flush', 'info');
+        addLog('No stashed items found', 'info');
+        return;
+      }
+
+      // Clear all alarms
+      const allAlarms = await new Promise((resolve) => {
+        chrome.alarms.getAll((alarms) => resolve(alarms || []));
+      });
+      
+      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper_'));
+      console.log('[DevPanel] Clearing', tabNapperAlarms.length, 'alarms');
+      addLog(`🔕 Clearing ${tabNapperAlarms.length} alarms`, 'info');
+
+      for (const alarm of tabNapperAlarms) {
+        await new Promise((resolve) => {
+          chrome.alarms.clear(alarm.name, () => resolve());
+        });
+      }
+
+      // Remove scheduled metadata from all items
+      const cleanedItems = stashedTabs.map(item => {
+        const cleaned = { ...item };
+        delete cleaned.scheduledFor;
+        delete cleaned.scheduledAction;
+        delete cleaned.scheduledWhen;
+        return cleaned;
+      });
+
+      // Move everything to inbox
+      const updatedInbox = [...cleanedItems, ...inbox];
+
+      await chrome.storage.local.set({
+        triageHub_inbox: updatedInbox,
+        triageHub_stashedTabs: []
+      });
+
+      console.log('[DevPanel] Flush complete');
+      showToast(`✅ Flushed ${stashedTabs.length} items!`, 'success');
+      addLog(`✅ Flushed ${stashedTabs.length} items to inbox`, 'success');
+
+      // Trigger UI refresh
+      window.dispatchEvent(new CustomEvent('storage-updated'));
+      setTimeout(() => loadAlarms(), 500);
+
+    } catch (error) {
+      console.error('[DevPanel] Error flushing:', error);
+      addLog(`❌ Error: ${error.message}`, 'error');
+      showToast('❌ Failed to flush', 'error');
+    }
+  };
+
   const triggerAllScheduledAlarms = async () => {
     console.log('[DevPanel] triggerAllScheduledAlarms called');
     
@@ -467,6 +576,13 @@ function AlarmsTab({ addLog, showToast }) {
             label="🚀 Trigger All Scheduled Alarms NOW"
             description="Force all scheduled items to trigger immediately (for testing)"
             onClick={triggerAllScheduledAlarms}
+            color="red"
+          />
+          <ActionButton
+            icon={Trash2}
+            label="🗑️ FLUSH ALL Stashed Items"
+            description="Clear all alarms and move ALL stashed items to inbox"
+            onClick={flushAllStashed}
             color="red"
           />
         </div>
