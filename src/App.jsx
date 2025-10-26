@@ -54,12 +54,19 @@ function App() {
       setShowDevPanel(true);
     });
     
-    // Expose dev mode toggle globally for console access
+    // Expose dev mode toggle and cache clear globally for console access
     if (typeof window !== 'undefined') {
       window.TabNapper_toggleDevMode = () => {
         toggleDevMode();
         setShowDevPanel(true);
         console.log('🎉 Dev Mode:', !isDevMode ? 'ENABLED' : 'DISABLED');
+      };
+      
+      // Expose cache clear for SmartSuggestions
+      window._clearSuggestionCache = async () => {
+        const { clearSuggestionsCache } = await import('./utils/smartSuggestions.js');
+        await clearSuggestionsCache();
+        console.log('🗑️ Smart Suggestions cache cleared');
       };
     }
     

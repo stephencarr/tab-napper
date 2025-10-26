@@ -67,6 +67,25 @@ async function saveCacheToStorage() {
  * Only gets what we need without status indicators
  */
 async function getLightweightHistory(maxResults = 500) {
+  // Check for mock data first (for testing)
+  if (typeof window !== 'undefined' && window._mockHistoryData) {
+    debugLog('Suggestions', `Using mock history data: ${window._mockHistoryData.length} items`);
+    return window._mockHistoryData.slice(0, maxResults);
+  }
+  
+  // Try to load from extension storage
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    try {
+      const result = await chrome.storage.local.get('tabNapper_mockHistory');
+      if (result.tabNapper_mockHistory && result.tabNapper_mockHistory.length > 0) {
+        debugLog('Suggestions', `Using mock history from storage: ${result.tabNapper_mockHistory.length} items`);
+        return result.tabNapper_mockHistory.slice(0, maxResults);
+      }
+    } catch (error) {
+      debugLog('Suggestions', 'Could not load mock history from storage:', error);
+    }
+  }
+  
   if (typeof chrome === 'undefined' || !chrome.history) {
     console.log('[SmartSuggestions] Chrome history API not available');
     return [];
@@ -90,16 +109,22 @@ async function getLightweightHistory(maxResults = 500) {
       );
     });
     
+    debugLog('Suggestions', `Fetched ${historyItems.length} real history items`);
+    
     // Filter out unwanted URLs
     const excludePatterns = [
       'chrome://', 'chrome-extension://', 'moz-extension://',
       'data:', 'blob:', 'javascript:'
     ];
     
-    return historyItems.filter(item => 
+    const filtered = historyItems.filter(item => 
       !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
       item.title && item.title.trim().length > 0
     );
+    
+    debugLog('Suggestions', `Filtered to ${filtered.length} valid history items`);
+    
+    return filtered;
     
   } catch (error) {
     console.error('[SmartSuggestions] Error fetching lightweight history:', error);
@@ -348,6 +373,13 @@ export async function generateSmartSuggestions() {
     }
     
     debugLog('Suggestions', `Analyzing ${historyItems.length} history items`);
+    console.log('[SmartSuggestions] 📚 Sample history items (first 5):');
+    historyItems.slice(0, 5).forEach((item, i) => {
+      const date = new Date(item.lastVisitTime);
+      console.log(`  ${i + 1}. ${item.title}`);
+      console.log(`     ${item.url}`);
+      console.log(`     Last visit: ${date.toLocaleString()}`);
+    });
     
     // Get currently pinned items and suggestion metadata
     const [pinnedUrls, metadata] = await Promise.all([
@@ -356,6 +388,9 @@ export async function generateSmartSuggestions() {
     ]);
     
     debugLog('Suggestions', `Found ${pinnedUrls.length} pinned items`);
+    if (pinnedUrls.length > 0) {
+      console.log('[SmartSuggestions] 📌 Pinned URLs:', pinnedUrls);
+    }
     
     // Group history by URL and calculate metrics
     const urlGroups = new Map();
@@ -377,18 +412,37 @@ export async function generateSmartSuggestions() {
     let skippedLowScore = 0;
     let skippedMinDays = 0;
     
+    console.log('[SmartSuggestions] 🔍 Analyzing URLs...');
+    console.log('[SmartSuggestions] Config:', {
+      minDays: SUGGESTION_CONFIG.MIN_DAILY_VISITS,
+      minVisits: SUGGESTION_CONFIG.MIN_TOTAL_VISITS,
+      threshold: SUGGESTION_CONFIG.SUGGESTION_THRESHOLD,
+      analysisWindow: SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS + ' days'
+    });
+    
+    // Sample first 10 URLs for detailed logging
+    let detailedLogCount = 0;
+    
     for (const [url, items] of urlGroups) {
       processed++;
+      const shouldLogDetail = detailedLogCount < 10;
+      
+      if (shouldLogDetail) {
+        console.log(`\n[SmartSuggestions] URL ${processed}: ${url}`);
+        console.log(`  - Total visits in history: ${items.length}`);
+      }
       
       // Skip if already pinned
       if (pinnedUrls.includes(url)) {
         skippedPinned++;
+        if (shouldLogDetail) console.log('  ❌ SKIP: Already pinned');
         continue;
       }
       
       // Skip if in cooldown period
       if (isInCooldown(url, metadata)) {
         skippedCooldown++;
+        if (shouldLogDetail) console.log('  ❌ SKIP: In cooldown');
         continue;
       }
       
@@ -396,24 +450,79 @@ export async function generateSmartSuggestions() {
       const metrics = calculateDailyVisitMetrics(url, historyItems);
       if (!metrics) {
         skippedMinDays++;
+        if (shouldLogDetail) console.log('  ❌ SKIP: No metrics (URL not found in analysis window)');
+        continue;
+      }
+      
+      if (shouldLogDetail) {
+        console.log('  📊 Metrics:', {
+          uniqueDays: metrics.uniqueDaysVisited,
+          totalVisits: metrics.totalVisits,
+          daysSinceRecent: metrics.daysSinceRecent,
+          consistency: metrics.consistency.toFixed(3),
+          recency: metrics.recency.toFixed(3)
+        });
+      }
+      
+      // Check minimum thresholds
+      if (metrics.uniqueDaysVisited < SUGGESTION_CONFIG.MIN_DAILY_VISITS) {
+        skippedMinDays++;
+        if (shouldLogDetail) console.log(`  ❌ SKIP: Only ${metrics.uniqueDaysVisited} days (need ${SUGGESTION_CONFIG.MIN_DAILY_VISITS})`);
+        continue;
+      }
+      
+      if (metrics.totalVisits < SUGGESTION_CONFIG.MIN_TOTAL_VISITS) {
+        skippedMinDays++;
+        if (shouldLogDetail) console.log(`  ❌ SKIP: Only ${metrics.totalVisits} visits (need ${SUGGESTION_CONFIG.MIN_TOTAL_VISITS})`);
         continue;
       }
       
       const score = calculateSuggestionScore(metrics);
+      if (shouldLogDetail) {
+        console.log(`  🎯 Score: ${score.toFixed(3)} (threshold: ${SUGGESTION_CONFIG.SUGGESTION_THRESHOLD})`);
+      }
+      
       if (score < SUGGESTION_CONFIG.SUGGESTION_THRESHOLD) {
         skippedLowScore++;
+        if (shouldLogDetail) console.log(`  ❌ SKIP: Score too low`);
         continue;
       }
       
       const itemInfo = extractItemInfo(url, historyItems);
       if (itemInfo) {
+        if (shouldLogDetail) console.log(`  ✅ CANDIDATE! Score: ${score.toFixed(3)}`);
         candidates.push({
           ...itemInfo,
           score,
           metrics,
           suggestionReason: generateSuggestionReason(metrics)
         });
+        detailedLogCount++;
       }
+    }
+    
+    console.log(`\n[SmartSuggestions] 📊 Summary:`);
+    console.log(`  Total URLs: ${processed}`);
+    console.log(`  Skipped - Already Pinned: ${skippedPinned}`);
+    console.log(`  Skipped - Cooldown: ${skippedCooldown}`);
+    console.log(`  Skipped - Insufficient Data: ${skippedMinDays}`);
+    console.log(`  Skipped - Low Score: ${skippedLowScore}`);
+    console.log(`  ✅ Candidates: ${candidates.length}`);
+    
+    if (candidates.length > 0) {
+      console.log(`\n[SmartSuggestions] 🎯 All Candidates (sorted by score):`);
+      candidates
+        .sort((a, b) => b.score - a.score)
+        .forEach((candidate, index) => {
+          console.log(`  ${index + 1}. ${candidate.title}`);
+          console.log(`     Score: ${candidate.score.toFixed(3)}`);
+          console.log(`     URL: ${candidate.url}`);
+          console.log(`     Reason: ${candidate.suggestionReason}`);
+          console.log(`     Metrics: ${candidate.metrics.uniqueDaysVisited}d visited, ${candidate.metrics.totalVisits} total visits, ${candidate.metrics.daysSinceRecent}d since recent`);
+          if (index >= SUGGESTION_CONFIG.MAX_SUGGESTIONS - 1 && index < candidates.length - 1) {
+            console.log(`     ${index >= SUGGESTION_CONFIG.MAX_SUGGESTIONS ? '❌ Not shown (below top ' + SUGGESTION_CONFIG.MAX_SUGGESTIONS + ')' : '✅ Will be shown'}`);
+          }
+        });
     }
     
     debugLog('Suggestions', `Results: ${candidates.length} candidates from ${processed} URLs (${skippedPinned} pinned, ${skippedCooldown} cooldown, ${skippedMinDays} insufficient days, ${skippedLowScore} low score)`);

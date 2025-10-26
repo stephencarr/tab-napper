@@ -56,7 +56,8 @@ function DevPanel({ isOpen, onClose, className }) {
       const message = args.map(arg => 
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' ');
-      if (message.includes('[Tab Napper]') || message.includes('[DevPanel]')) {
+      // Capture Tab Napper logs, DevPanel logs, and SmartSuggestions logs
+      if (message.includes('[Tab Napper]') || message.includes('[DevPanel]') || message.includes('[SmartSuggestions]')) {
         addLog(message, 'info');
       }
     };
@@ -609,19 +610,48 @@ function AlarmsTab({ addLog, showToast }) {
 
 // Console Tab Component
 function ConsoleTab({ logs, onClear }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
   const logColors = {
     info: 'text-blue-600 dark:text-blue-400',
     success: 'text-green-600 dark:text-green-400',
     error: 'text-red-600 dark:text-red-400',
     warn: 'text-yellow-600 dark:text-yellow-400'
   };
+  
+  // Count logs by type
+  const logCounts = logs.reduce((acc, log) => {
+    acc[log.type] = (acc[log.type] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Console Output ({logs.length})
-        </span>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+        >
+          <span>{isExpanded ? '▼' : '▶'}</span>
+          <span>Console Output ({logs.length})</span>
+          <div className="flex items-center space-x-2 ml-2">
+            {logCounts.error > 0 && (
+              <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
+                {logCounts.error} errors
+              </span>
+            )}
+            {logCounts.warn > 0 && (
+              <span className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full">
+                {logCounts.warn} warnings
+              </span>
+            )}
+            {(logCounts.info || 0) + (logCounts.success || 0) > 0 && (
+              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
+                {(logCounts.info || 0) + (logCounts.success || 0)} logs
+              </span>
+            )}
+          </div>
+        </button>
         <button
           onClick={onClear}
           className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -630,20 +660,22 @@ function ConsoleTab({ logs, onClear }) {
         </button>
       </div>
       
-      <div className="bg-gray-900 rounded p-3 h-[400px] overflow-y-auto font-mono text-xs">
-        {logs.length === 0 ? (
-          <div className="text-gray-500">Console is empty. Actions will log here.</div>
-        ) : (
-          logs.map(log => (
-            <div key={log.id} className="mb-1">
-              <span className="text-gray-500">[{log.timestamp}]</span>{' '}
-              <span className={logColors[log.type] || 'text-gray-300'}>
-                {log.message}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+      {isExpanded && (
+        <div className="bg-gray-900 rounded p-3 h-[400px] overflow-y-auto font-mono text-xs">
+          {logs.length === 0 ? (
+            <div className="text-gray-500">Console is empty. Actions will log here.</div>
+          ) : (
+            logs.map(log => (
+              <div key={log.id} className="mb-1">
+                <span className="text-gray-500">[{log.timestamp}]</span>{' '}
+                <span className={logColors[log.type] || 'text-gray-300'}>
+                  {log.message}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
