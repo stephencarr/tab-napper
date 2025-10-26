@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lightbulb, Plus, X, TrendingUp, Calendar, Clock, Pin, PinOff } from 'lucide-react';
-import { generateSmartSuggestions, pinSuggestion, getSuggestionStats } from '../utils/smartSuggestions.js';
+import { generateSmartSuggestions, pinSuggestion, dismissSuggestion, getSuggestionStats } from '../utils/smartSuggestions.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { cn } from '../utils/cn.js';
 
@@ -124,6 +124,26 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
     } catch (error) {
       console.error('[Tab Napper] ❌ Error pinning suggestion:', error);
       setError('Failed to pin suggestion');
+    }
+  };
+
+  // Handle dismissing a suggestion
+  const handleDismissSuggestion = async (suggestion, event) => {
+    event.stopPropagation(); // Prevent triggering the click handler
+    
+    console.log('[Tab Napper] 🚫 Dismissing suggestion:', suggestion.title);
+    
+    try {
+      await dismissSuggestion(suggestion);
+      
+      // Remove from suggestions list
+      setSuggestions(prev => prev.filter(s => s.url !== suggestion.url));
+      
+      console.log('[Tab Napper] ✅ Successfully dismissed suggestion');
+      
+    } catch (error) {
+      console.error('[Tab Napper] ❌ Error dismissing suggestion:', error);
+      setError('Failed to dismiss suggestion');
     }
   };
 
@@ -334,6 +354,13 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
                     title="Pin to Quick Access"
                   >
                     <Pin className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => handleDismissSuggestion(suggestion, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-calm-500 dark:text-calm-400 hover:text-calm-700 dark:hover:text-calm-200 hover:bg-calm-100 dark:hover:bg-calm-700/50 rounded"
+                    title="Dismiss suggestion"
+                  >
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>

@@ -415,12 +415,10 @@ function App() {
           <div className="calm-card p-6">
             <QuickAccessCards maxItems={6} />
           </div>
+          <div className="calm-card p-6">
+            <SmartSuggestions />
+          </div>
         </div>
-      </div>
-      
-      {/* Smart Suggestions - Full width below */}
-      <div className="calm-card p-6">
-        <SmartSuggestions />
       </div>
     </div>
   );
