@@ -260,7 +260,7 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   }
 });
 
-console.log('[Tab Napper] Background service worker ready - monitoring all tabs and scheduled reminders');
+console.log('[Tab Napper] Background service worker ready - monitoring all tabs and scheduled reminders, follow-ups, and reviews');
 
 /**
  * Handle scheduled reminders/follow-ups/reviews
