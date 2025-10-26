@@ -381,7 +381,7 @@ function AlarmsTab({ addLog, showToast }) {
     console.log('[DevPanel] triggerAllScheduledAlarms called');
     
     if (!confirm('Trigger ALL scheduled alarms now? This will move all stashed items back to inbox and fire their notifications.')) {
-      console.log('[DevPanel] User cancelled');
+      console.log('[DevPanel] User canceled');
       return;
     }
 
