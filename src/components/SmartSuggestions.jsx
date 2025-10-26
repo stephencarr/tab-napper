@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lightbulb, Plus, X, TrendingUp, Calendar, Clock, Pin, PinOff } from 'lucide-react';
-import { generateSmartSuggestions, pinSuggestion, getSuggestionStats } from '../utils/smartSuggestions.js';
+import { generateSmartSuggestions, pinSuggestion, dismissSuggestion, getSuggestionStats, clearSuggestionsCache } from '../utils/smartSuggestions.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { cn } from '../utils/cn.js';
 
@@ -53,27 +53,40 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
       setIsLoading(true);
       setError(null);
       
-      console.log('[Tab Napper] SmartSuggestions: Loading suggestions...');
-      console.log('[Tab Napper] SmartSuggestions: Mock data available?', typeof window !== 'undefined' && !!window._mockHistoryData);
+      console.log('[SmartSuggestions] 🔄 Loading suggestions...');
+      const hasWindow = typeof window !== 'undefined';
+      console.log('[SmartSuggestions] Mock data available?', hasWindow && !!window._mockHistoryData);
+      if (hasWindow && window._mockHistoryData) {
+        console.log('[SmartSuggestions] Mock data count:', window._mockHistoryData.length);
+      }
       
       // getSuggestionStats already calls generateSmartSuggestions internally
       const suggestionStats = await getSuggestionStats();
       
-      console.log('[Tab Napper] SmartSuggestions: Got stats:', suggestionStats?.totalSuggestions || 0, 'suggestions');
-      console.log('[Tab Napper] SmartSuggestions: History count:', suggestionStats?.historyItemsCount || 0);
+      console.log('[SmartSuggestions] ✅ Got stats:', {
+        totalSuggestions: suggestionStats?.totalSuggestions || 0,
+        historyCount: suggestionStats?.historyItemsCount || 0,
+        totalCandidates: suggestionStats?.totalCandidates || 0,
+        config: suggestionStats?.config
+      });
       
       if (suggestionStats && suggestionStats.suggestions.length > 0) {
         setSuggestions(suggestionStats.suggestions);
         setStats(suggestionStats);
-        console.log('[Tab Napper] SmartSuggestions: Updated UI with', suggestionStats.suggestions.length, 'suggestions');
+        console.log('[SmartSuggestions] 📊 Suggestions:', suggestionStats.suggestions.map(s => ({
+          title: s.title,
+          score: s.score,
+          daysVisited: s.daysVisited,
+          daysSinceRecent: s.daysSinceRecent
+        })));
       } else {
         setSuggestions([]);
         setStats(suggestionStats);
-        console.log('[Tab Napper] SmartSuggestions: No suggestions to display');
+        console.log('[SmartSuggestions] ⚠️ No suggestions generated');
       }
       
     } catch (err) {
-      console.error('[Tab Napper] Error loading smart suggestions:', err);
+      console.error('[SmartSuggestions] ❌ Error loading smart suggestions:', err);
       setError('Failed to load suggestions');
     } finally {
       setIsLoading(false);
@@ -124,6 +137,26 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
     } catch (error) {
       console.error('[Tab Napper] ❌ Error pinning suggestion:', error);
       setError('Failed to pin suggestion');
+    }
+  };
+
+  // Handle dismissing a suggestion
+  const handleDismissSuggestion = async (suggestion, event) => {
+    event.stopPropagation(); // Prevent triggering the click handler
+    
+    console.log('[Tab Napper] 🚫 Dismissing suggestion:', suggestion.title);
+    
+    try {
+      await dismissSuggestion(suggestion);
+      
+      // Remove from suggestions list
+      setSuggestions(prev => prev.filter(s => s.url !== suggestion.url));
+      
+      console.log('[Tab Napper] ✅ Successfully dismissed suggestion');
+      
+    } catch (error) {
+      console.error('[Tab Napper] ❌ Error dismissing suggestion:', error);
+      setError('Failed to dismiss suggestion');
     }
   };
 
@@ -305,6 +338,10 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
                   <p className="text-sm font-medium text-calm-900 dark:text-calm-100 truncate">
                     {suggestion.title}
                   </p>
+                  <div className="mt-1 text-xs text-emerald-700 dark:text-emerald-300 font-medium flex items-center space-x-1">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>{suggestion.suggestionReason}</span>
+                  </div>
                   <div className="mt-1 flex items-center justify-between text-xs text-calm-500 dark:text-calm-400">
                     <span className="truncate">
                       {suggestion.domain}
@@ -315,10 +352,6 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
                         <span>{getTimeAgo(suggestion.lastVisitTime)}</span>
                       </span>
                     </div>
-                  </div>
-                  <div className="text-xs text-calm-600 dark:text-calm-400 mt-1 flex items-center space-x-1">
-                    <TrendingUp className="h-3 w-3 text-emerald-500" />
-                    <span>{suggestion.suggestionReason}</span>
                   </div>
                 </div>
 
@@ -335,6 +368,13 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
                   >
                     <Pin className="h-4 w-4" />
                   </button>
+                  <button
+                    onClick={(e) => handleDismissSuggestion(suggestion, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-calm-500 dark:text-calm-400 hover:text-calm-700 dark:hover:text-calm-200 hover:bg-calm-100 dark:hover:bg-calm-700/50 rounded"
+                    title="Dismiss suggestion"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </li>
@@ -343,13 +383,17 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
       )}
 
       {/* Refresh button */}
-      {suggestions.length > 0 && (
-        <div className="text-center pt-2">
+      {(suggestions.length > 0 || !isLoading) && (
+        <div className="text-center pt-2 space-x-2">
           <button
-            onClick={loadSuggestions}
+            onClick={async () => {
+              console.log('[SmartSuggestions] 🔄 Force clearing cache...');
+              await clearSuggestionsCache();
+              await loadSuggestions();
+            }}
             className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline transition-colors"
           >
-            Refresh suggestions
+            Refresh
           </button>
         </div>
       )}

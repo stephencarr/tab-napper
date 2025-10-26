@@ -10,15 +10,16 @@ import { debugLog, debugError } from './debug.js';
 
 // Configuration constants
 const SUGGESTION_CONFIG = {
-  ANALYSIS_WINDOW_DAYS: 30,           // Look back 30 days for pattern analysis
-  MIN_DAILY_VISITS: 2,                // Minimum days visited to be considered (lowered for testing)
-  RECENCY_DECAY_DAYS: 7,              // Days after which recency weight decays
+  ANALYSIS_WINDOW_DAYS: 14,           // Look back 14 days for more relevant patterns
+  MIN_DAILY_VISITS: 2,                // Minimum days visited to be considered
+  MIN_TOTAL_VISITS: 5,                // Minimum total visits required
+  RECENCY_DECAY_DAYS: 3,              // Days after which recency weight decays (shorter window)
   COOLDOWN_PERIOD_DAYS: 7,            // Days before unpinned items can be suggested again
-  MAX_SUGGESTIONS: 4,                 // Maximum number of suggestions to show
-  SUGGESTION_THRESHOLD: 0.4,          // Minimum score to be suggested (lowered for testing)
-  CONSISTENCY_WEIGHT: 0.4,            // Weight for daily visit consistency
-  RECENCY_WEIGHT: 0.3,                // Weight for recent activity
-  FREQUENCY_WEIGHT: 0.3,              // Weight for overall frequency
+  MAX_SUGGESTIONS: 5,                 // Maximum number of suggestions to show
+  SUGGESTION_THRESHOLD: 0.35,         // Minimum score to be suggested
+  CONSISTENCY_WEIGHT: 0.35,           // Weight for daily visit consistency
+  RECENCY_WEIGHT: 0.40,               // Weight for recent activity (increased)
+  FREQUENCY_WEIGHT: 0.25,             // Weight for overall frequency
   CACHE_DURATION_MS: 60 * 60 * 1000,  // 1 hour cache duration
 };
 
@@ -66,6 +67,25 @@ async function saveCacheToStorage() {
  * Only gets what we need without status indicators
  */
 async function getLightweightHistory(maxResults = 500) {
+  // Check for mock data first (for testing)
+  if (typeof window !== 'undefined' && window._mockHistoryData) {
+    debugLog('Suggestions', `Using mock history data: ${window._mockHistoryData.length} items`);
+    return window._mockHistoryData.slice(0, maxResults);
+  }
+  
+  // Try to load from extension storage
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    try {
+      const result = await chrome.storage.local.get('tabNapper_mockHistory');
+      if (result.tabNapper_mockHistory && result.tabNapper_mockHistory.length > 0) {
+        debugLog('Suggestions', `Using mock history from storage: ${result.tabNapper_mockHistory.length} items`);
+        return result.tabNapper_mockHistory.slice(0, maxResults);
+      }
+    } catch (error) {
+      debugLog('Suggestions', 'Could not load mock history from storage:', error);
+    }
+  }
+  
   if (typeof chrome === 'undefined' || !chrome.history) {
     console.log('[SmartSuggestions] Chrome history API not available');
     return [];
@@ -89,16 +109,22 @@ async function getLightweightHistory(maxResults = 500) {
       );
     });
     
+    debugLog('Suggestions', `Fetched ${historyItems.length} real history items`);
+    
     // Filter out unwanted URLs
     const excludePatterns = [
       'chrome://', 'chrome-extension://', 'moz-extension://',
       'data:', 'blob:', 'javascript:'
     ];
     
-    return historyItems.filter(item => 
+    const filtered = historyItems.filter(item => 
       !excludePatterns.some(pattern => item.url.startsWith(pattern)) &&
       item.title && item.title.trim().length > 0
     );
+    
+    debugLog('Suggestions', `Filtered to ${filtered.length} valid history items`);
+    
+    return filtered;
     
   } catch (error) {
     console.error('[SmartSuggestions] Error fetching lightweight history:', error);
@@ -139,12 +165,23 @@ function calculateDailyVisitMetrics(url, historyItems) {
   const mostRecentVisit = Math.max(...urlItems.map(item => item.lastVisitTime));
   const oldestVisit = Math.min(...urlItems.map(item => item.lastVisitTime));
   
+  // Calculate days based on calendar dates (not 24-hour periods)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const mostRecentVisitDate = new Date(mostRecentVisit);
+  mostRecentVisitDate.setHours(0, 0, 0, 0);
+  
+  const oldestVisitDate = new Date(oldestVisit);
+  oldestVisitDate.setHours(0, 0, 0, 0);
+  
+  const daysSinceRecent = Math.floor((today.getTime() - mostRecentVisitDate.getTime()) / (24 * 60 * 60 * 1000));
+  const daysSinceOldest = Math.floor((today.getTime() - oldestVisitDate.getTime()) / (24 * 60 * 60 * 1000));
+  
   // Calculate consistency score (how regularly visited)
-  const daysSinceOldest = Math.ceil((now - oldestVisit) / (24 * 60 * 60 * 1000));
-  const consistency = daysSinceOldest > 0 ? uniqueDaysVisited / daysSinceOldest : 0;
+  const consistency = daysSinceOldest > 0 ? uniqueDaysVisited / (daysSinceOldest + 1) : 1;
   
   // Calculate recency score (how recently accessed)
-  const daysSinceRecent = Math.ceil((now - mostRecentVisit) / (24 * 60 * 60 * 1000));
   const recency = Math.max(0, 1 - (daysSinceRecent / SUGGESTION_CONFIG.RECENCY_DECAY_DAYS));
   
   // Calculate frequency score (average visits per day)
@@ -170,25 +207,36 @@ function calculateDailyVisitMetrics(url, historyItems) {
  * Calculate smart suggestion score
  */
 function calculateSuggestionScore(metrics) {
-  if (!metrics || metrics.uniqueDaysVisited < SUGGESTION_CONFIG.MIN_DAILY_VISITS) {
+  if (!metrics || 
+      metrics.uniqueDaysVisited < SUGGESTION_CONFIG.MIN_DAILY_VISITS ||
+      metrics.totalVisits < SUGGESTION_CONFIG.MIN_TOTAL_VISITS) {
     return 0;
   }
   
-  // Normalize scores to 0-1 range
-  const normalizedConsistency = Math.min(1, metrics.consistency * 2); // Cap at 50% daily visits
-  const normalizedRecency = metrics.recency;
-  const normalizedFrequency = Math.min(1, metrics.frequency / 10); // Cap at 10 visits per day
+  // Boost score for items visited very recently
+  const recencyBoost = metrics.daysSinceRecent === 0 ? 1.2 : 1.0;
   
-  // Weighted score calculation
-  const score = (
+  // Normalize scores to 0-1 range
+  const normalizedConsistency = Math.min(1, metrics.consistency * 3); // More aggressive consistency scoring (3x) to better reward daily usage patterns
+  const normalizedRecency = metrics.recency;
+  
+  // Frequency: favor items with 3-15 visits per day (typical work usage)
+  const avgVisitsPerDay = metrics.totalVisits / Math.max(1, metrics.uniqueDaysVisited);
+  // Normalize frequency: cap at 8 visits/day, chosen as a practical upper bound within the typical work usage range (see 3-15 visits/day above).
+  const normalizedFrequency = Math.min(1, avgVisitsPerDay / 8);
+  
+  // Weighted score calculation with recency boost
+  const baseScore = (
     normalizedConsistency * SUGGESTION_CONFIG.CONSISTENCY_WEIGHT +
     normalizedRecency * SUGGESTION_CONFIG.RECENCY_WEIGHT +
     normalizedFrequency * SUGGESTION_CONFIG.FREQUENCY_WEIGHT
   );
   
-  debugLog('Suggestions', `Score for ${metrics.url}: ${score.toFixed(3)} (consistency: ${normalizedConsistency.toFixed(2)}, recency: ${normalizedRecency.toFixed(2)}, frequency: ${normalizedFrequency.toFixed(2)})`);
+  const score = baseScore * recencyBoost;
   
-  return score;
+  debugLog('Suggestions', `Score for ${metrics.url}: ${score.toFixed(3)} (consistency: ${normalizedConsistency.toFixed(2)}, recency: ${normalizedRecency.toFixed(2)}, frequency: ${normalizedFrequency.toFixed(2)}, boost: ${recencyBoost})`);
+  
+  return Math.min(1, score); // Cap at 1.0
 }
 
 /**
@@ -205,21 +253,22 @@ async function getPinnedItems() {
 }
 
 /**
- * Get metadata about unpinned items and cooldown periods
- */
-async function getSuggestionMetadata() {
-  try {
-    const metadata = await loadAppState('triageHub_suggestionMetadata') || {
-      unpinnedItems: {},     // { url: timestamp_when_unpinned }
-      pinnedHistory: {},     // { url: timestamp_when_first_pinned }
-      suggestionHistory: {}  // { url: times_suggested }
-    };
-    return metadata;
-  } catch (error) {
-    debugError('Suggestions', 'Error loading suggestion metadata:', error);
-    return { unpinnedItems: {}, pinnedHistory: {}, suggestionHistory: {} };
-  }
-}
+  * Get metadata about unpinned items and cooldown periods
+  */
+ async function getSuggestionMetadata() {
+   try {
+     const metadata = await loadAppState('triageHub_suggestionMetadata') || {
+       unpinnedItems: {},     // { url: timestamp_when_unpinned }
+       dismissedItems: {},    // { url: timestamp_when_dismissed }
+       pinnedHistory: {},     // { url: timestamp_when_first_pinned }
+       suggestionHistory: {}  // { url: times_suggested }
+     };
+     return metadata;
+   } catch (error) {
+     debugError('Suggestions', 'Error loading suggestion metadata:', error);
+     return { unpinnedItems: {}, dismissedItems: {}, pinnedHistory: {}, suggestionHistory: {} };
+   }
+ }
 
 /**
  * Save suggestion metadata
@@ -233,15 +282,27 @@ async function saveSuggestionMetadata(metadata) {
 }
 
 /**
- * Check if an item is in cooldown period after being unpinned
+ * Check if an item is in cooldown period after being unpinned or dismissed
  */
 function isInCooldown(url, metadata) {
-  const unpinnedTime = metadata.unpinnedItems[normalizeUrl(url)];
-  if (!unpinnedTime) return false;
+  const normalizedUrl = normalizeUrl(url);
+  const unpinnedTime = metadata.unpinnedItems[normalizedUrl];
+  const dismissedTime = metadata.dismissedItems?.[normalizedUrl];
   
   const now = Date.now();
   const cooldownPeriod = SUGGESTION_CONFIG.COOLDOWN_PERIOD_DAYS * 24 * 60 * 60 * 1000;
-  return (now - unpinnedTime) < cooldownPeriod;
+  
+  // Check if unpinned and still in cooldown
+  if (unpinnedTime && (now - unpinnedTime) < cooldownPeriod) {
+    return true;
+  }
+  
+  // Check if dismissed and still in cooldown
+  if (dismissedTime && (now - dismissedTime) < cooldownPeriod) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -324,6 +385,13 @@ export async function generateSmartSuggestions() {
     }
     
     debugLog('Suggestions', `Analyzing ${historyItems.length} history items`);
+    console.log('[SmartSuggestions] 📚 Sample history items (first 5):');
+    historyItems.slice(0, 5).forEach((item, i) => {
+      const date = new Date(item.lastVisitTime);
+      console.log(`  ${i + 1}. ${item.title}`);
+      console.log(`     ${item.url}`);
+      console.log(`     Last visit: ${date.toLocaleString()}`);
+    });
     
     // Get currently pinned items and suggestion metadata
     const [pinnedUrls, metadata] = await Promise.all([
@@ -332,6 +400,9 @@ export async function generateSmartSuggestions() {
     ]);
     
     debugLog('Suggestions', `Found ${pinnedUrls.length} pinned items`);
+    if (pinnedUrls.length > 0) {
+      console.log('[SmartSuggestions] 📌 Pinned URLs:', pinnedUrls);
+    }
     
     // Group history by URL and calculate metrics
     const urlGroups = new Map();
@@ -353,18 +424,37 @@ export async function generateSmartSuggestions() {
     let skippedLowScore = 0;
     let skippedMinDays = 0;
     
+    console.log('[SmartSuggestions] 🔍 Analyzing URLs...');
+    console.log('[SmartSuggestions] Config:', {
+      minDays: SUGGESTION_CONFIG.MIN_DAILY_VISITS,
+      minVisits: SUGGESTION_CONFIG.MIN_TOTAL_VISITS,
+      threshold: SUGGESTION_CONFIG.SUGGESTION_THRESHOLD,
+      analysisWindow: SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS + ' days'
+    });
+    
+    // Sample first 10 URLs for detailed logging
+    let detailedLogCount = 0;
+    
     for (const [url, items] of urlGroups) {
       processed++;
+      const shouldLogDetail = detailedLogCount < 10;
+      
+      if (shouldLogDetail) {
+        console.log(`\n[SmartSuggestions] URL ${processed}: ${url}`);
+        console.log(`  - Total visits in history: ${items.length}`);
+      }
       
       // Skip if already pinned
       if (pinnedUrls.includes(url)) {
         skippedPinned++;
+        if (shouldLogDetail) console.log('  ❌ SKIP: Already pinned');
         continue;
       }
       
       // Skip if in cooldown period
       if (isInCooldown(url, metadata)) {
         skippedCooldown++;
+        if (shouldLogDetail) console.log('  ❌ SKIP: In cooldown');
         continue;
       }
       
@@ -372,24 +462,80 @@ export async function generateSmartSuggestions() {
       const metrics = calculateDailyVisitMetrics(url, historyItems);
       if (!metrics) {
         skippedMinDays++;
+        if (shouldLogDetail) console.log('  ❌ SKIP: No metrics (URL not found in analysis window)');
+        continue;
+      }
+      
+      if (shouldLogDetail) {
+        console.log('  📊 Metrics:', {
+          uniqueDays: metrics.uniqueDaysVisited,
+          totalVisits: metrics.totalVisits,
+          daysSinceRecent: metrics.daysSinceRecent,
+          consistency: metrics.consistency.toFixed(3),
+          recency: metrics.recency.toFixed(3)
+        });
+      }
+      
+      // Check minimum thresholds
+      if (metrics.uniqueDaysVisited < SUGGESTION_CONFIG.MIN_DAILY_VISITS) {
+        skippedMinDays++;
+        if (shouldLogDetail) console.log(`  ❌ SKIP: Only ${metrics.uniqueDaysVisited} days (need ${SUGGESTION_CONFIG.MIN_DAILY_VISITS})`);
+        continue;
+      }
+      
+      if (metrics.totalVisits < SUGGESTION_CONFIG.MIN_TOTAL_VISITS) {
+        skippedMinDays++;
+        if (shouldLogDetail) console.log(`  ❌ SKIP: Only ${metrics.totalVisits} visits (need ${SUGGESTION_CONFIG.MIN_TOTAL_VISITS})`);
         continue;
       }
       
       const score = calculateSuggestionScore(metrics);
+      if (shouldLogDetail) {
+        console.log(`  🎯 Score: ${score.toFixed(3)} (threshold: ${SUGGESTION_CONFIG.SUGGESTION_THRESHOLD})`);
+      }
+      
       if (score < SUGGESTION_CONFIG.SUGGESTION_THRESHOLD) {
         skippedLowScore++;
+        if (shouldLogDetail) console.log(`  ❌ SKIP: Score too low`);
         continue;
       }
       
       const itemInfo = extractItemInfo(url, historyItems);
       if (itemInfo) {
+        if (shouldLogDetail) console.log(`  ✅ CANDIDATE! Score: ${score.toFixed(3)}`);
         candidates.push({
           ...itemInfo,
           score,
           metrics,
           suggestionReason: generateSuggestionReason(metrics)
         });
+        detailedLogCount++;
       }
+    }
+    
+    console.log(`\n[SmartSuggestions] 📊 Summary:`);
+    console.log(`  Total URLs: ${processed}`);
+    console.log(`  Skipped - Already Pinned: ${skippedPinned}`);
+    console.log(`  Skipped - Cooldown: ${skippedCooldown}`);
+    console.log(`  Skipped - Insufficient Data: ${skippedMinDays}`);
+    console.log(`  Skipped - Low Score: ${skippedLowScore}`);
+    console.log(`  ✅ Candidates: ${candidates.length}`);
+    
+    if (candidates.length > 0) {
+      console.log(`\n[SmartSuggestions] 🎯 All Candidates (sorted by score):`);
+      candidates
+        .sort((a, b) => b.score - a.score)
+        .forEach((candidate, index) => {
+          console.log(`  ${index + 1}. ${candidate.title}`);
+          console.log(`     Score: ${candidate.score.toFixed(3)}`);
+          console.log(`     URL: ${candidate.url}`);
+          console.log(`     Reason: ${candidate.suggestionReason}`);
+          console.log(`     Metrics: ${candidate.metrics.uniqueDaysVisited}d visited, ${candidate.metrics.totalVisits} total visits, ${candidate.metrics.daysSinceRecent}d since recent`);
+          const shownStatus = index < SUGGESTION_CONFIG.MAX_SUGGESTIONS
+            ? '✅ Will be shown'
+            : `❌ Not shown (below top ${SUGGESTION_CONFIG.MAX_SUGGESTIONS})`;
+          console.log(`     ${shownStatus}`);
+        });
     }
     
     debugLog('Suggestions', `Results: ${candidates.length} candidates from ${processed} URLs (${skippedPinned} pinned, ${skippedCooldown} cooldown, ${skippedMinDays} insufficient days, ${skippedLowScore} low score)`);
@@ -419,16 +565,21 @@ export async function generateSmartSuggestions() {
  * Generate human-readable reason for suggestion
  */
 function generateSuggestionReason(metrics) {
-  const { uniqueDaysVisited, daysSinceRecent, frequency } = metrics;
+  const { uniqueDaysVisited, daysSinceRecent, totalVisits } = metrics;
+  const avgVisitsPerDay = totalVisits / Math.max(1, uniqueDaysVisited);
   
-  if (uniqueDaysVisited >= 10 && daysSinceRecent <= 1) {
-    return `Visited ${uniqueDaysVisited} days recently - daily habit detected`;
-  } else if (uniqueDaysVisited >= 5 && frequency >= 3) {
-    return `Visited ${uniqueDaysVisited} days with high activity`;
-  } else if (daysSinceRecent === 0 && frequency >= 2) {
-    return `Very active today with consistent usage`;
-  } else if (uniqueDaysVisited >= 7) {
-    return `Regularly visited over ${uniqueDaysVisited} days`;
+  if (daysSinceRecent === 0 && uniqueDaysVisited >= 5) {
+    return `Active today - visited ${uniqueDaysVisited} days recently`;
+  } else if (daysSinceRecent === 0 && avgVisitsPerDay >= 3) {
+    return `Very active today - ${Math.round(avgVisitsPerDay)} visits per day`;
+  } else if (uniqueDaysVisited >= 7 && avgVisitsPerDay >= 3) {
+    return `Daily habit - ${uniqueDaysVisited} days, ${Math.round(avgVisitsPerDay)} visits/day`;
+  } else if (uniqueDaysVisited >= 5 && daysSinceRecent <= 1) {
+    return `Frequent recent use - ${uniqueDaysVisited} days recently`;
+  } else if (avgVisitsPerDay >= 5) {
+    return `High activity - ${Math.round(avgVisitsPerDay)} visits per day`;
+  } else if (uniqueDaysVisited >= 3) {
+    return `Regular visits over ${uniqueDaysVisited} days`;
   } else {
     return `Frequently accessed with good consistency`;
   }
@@ -509,6 +660,33 @@ export async function unpinItem(itemId) {
     
   } catch (error) {
     debugError('Suggestions', 'Error unpinning item:', error);
+    throw error;
+  }
+}
+
+/**
+ * Dismiss a suggestion (puts it in cooldown without unpinning anything)
+ */
+export async function dismissSuggestion(suggestion) {
+  try {
+    debugLog('Suggestions', `Dismissing suggestion: ${suggestion.title}`);
+    
+    // Update suggestion metadata to start cooldown
+    const metadata = await getSuggestionMetadata();
+    if (!metadata.dismissedItems) {
+      metadata.dismissedItems = {};
+    }
+    metadata.dismissedItems[normalizeUrl(suggestion.url)] = Date.now();
+    await saveSuggestionMetadata(metadata);
+    
+    // Clear suggestions cache since dismissing affects future suggestions
+    await clearSuggestionsCache();
+    
+    debugLog('Suggestions', `Successfully dismissed: ${suggestion.title}`);
+    return true;
+    
+  } catch (error) {
+    debugError('Suggestions', 'Error dismissing suggestion:', error);
     throw error;
   }
 }

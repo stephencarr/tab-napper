@@ -195,49 +195,56 @@ async function generateTestBrowsingHistory() {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
     
-    // Generate visits for popular developer sites over the last 30 days
+    // Generate visits for popular developer sites over the last 14 days (updated for new algorithm)
     const testSites = [
       {
         url: 'https://stackoverflow.com/questions/tagged/javascript',
         title: 'javascript - Stack Overflow',
-        dailyVisits: 15, // Very frequent - should score high
-        daysActive: 28,  // Almost daily
-        lastVisit: now - (2 * 60 * 60 * 1000) // 2 hours ago
+        dailyVisits: 8, // Very frequent - should score high
+        daysActive: 12,  // Almost daily in 14-day window
+        lastVisit: now - (30 * 60 * 1000) // 30 minutes ago - TODAY boost
       },
       {
         url: 'https://github.com/microsoft/vscode',
         title: 'microsoft/vscode: Visual Studio Code',
-        dailyVisits: 8,
-        daysActive: 20,
-        lastVisit: now - (1 * 60 * 60 * 1000) // 1 hour ago
+        dailyVisits: 6,
+        daysActive: 10,
+        lastVisit: now - (1 * 60 * 60 * 1000) // 1 hour ago - TODAY boost
       },
       {
         url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript',
         title: 'JavaScript | MDN',
-        dailyVisits: 12,
-        daysActive: 25,
-        lastVisit: now - (30 * 60 * 1000) // 30 minutes ago
+        dailyVisits: 7,
+        daysActive: 11,
+        lastVisit: now - (2 * 60 * 60 * 1000) // 2 hours ago - TODAY boost
       },
       {
         url: 'https://react.dev/learn',
         title: 'Learn React',
-        dailyVisits: 6,
-        daysActive: 18,
-        lastVisit: now - (4 * 60 * 60 * 1000) // 4 hours ago
+        dailyVisits: 5,
+        daysActive: 9,
+        lastVisit: now - (1 * oneDay) // 1 day ago - recent
       },
       {
         url: 'https://tailwindcss.com/docs',
         title: 'Tailwind CSS Documentation',
         dailyVisits: 4,
-        daysActive: 22,
-        lastVisit: now - (1 * oneDay) // 1 day ago
+        daysActive: 8,
+        lastVisit: now - (2 * oneDay) // 2 days ago
+      },
+      {
+        url: 'https://vitejs.dev/guide/',
+        title: 'Getting Started | Vite',
+        dailyVisits: 3,
+        daysActive: 7,
+        lastVisit: now - (3 * oneDay) // 3 days ago
       },
       {
         url: 'https://example.com/old-site',
-        title: 'Old Site - High Count But Ancient',
-        dailyVisits: 50, // High count but old
-        daysActive: 5,
-        lastVisit: now - (20 * oneDay) // 20 days ago - should score low due to recency
+        title: 'Old Site - Should Score Low',
+        dailyVisits: 2,
+        daysActive: 3,
+        lastVisit: now - (10 * oneDay) // 10 days ago - should score low due to recency
       }
     ];
     
@@ -245,11 +252,11 @@ async function generateTestBrowsingHistory() {
     const mockHistory = [];
     
     testSites.forEach((site, siteIndex) => {
-      // Generate visits across multiple days
-      for (let day = 0; day < site.daysActive; day++) {
+      // Generate visits across multiple days within 14-day window
+      for (let day = 0; day < Math.min(site.daysActive, 14); day++) {
         const dayTimestamp = now - (day * oneDay);
         
-        // Add multiple visits per day (random between 1 and dailyVisits)
+        // Add multiple visits per day
         const visitsThisDay = Math.floor(Math.random() * site.dailyVisits) + 1;
         
         for (let visit = 0; visit < visitsThisDay; visit++) {
@@ -271,10 +278,11 @@ async function generateTestBrowsingHistory() {
     // Sort by most recent first
     mockHistory.sort((a, b) => b.lastVisitTime - a.lastVisitTime);
     
-    console.log(`[Tab Napper] Generated ${mockHistory.length} mock history entries`);
-    console.log('[Tab Napper] Sites that should score high for suggestions:');
-    testSites.slice(0, 4).forEach(site => {
-      console.log(`  - ${site.title} (${site.daysActive}d active, ${site.dailyVisits} daily visits)`);
+    console.log(`[Tab Napper] Generated ${mockHistory.length} mock history entries (14-day window)`);
+    console.log('[Tab Napper] Sites that should score high (visited today with recency boost):');
+    testSites.slice(0, 3).forEach(site => {
+      const daysAgo = Math.round((now - site.lastVisit) / oneDay);
+      console.log(`  - ${site.title} (${site.daysActive}d active, ${site.dailyVisits} visits/day, ${daysAgo === 0 ? 'TODAY' : daysAgo + 'd ago'})`);
     });
     
     // Store in multiple ways for persistence
