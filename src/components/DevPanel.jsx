@@ -269,87 +269,127 @@ function AlarmsTab({ addLog, showToast }) {
   }, [loadAlarms]);
 
   const triggerAllScheduledAlarms = async () => {
+    console.log('[DevPanel] triggerAllScheduledAlarms called');
+    
     if (!confirm('Trigger ALL scheduled alarms now? This will move all stashed items back to inbox and fire their notifications.')) {
+      console.log('[DevPanel] User cancelled');
       return;
     }
 
     try {
-      addLog('Triggering all scheduled alarms...', 'info');
+      addLog('🚀 Starting to trigger all scheduled alarms...', 'info');
+      showToast('⏳ Triggering alarms...', 'info');
       
-      // Get all Tab Napper alarms (those starting with tabNapper_)
-      chrome.alarms.getAll(async (allAlarms) => {
-        const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper_'));
-        
-        if (tabNapperAlarms.length === 0) {
-          showToast('No scheduled alarms found', 'info');
-          addLog('No Tab Napper alarms to trigger', 'info');
-          return;
-        }
+      // Wrap chrome.alarms.getAll in a promise
+      const allAlarms = await new Promise((resolve) => {
+        chrome.alarms.getAll((alarms) => resolve(alarms || []));
+      });
+      
+      console.log('[DevPanel] All alarms:', allAlarms);
+      
+      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper_'));
+      console.log('[DevPanel] Tab Napper alarms:', tabNapperAlarms);
+      
+      if (tabNapperAlarms.length === 0) {
+        showToast('No scheduled alarms found', 'info');
+        addLog('❌ No Tab Napper alarms to trigger', 'info');
+        return;
+      }
 
-        addLog(`Found ${tabNapperAlarms.length} scheduled alarms`, 'info');
+      addLog(`📋 Found ${tabNapperAlarms.length} scheduled alarms`, 'info');
 
-        // Clear all existing alarms and manually trigger them
-        for (const alarm of tabNapperAlarms) {
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Process each alarm
+      for (const alarm of tabNapperAlarms) {
+        try {
           // Parse the alarm name to get the item info
           const parts = alarm.name.split('_');
           const action = parts[1];
           const itemId = parts.slice(2).join('_');
 
-          addLog(`Triggering: ${alarm.name}`, 'info');
+          console.log('[DevPanel] Processing alarm:', alarm.name, 'itemId:', itemId);
+          addLog(`⏰ Triggering: ${alarm.name}`, 'info');
 
           // Get the stashed item
           const result = await chrome.storage.local.get(['triageHub_stashedTabs', 'triageHub_inbox']);
           const stashedTabs = result.triageHub_stashedTabs || [];
           const inbox = result.triageHub_inbox || [];
 
+          console.log('[DevPanel] Stashed tabs:', stashedTabs.length);
           const item = stashedTabs.find(i => i.id === itemId);
+          console.log('[DevPanel] Found item:', item ? item.title : 'NOT FOUND');
 
-          if (item) {
-            // Remove scheduled data
-            const retriagedItem = { ...item };
-            delete retriagedItem.scheduledFor;
-            delete retriagedItem.scheduledAction;
-            delete retriagedItem.scheduledWhen;
-
-            // Move to inbox
-            const updatedInbox = [retriagedItem, ...inbox];
-            const updatedStashed = stashedTabs.filter(i => i.id !== itemId);
-
-            await chrome.storage.local.set({
-              triageHub_inbox: updatedInbox,
-              triageHub_stashedTabs: updatedStashed
-            });
-
-            // Create notification
-            const actionLabel = action === 'remind_me' ? 'Reminder' : 
-                               action === 'follow_up' ? 'Follow-up' : 'Review';
-            const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-
-            chrome.notifications.create(`dev-trigger-${itemId}`, {
-              type: 'basic',
-              iconUrl: iconDataUri,
-              title: `Tab Napper ${actionLabel} (Dev Trigger)`,
-              message: item.title || 'Scheduled item ready for review',
-              priority: 2,
-              requireInteraction: true,
-              buttons: [
-                { title: 'Open Tab Napper' },
-                { title: 'Dismiss' }
-              ]
-            });
-
-            // Clear the alarm
-            chrome.alarms.clear(alarm.name);
+          if (!item) {
+            addLog(`⚠️ Item not found: ${itemId}`, 'warn');
+            errorCount++;
+            continue;
           }
-        }
 
-        showToast(`✅ Triggered ${tabNapperAlarms.length} alarms!`, 'success');
-        addLog(`✅ Successfully triggered ${tabNapperAlarms.length} alarms`, 'success');
-        
-        // Reload alarms list
-        setTimeout(() => loadAlarms(), 500);
-      });
+          // Remove scheduled data
+          const retriagedItem = { ...item };
+          delete retriagedItem.scheduledFor;
+          delete retriagedItem.scheduledAction;
+          delete retriagedItem.scheduledWhen;
+
+          // Move to inbox
+          const updatedInbox = [retriagedItem, ...inbox];
+          const updatedStashed = stashedTabs.filter(i => i.id !== itemId);
+
+          await chrome.storage.local.set({
+            triageHub_inbox: updatedInbox,
+            triageHub_stashedTabs: updatedStashed
+          });
+
+          console.log('[DevPanel] Storage updated for:', itemId);
+
+          // Create notification
+          const actionLabel = action === 'remind_me' ? 'Reminder' : 
+                             action === 'follow_up' ? 'Follow-up' : 'Review';
+          const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+          chrome.notifications.create(`dev-trigger-${itemId}`, {
+            type: 'basic',
+            iconUrl: iconDataUri,
+            title: `Tab Napper ${actionLabel} (Dev Trigger)`,
+            message: item.title || 'Scheduled item ready for review',
+            priority: 2,
+            requireInteraction: true,
+            buttons: [
+              { title: 'Open Tab Napper' },
+              { title: 'Dismiss' }
+            ]
+          });
+
+          // Clear the alarm
+          await new Promise((resolve) => {
+            chrome.alarms.clear(alarm.name, () => resolve());
+          });
+
+          console.log('[DevPanel] Alarm cleared:', alarm.name);
+          addLog(`✅ Triggered: ${item.title}`, 'success');
+          successCount++;
+
+        } catch (itemError) {
+          console.error('[DevPanel] Error processing alarm:', alarm.name, itemError);
+          addLog(`❌ Error processing ${alarm.name}: ${itemError.message}`, 'error');
+          errorCount++;
+        }
+      }
+
+      showToast(`✅ Triggered ${successCount} alarms!`, 'success');
+      addLog(`✅ Successfully triggered ${successCount} alarms (${errorCount} errors)`, 'success');
+      
+      // Reload alarms list and force UI refresh
+      setTimeout(() => {
+        loadAlarms();
+        // Trigger reactive store update
+        window.dispatchEvent(new CustomEvent('storage-updated'));
+      }, 500);
+
     } catch (error) {
+      console.error('[DevPanel] Error in triggerAllScheduledAlarms:', error);
       addLog(`❌ Error: ${error.message}`, 'error');
       showToast('❌ Failed to trigger alarms', 'error');
     }
