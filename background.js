@@ -300,7 +300,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     }
     
     // Parse alarm name: tabNapper_{action}_{itemId}
-    const alarmNameRegex = /^tabNapper_([a-zA-Z_]+)_(.+)$/;
+    const alarmNameRegex = /^tabNapper_(remind_me|follow_up|review)_(.+)$/;
     const match = alarm.name.match(alarmNameRegex);
     if (!match) {
       console.warn('[Tab Napper] Invalid alarm name format:', alarm.name);
