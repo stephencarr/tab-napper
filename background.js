@@ -299,19 +299,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       return;
     }
     
-    // Parse alarm name: tabNapper::{action}::{itemId}
-    if (!alarm.name.startsWith('tabNapper::')) {
+    // Parse alarm name: tabNapper_{action}_{itemId}
+    if (!alarm.name.startsWith('tabNapper_')) {
       return; // Not our alarm
     }
     
-    const parts = alarm.name.split('::');
+    const parts = alarm.name.split('_');
     if (parts.length < 3) {
       console.warn('[Tab Napper] Invalid alarm name format:', alarm.name);
       return;
     }
     
     const action = parts[1]; // remind_me, follow_up, or review
-    const itemId = parts.slice(2).join('::'); // In case itemId contains '::'
+    const itemId = parts.slice(2).join('_'); // In case itemId contains '_'
     
     console.log('[Tab Napper] Processing scheduled reminder:', { action, itemId });
     
