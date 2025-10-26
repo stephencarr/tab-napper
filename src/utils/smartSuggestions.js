@@ -219,7 +219,8 @@ function calculateSuggestionScore(metrics) {
   const recencyBoost = metrics.daysSinceRecent === 0 ? 1.2 : 1.0;
   const normalizedConsistency = Math.min(1, metrics.consistency * 3); // Scale consistency by 3x to amplify daily usage patterns (e.g., 0.33 consistency → 1.0 score)
   // Normalize scores to 0-1 range
-  const normalizedConsistency = Math.min(1, metrics.consistency * 3); // More aggressive consistency scoring (3x) to better reward daily usage patterns
+  // More aggressive consistency scoring (3x) to better reward daily usage patterns
+  const normalizedConsistency = Math.min(1, metrics.consistency * 3);
   const normalizedRecency = metrics.recency;
   
   // Frequency: favor items with 3-15 visits per day (typical work usage)
