@@ -238,9 +238,9 @@ export function getDetailedScheduledTime(timestamp) {
   // If past due, show how long ago
   if (isPastDue) {
     const diffMs = now.getTime() - timestamp;
-    const diffMinutes = Math.round(diffMs / 60000);
-    const diffHours = Math.round(diffMs / 3600000);
-    const diffDays = Math.round(diffMs / 86400000);
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
     
     if (diffMinutes < 1) {
       return 'Past due (Just now)';
