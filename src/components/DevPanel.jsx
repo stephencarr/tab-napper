@@ -18,6 +18,7 @@ function DevPanel({ isOpen, onClose, className }) {
   const [activeTab, setActiveTab] = useState('data');
   const [expandedSections, setExpandedSections] = useState(['quick-actions']);
   const [logs, setLogs] = useState([]);
+  const [toast, setToast] = useState(null);
 
   const toggleSection = (section) => {
     setExpandedSections(prev =>
@@ -37,6 +38,12 @@ function DevPanel({ isOpen, onClose, className }) {
   }, []);
 
   const clearLogs = () => setLogs([]);
+
+  // Show toast notification
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   // Quick action buttons
   const quickActions = [
@@ -109,12 +116,24 @@ function DevPanel({ isOpen, onClose, className }) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'data' && <DataTab addLog={addLog} />}
-        {activeTab === 'alarms' && <AlarmsTab addLog={addLog} />}
+        {activeTab === 'data' && <DataTab addLog={addLog} showToast={showToast} />}
+        {activeTab === 'alarms' && <AlarmsTab addLog={addLog} showToast={showToast} />}
         {activeTab === 'console' && (
           <ConsoleTab logs={logs} onClear={clearLogs} />
         )}
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={cn(
+          'absolute top-16 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg text-white text-sm font-medium z-50 animate-in fade-in slide-in-from-top-2',
+          toast.type === 'success' && 'bg-green-600',
+          toast.type === 'error' && 'bg-red-600',
+          toast.type === 'info' && 'bg-blue-600'
+        )}>
+          {toast.message}
+        </div>
+      )}
 
       {/* Quick Actions Bar */}
       <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800">
@@ -142,7 +161,7 @@ function DevPanel({ isOpen, onClose, className }) {
 }
 
 // Data Tab Component
-function DataTab({ addLog }) {
+function DataTab({ addLog, showToast }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAddSampleData = async () => {
@@ -151,8 +170,10 @@ function DataTab({ addLog }) {
     try {
       await addSampleData();
       addLog('✅ Sample data added successfully', 'success');
+      showToast('✅ Sample data added!', 'success');
     } catch (error) {
       addLog(`❌ Error: ${error.message}`, 'error');
+      showToast('❌ Failed to add data', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -165,8 +186,10 @@ function DataTab({ addLog }) {
     try {
       await clearSampleData();
       addLog('✅ Sample data cleared', 'success');
+      showToast('✅ Sample data cleared!', 'success');
     } catch (error) {
       addLog(`❌ Error: ${error.message}`, 'error');
+      showToast('❌ Failed to clear data', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -178,8 +201,10 @@ function DataTab({ addLog }) {
     try {
       await generateTestBrowsingHistory();
       addLog('✅ Test history generated', 'success');
+      showToast('✅ Test history generated!', 'success');
     } catch (error) {
       addLog(`❌ Error: ${error.message}`, 'error');
+      showToast('❌ Failed to generate history', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -220,14 +245,14 @@ function DataTab({ addLog }) {
       </Section>
 
       <Section title="State Inspector">
-        <StateInspector addLog={addLog} />
+        <StateInspector addLog={addLog} showToast={showToast} />
       </Section>
     </div>
   );
 }
 
 // Alarms Tab Component
-function AlarmsTab({ addLog }) {
+function AlarmsTab({ addLog, showToast }) {
   const [alarms, setAlarms] = useState([]);
 
   const loadAlarms = useCallback(async () => {
@@ -242,6 +267,93 @@ function AlarmsTab({ addLog }) {
   useEffect(() => {
     loadAlarms();
   }, [loadAlarms]);
+
+  const triggerAllScheduledAlarms = async () => {
+    if (!confirm('Trigger ALL scheduled alarms now? This will move all stashed items back to inbox and fire their notifications.')) {
+      return;
+    }
+
+    try {
+      addLog('Triggering all scheduled alarms...', 'info');
+      
+      // Get all Tab Napper alarms (those starting with tabNapper_)
+      chrome.alarms.getAll(async (allAlarms) => {
+        const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper_'));
+        
+        if (tabNapperAlarms.length === 0) {
+          showToast('No scheduled alarms found', 'info');
+          addLog('No Tab Napper alarms to trigger', 'info');
+          return;
+        }
+
+        addLog(`Found ${tabNapperAlarms.length} scheduled alarms`, 'info');
+
+        // Clear all existing alarms and manually trigger them
+        for (const alarm of tabNapperAlarms) {
+          // Parse the alarm name to get the item info
+          const parts = alarm.name.split('_');
+          const action = parts[1];
+          const itemId = parts.slice(2).join('_');
+
+          addLog(`Triggering: ${alarm.name}`, 'info');
+
+          // Get the stashed item
+          const result = await chrome.storage.local.get(['triageHub_stashedTabs', 'triageHub_inbox']);
+          const stashedTabs = result.triageHub_stashedTabs || [];
+          const inbox = result.triageHub_inbox || [];
+
+          const item = stashedTabs.find(i => i.id === itemId);
+
+          if (item) {
+            // Remove scheduled data
+            const retriagedItem = { ...item };
+            delete retriagedItem.scheduledFor;
+            delete retriagedItem.scheduledAction;
+            delete retriagedItem.scheduledWhen;
+
+            // Move to inbox
+            const updatedInbox = [retriagedItem, ...inbox];
+            const updatedStashed = stashedTabs.filter(i => i.id !== itemId);
+
+            await chrome.storage.local.set({
+              triageHub_inbox: updatedInbox,
+              triageHub_stashedTabs: updatedStashed
+            });
+
+            // Create notification
+            const actionLabel = action === 'remind_me' ? 'Reminder' : 
+                               action === 'follow_up' ? 'Follow-up' : 'Review';
+            const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+            chrome.notifications.create(`dev-trigger-${itemId}`, {
+              type: 'basic',
+              iconUrl: iconDataUri,
+              title: `Tab Napper ${actionLabel} (Dev Trigger)`,
+              message: item.title || 'Scheduled item ready for review',
+              priority: 2,
+              requireInteraction: true,
+              buttons: [
+                { title: 'Open Tab Napper' },
+                { title: 'Dismiss' }
+              ]
+            });
+
+            // Clear the alarm
+            chrome.alarms.clear(alarm.name);
+          }
+        }
+
+        showToast(`✅ Triggered ${tabNapperAlarms.length} alarms!`, 'success');
+        addLog(`✅ Successfully triggered ${tabNapperAlarms.length} alarms`, 'success');
+        
+        // Reload alarms list
+        setTimeout(() => loadAlarms(), 500);
+      });
+    } catch (error) {
+      addLog(`❌ Error: ${error.message}`, 'error');
+      showToast('❌ Failed to trigger alarms', 'error');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -279,9 +391,11 @@ function AlarmsTab({ addLog }) {
                 addLog('Creating test alarm...', 'info');
                 await testAlarm();
                 addLog('✅ Test alarm created - check console in 10s', 'success');
+                showToast('✅ Test alarm created!', 'success');
                 setTimeout(() => loadAlarms(), 200);
               } catch (error) {
                 addLog(`❌ Error: ${error.message}`, 'error');
+                showToast('❌ Failed to create alarm', 'error');
               }
             }}
             color="blue"
@@ -295,11 +409,20 @@ function AlarmsTab({ addLog }) {
                 addLog('Sending test notification...', 'info');
                 await testNotification();
                 addLog('✅ Notification sent', 'success');
+                showToast('✅ Notification sent!', 'success');
               } catch (error) {
                 addLog(`❌ Error: ${error.message}`, 'error');
+                showToast('❌ Failed to send notification', 'error');
               }
             }}
             color="purple"
+          />
+          <ActionButton
+            icon={Clock}
+            label="🚀 Trigger All Scheduled Alarms NOW"
+            description="Force all scheduled items to trigger immediately (for testing)"
+            onClick={triggerAllScheduledAlarms}
+            color="red"
           />
         </div>
       </Section>
@@ -373,7 +496,7 @@ function ActionButton({ icon: Icon, label, description, onClick, disabled, color
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'w-full flex items-start space-x-3 p-3 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+        'w-full flex items-start space-x-3 p-3 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.98]',
         colors[color]
       )}
     >
@@ -419,7 +542,7 @@ function AlarmCard({ alarm }) {
   );
 }
 
-function StateInspector({ addLog }) {
+function StateInspector({ addLog, showToast }) {
   const [stateData, setStateData] = useState(null);
 
   const inspectState = async () => {
@@ -429,8 +552,10 @@ function StateInspector({ addLog }) {
       const data = await chrome.storage.local.get(null);
       setStateData(data);
       addLog('State loaded successfully', 'success');
+      showToast('✅ State loaded!', 'success');
     } catch (error) {
       addLog(`Error loading state: ${error.message}`, 'error');
+      showToast('❌ Failed to load state', 'error');
     }
   };
 
