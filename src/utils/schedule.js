@@ -246,7 +246,7 @@ export function getDetailedScheduledTime(timestamp) {
     const diffHours = Math.floor(diffMs / MS_PER_HOUR);
 
     // Calculate days based on calendar dates, not 24-hour periods
-    const startOfToday = new Date();
+    const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
     const startOfReminderDate = new Date(timestamp);
     startOfReminderDate.setHours(0, 0, 0, 0);
