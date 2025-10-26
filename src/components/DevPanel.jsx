@@ -10,6 +10,8 @@ import {
   testNotification,
   testAlarm
 } from '../utils/devUtils.js';
+import { setScheduledAlarm } from '../utils/schedule.js';
+import { saveAppState, loadAppState } from '../utils/storage.js';
 
 /**
  * Modern Dev Panel with categorized tools
@@ -570,6 +572,45 @@ function AlarmsTab({ addLog, showToast }) {
               }
             }}
             color="blue"
+          />
+          <ActionButton
+            icon={Bell}
+            label="Test Workflow Reminder (30s)"
+            description="Schedule a test item with 30-second reminder (tests full workflow)"
+            onClick={async () => {
+              try {
+                addLog('Creating test workflow reminder...', 'info');
+                
+                // Create a test item
+                const testItem = {
+                  id: `test-reminder-${Date.now()}`,
+                  title: 'Test Workflow Reminder',
+                  url: 'https://example.com/test-reminder',
+                  type: 'test',
+                  stashedAt: Date.now(),
+                  scheduledFor: Date.now() + 30000, // 30 seconds from now
+                  scheduledAction: 'remind_me',
+                  scheduledWhen: 'In 30 seconds'
+                };
+                
+                // Add to stashed tabs
+                const stashed = await loadAppState('triageHub_stashedTabs', []);
+                await saveAppState('triageHub_stashedTabs', [testItem, ...stashed]);
+                
+                // Set the alarm
+                await setScheduledAlarm(testItem, 'remind_me', testItem.scheduledFor);
+                
+                addLog('✅ Test reminder scheduled for 30 seconds!', 'success');
+                addLog(`Item: ${testItem.title}`, 'info');
+                addLog(`Will fire at: ${new Date(testItem.scheduledFor).toLocaleTimeString()}`, 'info');
+                showToast('✅ Test reminder scheduled!', 'success');
+                setTimeout(() => loadAlarms(), 200);
+              } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                showToast('❌ Failed to schedule reminder', 'error');
+              }
+            }}
+            color="purple"
           />
           <ActionButton
             icon={Bell}
