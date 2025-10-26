@@ -390,8 +390,14 @@ function AlarmsTab({ addLog, showToast }) {
       showToast('⏳ Triggering alarms...', 'info');
       
       // Wrap chrome.alarms.getAll in a promise
-      const allAlarms = await new Promise((resolve) => {
-        chrome.alarms.getAll((alarms) => resolve(alarms || []));
+      const allAlarms = await new Promise((resolve, reject) => {
+        chrome.alarms.getAll((alarms) => {
+          if (chrome.runtime && chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(alarms || []);
+          }
+        });
       });
       
       console.log('[DevPanel] All alarms:', allAlarms);
