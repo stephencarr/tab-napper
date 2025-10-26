@@ -569,13 +569,13 @@ function generateSuggestionReason(metrics) {
   const avgVisitsPerDay = totalVisits / Math.max(1, uniqueDaysVisited);
   
   if (daysSinceRecent === 0 && uniqueDaysVisited >= 5) {
-    return `Active today - visited ${uniqueDaysVisited} days this week`;
+    return `Active today - visited ${uniqueDaysVisited} days recently`;
   } else if (daysSinceRecent === 0 && avgVisitsPerDay >= 3) {
     return `Very active today - ${Math.round(avgVisitsPerDay)} visits per day`;
   } else if (uniqueDaysVisited >= 7 && avgVisitsPerDay >= 3) {
     return `Daily habit - ${uniqueDaysVisited} days, ${Math.round(avgVisitsPerDay)} visits/day`;
   } else if (uniqueDaysVisited >= 5 && daysSinceRecent <= 1) {
-    return `Frequent recent use - ${uniqueDaysVisited} days this week`;
+    return `Frequent recent use - ${uniqueDaysVisited} days recently`;
   } else if (avgVisitsPerDay >= 5) {
     return `High activity - ${Math.round(avgVisitsPerDay)} visits per day`;
   } else if (uniqueDaysVisited >= 3) {
