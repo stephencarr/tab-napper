@@ -335,7 +335,7 @@ function AlarmsTab({ addLog, showToast }) {
         chrome.alarms.getAll((alarms) => resolve(alarms || []));
       });
       
-      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper_'));
+      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper::'));
       console.log('[DevPanel] Clearing', tabNapperAlarms.length, 'alarms');
       addLog(`🔕 Clearing ${tabNapperAlarms.length} alarms`, 'info');
 
@@ -402,7 +402,7 @@ function AlarmsTab({ addLog, showToast }) {
       
       console.log('[DevPanel] All alarms:', allAlarms);
       
-      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper_'));
+      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper::'));
       console.log('[DevPanel] Tab Napper alarms:', tabNapperAlarms);
       
       if (tabNapperAlarms.length === 0) {
@@ -419,27 +419,24 @@ function AlarmsTab({ addLog, showToast }) {
       // Process each alarm
       for (const alarm of tabNapperAlarms) {
         try {
-          // Parse the alarm name: tabNapper_{action}_{itemId}
-          // Example: tabNapper_remind_me_inbox-1761419209071-ep2vhqiz5
-          // Action can have underscores (remind_me, follow_up)
-          // ItemId starts with category: inbox-, stashed-, archived-, etc.
+          // Parse the alarm name: tabNapper::{action}::{itemId}
+          // Example: tabNapper::remind_me::inbox-1761419209071-ep2vhqiz5
+          // Using :: separator avoids conflicts with underscores in action names
           
-          const nameWithoutPrefix = alarm.name.replace('tabNapper_', '');
-          // remind_me_inbox-1761419209071-ep2vhqiz5
+          if (!alarm.name.startsWith('tabNapper::')) {
+            continue; // Not our alarm
+          }
           
-          // Find where the itemId starts (look for pattern: _[category]-)
-          const itemIdMatch = nameWithoutPrefix.match(/_(inbox-|stashed-|archived-)/);
-          
-          if (!itemIdMatch) {
-            console.error('[DevPanel] Could not parse alarm name:', alarm.name);
+          const parts = alarm.name.split('::');
+          if (parts.length < 3) {
+            console.error('[DevPanel] Invalid alarm name format:', alarm.name);
             addLog(`⚠️ Invalid alarm name format: ${alarm.name}`, 'warn');
             errorCount++;
             continue;
           }
           
-          const itemIdStart = itemIdMatch.index + 1; // +1 to skip the underscore
-          const action = nameWithoutPrefix.substring(0, itemIdMatch.index);
-          const itemId = nameWithoutPrefix.substring(itemIdStart);
+          const action = parts[1]; // remind_me, follow_up, or review
+          const itemId = parts.slice(2).join('::'); // In case itemId contains ::
 
           console.log('[DevPanel] Processing alarm:', alarm.name);
           console.log('[DevPanel] Parsed - action:', action, 'itemId:', itemId);
