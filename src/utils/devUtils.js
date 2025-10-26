@@ -479,10 +479,10 @@ async function testNotification() {
 async function testAlarm() {
   if (typeof chrome === 'undefined' || !chrome.alarms) {
     console.warn('[Tab Napper] Chrome alarms API not available');
-    return;
+    throw new Error('Chrome alarms API not available');
   }
   
-  try {
+  return new Promise((resolve, reject) => {
     console.log('[Tab Napper] Creating test alarm (fires in 10 seconds)...');
     
     chrome.alarms.create('test-alarm', {
@@ -490,15 +490,15 @@ async function testAlarm() {
     }, () => {
       if (chrome.runtime.lastError) {
         console.error('[Tab Napper] ❌ Error creating test alarm:', chrome.runtime.lastError);
+        reject(new Error(chrome.runtime.lastError.message));
       } else {
         console.log('[Tab Napper] ✅ Test alarm created');
         console.log('[Tab Napper] Watch the console for alarm firing in ~10 seconds');
         console.log('[Tab Napper] You should also see a notification when it fires');
+        resolve();
       }
     });
-  } catch (error) {
-    console.error('[Tab Napper] Error creating test alarm:', error);
-  }
+  });
 }
 
 // Expose functions globally for easy testing in console

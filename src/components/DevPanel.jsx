@@ -274,10 +274,15 @@ function AlarmsTab({ addLog }) {
             icon={Clock}
             label="Test Alarm (10 seconds)"
             description="Create a test alarm that fires in 10 seconds"
-            onClick={() => {
-              testAlarm();
-              addLog('Test alarm created', 'info');
-              setTimeout(loadAlarms, 100);
+            onClick={async () => {
+              try {
+                addLog('Creating test alarm...', 'info');
+                await testAlarm();
+                addLog('✅ Test alarm created - check console in 10s', 'success');
+                setTimeout(() => loadAlarms(), 200);
+              } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+              }
             }}
             color="blue"
           />
@@ -285,9 +290,14 @@ function AlarmsTab({ addLog }) {
             icon={Bell}
             label="Test Notification"
             description="Show a test system notification"
-            onClick={() => {
-              testNotification();
-              addLog('Test notification sent', 'info');
+            onClick={async () => {
+              try {
+                addLog('Sending test notification...', 'info');
+                await testNotification();
+                addLog('✅ Notification sent', 'success');
+              } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+              }
             }}
             color="purple"
           />
