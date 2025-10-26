@@ -388,10 +388,9 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
           <button
             onClick={async () => {
               console.log('[SmartSuggestions] 🔄 Force clearing cache...');
-              // Clear cache
-              if (typeof window !== 'undefined' && window._clearSuggestionCache) {
-                await window._clearSuggestionCache();
-              }
+              // Directly import and call the cache clearing function
+              const { clearSuggestionsCache } = await import('../utils/smartSuggestions.js');
+              await clearSuggestionsCache();
               // Reload
               await loadSuggestions();
             }}
