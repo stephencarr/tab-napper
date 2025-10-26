@@ -7,9 +7,6 @@
 import { useState, useEffect } from 'react';
 
 const DEV_MODE_KEY = 'tabNapper_devMode';
-const EASTER_EGG_SEQUENCE = ['Tab', 'Nap', 'Dev']; // Press these keys in order
-let easterEggIndex = 0;
-let easterEggTimeout = null;
 
 /**
  * Hook to manage dev mode state
@@ -37,39 +34,17 @@ export function useDevMode() {
 
 /**
  * Set up easter egg listener for dev mode activation
+ * Press Ctrl+Shift+D (or Cmd+Shift+D on Mac) to toggle dev mode
  */
 export function setupDevModeEasterEgg(onActivate) {
   if (typeof window === 'undefined') return () => {};
 
   const handleKeyPress = (e) => {
-    const expectedKey = EASTER_EGG_SEQUENCE[easterEggIndex];
-    
-    // Check if the pressed key matches (case insensitive)
-    if (e.key && e.key.toLowerCase() === expectedKey.toLowerCase()) {
-      easterEggIndex++;
-      
-      // Reset timeout
-      if (easterEggTimeout) {
-        clearTimeout(easterEggTimeout);
-      }
-      
-      // If sequence complete, activate dev mode
-      if (easterEggIndex >= EASTER_EGG_SEQUENCE.length) {
-        console.log('🎉 Dev Mode Easter Egg Activated!');
-        onActivate();
-        easterEggIndex = 0;
-      } else {
-        // Set timeout to reset sequence after 2 seconds
-        easterEggTimeout = setTimeout(() => {
-          easterEggIndex = 0;
-        }, 2000);
-      }
-    } else if (e.key && e.key.length === 1) {
-      // Any other character key resets the sequence
-      easterEggIndex = 0;
-      if (easterEggTimeout) {
-        clearTimeout(easterEggTimeout);
-      }
+    // Check for Ctrl+Shift+D (Windows/Linux) or Cmd+Shift+D (Mac)
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      console.log('🎉 Dev Mode Toggle!');
+      onActivate();
     }
   };
 
@@ -77,9 +52,6 @@ export function setupDevModeEasterEgg(onActivate) {
 
   return () => {
     window.removeEventListener('keydown', handleKeyPress);
-    if (easterEggTimeout) {
-      clearTimeout(easterEggTimeout);
-    }
   };
 }
 
