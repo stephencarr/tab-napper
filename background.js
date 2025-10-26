@@ -330,10 +330,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     }
     
     // Remove the scheduled reminder data from the item
-    const retriagedItem = { ...item };
-    delete retriagedItem.scheduledFor;
-    delete retriagedItem.scheduledAction;
-    delete retriagedItem.scheduledWhen;
+    const { scheduledFor, scheduledAction, scheduledWhen, ...retriagedItem } = item;
     
     // Add to beginning of inbox for re-triage
     const updatedInbox = [retriagedItem, ...inbox];
