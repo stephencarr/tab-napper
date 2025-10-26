@@ -364,11 +364,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     };
     
     // Create the notification
+    console.log('[Tab Napper] Creating notification for:', itemId);
     chrome.notifications.create(`reminder-${itemId}`, notificationOptions, (notificationId) => {
       if (chrome.runtime.lastError) {
-        console.error('[Tab Napper] Error creating notification:', chrome.runtime.lastError);
+        console.error('[Tab Napper] ❌ Error creating notification:', chrome.runtime.lastError);
       } else {
-        console.log('[Tab Napper] ✓ Notification created:', notificationId);
+        console.log('[Tab Napper] ✅ Notification created successfully:', notificationId);
       }
     });
     
