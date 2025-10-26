@@ -237,10 +237,20 @@ export function getDetailedScheduledTime(timestamp) {
   
   // If past due, show how long ago
   if (isPastDue) {
+    const MS_PER_MINUTE = 60000;
+    const MS_PER_HOUR = 3600000;
+    const MS_PER_DAY = 86400000;
+
     const diffMs = now.getTime() - timestamp;
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+    const diffMinutes = Math.floor(diffMs / MS_PER_MINUTE);
+    const diffHours = Math.floor(diffMs / MS_PER_HOUR);
+
+    // Calculate days based on calendar dates, not 24-hour periods
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfReminderDate = new Date(timestamp);
+    startOfReminderDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((startOfToday.getTime() - startOfReminderDate.getTime()) / MS_PER_DAY);
     
     if (diffMinutes < 1) {
       return 'Past due (Just now)';
