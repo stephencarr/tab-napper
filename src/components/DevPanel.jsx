@@ -415,12 +415,25 @@ function AlarmsTab({ addLog, showToast }) {
         try {
           // Parse the alarm name: tabNapper_{action}_{itemId}
           // Example: tabNapper_remind_me_inbox-1761419209071-ep2vhqiz5
-          const nameWithoutPrefix = alarm.name.replace('tabNapper_', '');
+          // Action can have underscores (remind_me, follow_up)
+          // ItemId starts with category: inbox-, stashed-, archived-, etc.
           
-          // Split on first underscore only to separate action from itemId
-          const firstUnderscoreIndex = nameWithoutPrefix.indexOf('_');
-          const action = nameWithoutPrefix.substring(0, firstUnderscoreIndex);
-          const itemId = nameWithoutPrefix.substring(firstUnderscoreIndex + 1);
+          const nameWithoutPrefix = alarm.name.replace('tabNapper_', '');
+          // remind_me_inbox-1761419209071-ep2vhqiz5
+          
+          // Find where the itemId starts (look for pattern: _[category]-)
+          const itemIdMatch = nameWithoutPrefix.match(/_(inbox-|stashed-|archived-|fidget-)/);
+          
+          if (!itemIdMatch) {
+            console.error('[DevPanel] Could not parse alarm name:', alarm.name);
+            addLog(`⚠️ Invalid alarm name format: ${alarm.name}`, 'warn');
+            errorCount++;
+            continue;
+          }
+          
+          const itemIdStart = itemIdMatch.index + 1; // +1 to skip the underscore
+          const action = nameWithoutPrefix.substring(0, itemIdMatch.index);
+          const itemId = nameWithoutPrefix.substring(itemIdStart);
 
           console.log('[DevPanel] Processing alarm:', alarm.name);
           console.log('[DevPanel] Parsed - action:', action, 'itemId:', itemId);
