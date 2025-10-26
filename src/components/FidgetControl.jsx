@@ -25,7 +25,7 @@ function FidgetControl({ item, onAction, className }) {
       setDeleteConfirmation(false);
     }, 3000);
     
-    // Cleanup timeout on unmount or when deleteConfirmation changes
+    // Cleanup timeout on unmount or when deleteConfirmation becomes false
     return () => clearTimeout(timeoutId);
   }, [deleteConfirmation]);
   
