@@ -89,7 +89,7 @@ function FidgetControl({ item, onAction, className }) {
   const handleExecute = useCallback(() => {
     if (onAction) {
       const actionData = {
-        action: actionState.toLowerCase().replace(' ', '_'),
+        action: actionState.toLowerCase().replaceAll(' ', '_'),
         when: whenState,
         timestamp: Date.now()
       };
