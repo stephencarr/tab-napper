@@ -23,6 +23,7 @@ import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
 import DevPanel from './components/DevPanel.jsx';
+import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 import Layout from './components/Layout.jsx';
 
 function App() {
