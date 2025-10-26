@@ -225,7 +225,7 @@ function calculateSuggestionScore(metrics) {
   
   // Frequency: favor items with 3-15 visits per day (typical work usage)
   const avgVisitsPerDay = metrics.totalVisits / Math.max(1, metrics.uniqueDaysVisited);
-  // Normalize frequency: cap at 8 visits/day, which is the upper end of typical work usage (see above comment).
+  // Normalize frequency: cap at 8 visits/day, chosen as a practical upper bound within the typical work usage range (see 3-15 visits/day above).
   const normalizedFrequency = Math.min(1, avgVisitsPerDay / 8);
   
   // Weighted score calculation with recency boost
