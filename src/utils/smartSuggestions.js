@@ -165,12 +165,23 @@ function calculateDailyVisitMetrics(url, historyItems) {
   const mostRecentVisit = Math.max(...urlItems.map(item => item.lastVisitTime));
   const oldestVisit = Math.min(...urlItems.map(item => item.lastVisitTime));
   
+  // Calculate days based on calendar dates (not 24-hour periods)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const mostRecentVisitDate = new Date(mostRecentVisit);
+  mostRecentVisitDate.setHours(0, 0, 0, 0);
+  
+  const oldestVisitDate = new Date(oldestVisit);
+  oldestVisitDate.setHours(0, 0, 0, 0);
+  
+  const daysSinceRecent = Math.floor((today.getTime() - mostRecentVisitDate.getTime()) / (24 * 60 * 60 * 1000));
+  const daysSinceOldest = Math.floor((today.getTime() - oldestVisitDate.getTime()) / (24 * 60 * 60 * 1000));
+  
   // Calculate consistency score (how regularly visited)
-  const daysSinceOldest = Math.ceil((now - oldestVisit) / (24 * 60 * 60 * 1000));
-  const consistency = daysSinceOldest > 0 ? uniqueDaysVisited / daysSinceOldest : 0;
+  const consistency = daysSinceOldest > 0 ? uniqueDaysVisited / (daysSinceOldest + 1) : 1;
   
   // Calculate recency score (how recently accessed)
-  const daysSinceRecent = Math.ceil((now - mostRecentVisit) / (24 * 60 * 60 * 1000));
   const recency = Math.max(0, 1 - (daysSinceRecent / SUGGESTION_CONFIG.RECENCY_DECAY_DAYS));
   
   // Calculate frequency score (average visits per day)
