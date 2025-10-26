@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lightbulb, Plus, X, TrendingUp, Calendar, Clock, Pin, PinOff } from 'lucide-react';
-import { generateSmartSuggestions, pinSuggestion, dismissSuggestion, getSuggestionStats } from '../utils/smartSuggestions.js';
+import { generateSmartSuggestions, pinSuggestion, dismissSuggestion, getSuggestionStats, clearSuggestionsCache } from '../utils/smartSuggestions.js';
 import { navigateToUrl } from '../utils/navigation.js';
 import { cn } from '../utils/cn.js';
 
@@ -388,10 +388,7 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
           <button
             onClick={async () => {
               console.log('[SmartSuggestions] 🔄 Force clearing cache...');
-              // Directly import and call the cache clearing function
-              const { clearSuggestionsCache } = await import('../utils/smartSuggestions.js');
               await clearSuggestionsCache();
-              // Reload
               await loadSuggestions();
             }}
             className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline transition-colors"
