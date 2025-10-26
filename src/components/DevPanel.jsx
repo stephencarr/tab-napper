@@ -304,12 +304,17 @@ function AlarmsTab({ addLog, showToast }) {
       // Process each alarm
       for (const alarm of tabNapperAlarms) {
         try {
-          // Parse the alarm name to get the item info
-          const parts = alarm.name.split('_');
-          const action = parts[1];
-          const itemId = parts.slice(2).join('_');
+          // Parse the alarm name: tabNapper_{action}_{itemId}
+          // Example: tabNapper_remind_me_inbox-1761419209071-ep2vhqiz5
+          const nameWithoutPrefix = alarm.name.replace('tabNapper_', '');
+          
+          // Split on first underscore only to separate action from itemId
+          const firstUnderscoreIndex = nameWithoutPrefix.indexOf('_');
+          const action = nameWithoutPrefix.substring(0, firstUnderscoreIndex);
+          const itemId = nameWithoutPrefix.substring(firstUnderscoreIndex + 1);
 
-          console.log('[DevPanel] Processing alarm:', alarm.name, 'itemId:', itemId);
+          console.log('[DevPanel] Processing alarm:', alarm.name);
+          console.log('[DevPanel] Parsed - action:', action, 'itemId:', itemId);
           addLog(`⏰ Triggering: ${alarm.name}`, 'info');
 
           // Get the stashed item
