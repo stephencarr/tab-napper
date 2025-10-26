@@ -226,6 +226,40 @@ export function getScheduledTimeDescription(timestamp) {
 export function getDetailedScheduledTime(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
+  const isPastDue = timestamp < now.getTime();
+  
+  // Format time
+  const timeStr = date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+  
+  // If past due, show how long ago
+  if (isPastDue) {
+    const diffMs = now.getTime() - timestamp;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMinutes < 1) {
+      return 'Past due (Just now)';
+    } else if (diffMinutes < 60) {
+      return `Past due (${diffMinutes}m ago)`;
+    } else if (diffHours < 24) {
+      return `Past due (${diffHours}h ago)`;
+    } else if (diffDays === 1) {
+      return `Past due (Yesterday at ${timeStr})`;
+    } else if (diffDays < 7) {
+      return `Past due (${diffDays}d ago)`;
+    } else {
+      const dateStr = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric'
+      });
+      return `Past due (${dateStr})`;
+    }
+  }
   
   // Check if it's today
   const isToday = date.toDateString() === now.toDateString();
@@ -234,13 +268,6 @@ export function getDetailedScheduledTime(timestamp) {
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const isTomorrow = date.toDateString() === tomorrow.toDateString();
-  
-  // Format time
-  const timeStr = date.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    minute: '2-digit',
-    hour12: true 
-  });
   
   if (isToday) {
     return `Today at ${timeStr}`;
