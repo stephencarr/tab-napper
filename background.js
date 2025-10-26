@@ -81,7 +81,13 @@ async function captureClosedTab(tabInfo) {
     const inboxItem = {
       id: `inbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: tabInfo.title || 'Untitled',
-      description: `Captured from ${new URL(tabInfo.url).hostname}`,
+      description: (() => {
+        try {
+          return `Captured from ${new URL(tabInfo.url).hostname}`;
+        } catch {
+          return `Captured from unknown site`;
+        }
+      })(),
       url: tabInfo.url,
       timestamp: Date.now(),
       type: 'captured-tab',
