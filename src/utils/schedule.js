@@ -242,7 +242,9 @@ export function getDetailedScheduledTime(timestamp) {
     const diffHours = Math.round(diffMs / 3600000);
     const diffDays = Math.round(diffMs / 86400000);
     
-    if (diffMinutes < 60) {
+    if (diffMinutes < 1) {
+      return 'Past due (Just now)';
+    } else if (diffMinutes < 60) {
       return `Past due (${diffMinutes}m ago)`;
     } else if (diffHours < 24) {
       return `Past due (${diffHours}h ago)`;
