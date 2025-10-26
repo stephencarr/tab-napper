@@ -594,7 +594,7 @@ function AlarmsTab({ addLog, showToast }) {
                 };
                 
                 // Add to stashed tabs
-                const stashed = await loadAppState('triageHub_stashedTabs', []);
+                const stashed = await loadAppState('triageHub_stashedTabs') || [];
                 await saveAppState('triageHub_stashedTabs', [testItem, ...stashed]);
                 
                 // Set the alarm
