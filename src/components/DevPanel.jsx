@@ -632,6 +632,7 @@ function ConsoleTab({ logs, onClear }) {
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
           aria-label={isExpanded ? 'Collapse console' : 'Expand console'}
+          aria-expanded={isExpanded}
         >
           <span>{isExpanded ? '▼' : '▶'}</span>
           <span>Console Output ({logs.length})</span>
