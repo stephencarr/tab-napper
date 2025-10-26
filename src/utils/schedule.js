@@ -9,7 +9,7 @@ const MS_PER_DAY = 86400000;
 
 /**
  * Calculate the timestamp for a given "when" string
- * @param {string} whenText - Human-readable time text (e.g., "In 1 hour", "Tomorrow morning")
+ * @param {string} whenText - Human-readable time text (e.g., "In 5 minutes", "In 1 hour", "Tomorrow morning")
  * @returns {number} - Unix timestamp in milliseconds
  */
 export function calculateScheduledTime(whenText) {
@@ -17,6 +17,12 @@ export function calculateScheduledTime(whenText) {
   const result = new Date(now);
 
   switch (whenText) {
+    case 'In 5 minutes':
+      result.setMinutes(result.getMinutes() + 5);
+      break;
+    case 'In 10 minutes':
+      result.setMinutes(result.getMinutes() + 10);
+      break;
     case 'In 30 minutes':
       result.setMinutes(result.getMinutes() + 30);
       break;

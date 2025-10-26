@@ -11,7 +11,7 @@ import { cn } from '../utils/cn.js';
 function FidgetControl({ item, onAction, className }) {
   // Control states - simplified to just action and when
   const [actionState, setActionState] = useState('Remind Me');
-  const [whenState, setWhenState] = useState('In 1 hour');
+  const [whenState, setWhenState] = useState('In 5 minutes');
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   
   // Action cycle states (removed DELETE NOW)
@@ -35,8 +35,8 @@ function FidgetControl({ item, onAction, className }) {
     const currentHour = now.getHours();
     const options = [];
     
-    // Always available quick options
-    options.push('In 30 minutes', 'In 1 hour', 'In 2 hours', 'In 3 hours');
+    // Always available quick options - now including very short intervals
+    options.push('In 5 minutes', 'In 10 minutes', 'In 30 minutes', 'In 1 hour', 'In 2 hours', 'In 3 hours');
     
     // Context-aware options based on time of day
     if (currentHour < 12) {
