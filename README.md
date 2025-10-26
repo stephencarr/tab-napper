@@ -1,8 +1,18 @@
 # Tab Napper
 
-An ADHD-friendly Chrome extension that replaces your New Tab Page with a calm, uncluttered tab management and reminder system featuring advanced omnisearch and intelligent suggestions.
+An ADHD-friendly Chrome extension that replaces your New Tab Page with a calm, uncluttered tab management and reminder system featuring stash & schedule, system notifications, and intelligent suggestions.
 
 ## ✨ Key Features
+
+### ⏰ **Stash & Schedule**
+- **Smart Time-Based Reminders**: Schedule tabs to come back at the perfect time
+- **Three Action Types**: Remind Me (quick check), Follow Up (deeper work), Review (careful thought)
+- **Contextual Time Suggestions**: "In 1 hour", "This afternoon", "Tomorrow 9am", etc.
+- **Chrome Alarms Integration**: Persistent scheduling that survives browser restarts
+- **System Notifications**: Sticky, high-priority alerts when reminders trigger
+- **Auto Re-Triage**: Scheduled items automatically return to inbox
+- **Visual Indicators**: Clock icons and formatted times on stashed cards
+- **Alarm Management**: Clear alarms automatically when items are trashed
 
 ### 🔍 **Enhanced Omnisearch**
 - **Universal Search**: Search across tabs, history, notes, and all saved items simultaneously
@@ -11,15 +21,17 @@ An ADHD-friendly Chrome extension that replaces your New Tab Page with a calm, u
 - **Visual Segmentation**: Color-coded results with relevance scores and priority indicators
 - **Instant Focus**: Auto-focused search input for immediate productivity
 - **Click-to-Open**: Search results open directly in new tabs
+- **Unified List Design**: Consistent styling across all search and tab views
 
 ### 🧠 **ADHD-Friendly Design**
 - **Calm Interface**: Minimalist design to reduce cognitive overwhelm
 - **FidgetControl System**: Revolutionary two-pill interface for rapid actions
-  - **Action Pill**: Remind Me → Follow Up → Review → DELETE NOW (with confirmation)
+  - **Action Pill**: Stash → Remind Me → Follow Up → Review → DELETE NOW (with confirmation)
   - **When Pill**: Smart contextual timing ("In 1 hour", "This afternoon", "Tomorrow")
 - **Rapid Clicking**: All controls optimized for fidgeting and quick interaction
 - **Layout Stability**: Fixed button sizes prevent cursor drift
 - **No Menu Diving**: Everything accessible with direct clicks
+- **Trash Can Workflow**: Two-click confirmation (click → red "Confirm" → delete)
 
 ### 🎯 **Smart Tab Management**
 - **Automatic Capture**: Seamlessly captures closed tabs for triage
@@ -27,6 +39,7 @@ An ADHD-friendly Chrome extension that replaces your New Tab Page with a calm, u
 - **Unified Card Layout**: Three-zone design (Identity, Action Block, Commitment)
 - **Structured Organization**: Inbox → Stashed → Quick Access → Trash workflow
 - **Status Indicators**: Visual cues for open tabs and previously stashed items
+- **Item Counts**: Live counts for all tab buckets in sidebar navigation
 
 ### 🤖 **Intelligent Suggestions**
 - **Smart Pattern Analysis**: Analyzes 30 days of browsing history for patterns
@@ -35,12 +48,23 @@ An ADHD-friendly Chrome extension that replaces your New Tab Page with a calm, u
 - **Cooldown Management**: Prevents re-suggesting recently unpinned items
 - **Performance Optimized**: Lightweight history fetching, no browser stalling
 
+### 🛠️ **Developer Tools**
+- **Dev Mode Toggle**: Ctrl+Shift+D easter egg activates comprehensive debugging panel
+- **Live Console Capture**: Real-time log interception for Tab Napper messages
+- **Test Notifications**: Verify system notification permissions and display
+- **Test Alarms**: 10-second test alarm to validate scheduling system
+- **Trigger All Alarms**: Instantly fire all scheduled alarms for testing
+- **Flush All Stashed**: Clear all alarms and move items to inbox (with confirmation)
+- **Toast Feedback**: Visual confirmation for all dev actions
+- **State Inspector**: Query and examine extension state in real-time
+
 ### 🔒 **Privacy & Performance**
 - **100% Local**: All data stored locally on your device
 - **Lightweight Architecture**: Component-specific optimized data fetching
 - **Chrome API Integration**: Direct use of native browser APIs for maximum efficiency
 - **No External Dependencies**: Zero tracking, no data collection
 - **Optional Encryption**: Critical data can be encrypted before storage
+- **Background Worker**: Monitors tab lifecycle even when Tab Napper is closed
 
 ## 🚀 Performance Optimizations
 
@@ -55,6 +79,7 @@ An ADHD-friendly Chrome extension that replaces your New Tab Page with a calm, u
 - **Auto-Focus**: Search input gains focus immediately on page load
 - **ESC Clearing**: Quick keyboard shortcut to clear searches
 - **Progressive Loading**: Components load independently without blocking
+- **Reactive Updates**: UI automatically refreshes when alarms trigger
 
 ## 🎨 User Experience
 

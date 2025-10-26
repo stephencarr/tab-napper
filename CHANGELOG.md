@@ -7,29 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Background service worker to monitor note tab closure
-  - Automatically re-triages notes to Inbox when note.html tabs are closed
-  - Tracks note tabs via URL parsing and maintains tab-to-noteId mapping
-  - Completes Ticket 12: Note Tab Re-Triage on Close lifecycle
-
-### Fixed
-- Fidget Controls click interaction in StashCard component
-  - Added event.stopPropagation() to prevent card onClick from blocking Fidget buttons
-  - Users can now interact with action buttons (Stash, Delete, Remind) without opening the note
- - Note re-triage reliability in background service worker
-   - retriageNote now looks up notes in both triageHub_notes and triageHub_inbox (covers Quick Note Capture)
-   - Removed unused isNoteTab helper for maintainability
-
-### Changed
-- Tailwind app shell header refinement
-  - Compact global search in header with reduced height for a cleaner look
-  - Removed large view title from header to reduce visual noise
-
 ### Planned
 - Advanced filtering for search results
 - Full keyboard navigation support
 - Export/import functionality
+
+## [0.7.0] - 2025-10-26
+
+### Added - Stash & Schedule: Smart Time-Based Reminders with Notifications
+- **⏰ Stash & Schedule System**: Complete time-based reminder workflow for tabs
+  - Stash items with scheduled reminders (Remind Me/Follow Up/Review)
+  - Smart time suggestions: relative (1 hour, this afternoon), absolute (today 3pm, tomorrow 9am)
+  - Chrome Alarms API integration for persistent, reliable scheduling
+  - Automatic re-triage to inbox when alarms trigger
+  - Visual scheduling indicators in stash cards (clock icon + formatted time)
+  - Item counts for all tab buckets in sidebar (Inbox, Stashed, Archive, Trash)
+  
+- **🔔 System Notifications**: Sticky notification alerts for scheduled items
+  - High-priority, persistent notifications (requireInteraction: true)
+  - Custom notification titles based on action type
+  - Action buttons: "Open Tab Napper" and "Dismiss"
+  - PNG data URI icons for Chrome compatibility
+  - Background worker monitors and triggers scheduled alarms
+
+- **🗑️ Trash Can Functionality**: Two-click confirmation deletion system
+  - Trash icon button appears next to fidget widget
+  - First click: button turns red, shows "Confirm"
+  - Second click: permanently deletes item and clears associated alarms
+  - Cooldown timer automatically reverts to trash icon after 3 seconds
+  - Integrated with stashed items - trashing clears alarms automatically
+
+- **🛠️ Enhanced Developer Tools**: Comprehensive debugging capabilities
+  - Dev mode toggle via Ctrl+Shift+D easter egg
+  - Restyled dev console with better UX and visual hierarchy
+  - Live console log capture (intercepts console.log/error/warn)
+  - Test Alarm (10 seconds) and Test Notification buttons
+  - "Trigger All Scheduled Alarms NOW" - instant testing without waiting
+  - "Flush All Stashed Items" - clear alarms and move all to inbox
+  - Toast notifications for all dev actions (success/error/info)
+  - Button hover animations and active state feedback
+  - Detailed logging with emoji indicators for easy scanning
+
+- **♻️ Background Worker Enhancements**: Tab lifecycle monitoring
+  - Listens for closed tabs and updates state even when Tab Napper is closed
+  - Alarm listener registered for scheduled reminders on startup
+  - Active alarm logging on service worker initialization
+  - Persistent state management across browser sessions
+
+- **🎨 UI Component Improvements**: Unified search and list styling
+  - Reusable list component for Recent, Search Results, and all tab lists
+  - Consistent card design across all views
+  - Search results now scroll main pane (no nested scroll areas)
+  - Visual consistency between all list types
+
+### Enhanced
+- **FidgetControl Component**: Integrated scheduling into action workflow
+  - Action pill: Stash, Remind Me, Follow Up, Review, DELETE NOW
+  - When pill: Smart contextual time options based on current time
+  - Seamless scheduling UX with no menu diving
+  - Past Time Guard prevents invalid time combinations
+
+- **Reactive Storage**: Real-time updates across all components
+  - Storage change events trigger UI refresh
+  - Cross-component synchronization for alarms and stashed items
+  - Automatic state updates when alarms fire
+
+### Fixed
+- **Alarm Name Parsing**: Correctly handles underscores in action names
+  - Actions with underscores (remind_me, follow_up) now parse correctly
+  - Regex-based parsing finds item category pattern (inbox-, stashed-, etc.)
+  - Proper itemId extraction for all alarm types
+  
+- **Notification Icons**: Chrome-compatible PNG data URIs
+  - Fixed "Unable to download all specified images" error
+  - Chrome notifications require PNG/JPG, not SVG
+  - Minimal 1x1 transparent PNG as fallback icon
+
+- **Dev Panel Console**: Live log capture working correctly
+  - useEffect properly intercepts console methods
+  - Tab Napper and DevPanel logs automatically appear
+  - No more missing debug output
+
+### Technical
+- **Chrome Alarms API**: Persistent scheduling across sessions
+- **Service Worker Architecture**: Background monitoring and alarm handling
+- **Component Refactoring**: Single reusable list component for all tab displays
+- **State Management**: Enhanced reactive storage with storage-updated events
+- **Developer Experience**: Comprehensive dev mode with testing tools
+
+### Security
+- Notifications use safe data URI icons (no external image loading)
+- Alarm data validated before processing
+- Confirmation required for destructive actions (trash, flush)
 
 ## [0.6.0] - 2025-10-25
 
