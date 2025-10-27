@@ -92,11 +92,12 @@ async function getLightweightHistory(maxResults = 500) {
   }
   
   try {
-    const historyItems = await new Promise((resolve, reject) => {
+    // Add timeout to prevent hanging on large datasets
+    const fetchPromise = new Promise((resolve, reject) => {
       chrome.history.search(
         {
           text: '',
-          maxResults: maxResults,
+          maxResults: Math.min(maxResults, 300), // Reduce max to 300 for performance
           startTime: Date.now() - (SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS * 24 * 60 * 60 * 1000)
         },
         (results) => {
@@ -108,6 +109,13 @@ async function getLightweightHistory(maxResults = 500) {
         }
       );
     });
+    
+    // Timeout after 5 seconds
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('History fetch timeout')), 5000)
+    );
+    
+    const historyItems = await Promise.race([fetchPromise, timeoutPromise]);
     
     debugLog('Suggestions', `Fetched ${historyItems.length} real history items`);
     
@@ -128,6 +136,7 @@ async function getLightweightHistory(maxResults = 500) {
     
   } catch (error) {
     console.error('[SmartSuggestions] Error fetching lightweight history:', error);
+    // Return empty array on error to prevent crashes
     return [];
   }
 }
@@ -416,6 +425,13 @@ export async function generateSmartSuggestions() {
     
     debugLog('Suggestions', `Found ${urlGroups.size} unique URLs to analyze`);
     
+    // Limit processing to prevent hang on large datasets
+    const MAX_URLS_TO_PROCESS = 100; // Safety limit
+    if (urlGroups.size > MAX_URLS_TO_PROCESS) {
+      console.warn(`[SmartSuggestions] Large dataset detected (${urlGroups.size} URLs). Processing first ${MAX_URLS_TO_PROCESS} for performance.`);
+      debugLog('Suggestions', `⚠️ Limiting analysis to ${MAX_URLS_TO_PROCESS} URLs for performance`);
+    }
+    
     // Calculate suggestion scores for each URL
     const candidates = [];
     let processed = 0;
@@ -436,6 +452,12 @@ export async function generateSmartSuggestions() {
     let detailedLogCount = 0;
     
     for (const [url, items] of urlGroups) {
+      // Stop processing if we've hit the limit
+      if (processed >= MAX_URLS_TO_PROCESS) {
+        console.warn(`[SmartSuggestions] ⚠️ Stopped at ${MAX_URLS_TO_PROCESS} URLs to prevent hang`);
+        break;
+      }
+      
       processed++;
       const shouldLogDetail = detailedLogCount < 10;
       
