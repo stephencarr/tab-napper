@@ -29,43 +29,92 @@ function FidgetControl({ item, onAction, className }) {
     return () => clearTimeout(timeoutId);
   }, [deleteConfirmation]);
   
-  // Smart contextual "when" options that always make logical sense
+  // Smart contextual "when" options - completely overhauled for context-sensitivity
   const getSmartWhenOptions = useCallback(() => {
     const now = new Date();
     const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
     const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentDate = now.getDate();
+    const currentMonth = now.getMonth();
     const options = [];
     
-    // Always available quick options - now including very short intervals
-    options.push('In 5 minutes', 'In 10 minutes', 'In 30 minutes', 'In 1 hour', 'In 2 hours', 'In 3 hours');
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
-    // Context-aware options based on time of day
+    // PHASE 1: TODAY - Fine-grained hour-based options
+    // Only show hour options that make sense for remaining hours in the day
+    const hoursLeftToday = 23 - currentHour;
+    
+    // Always show very short intervals
+    options.push('In 5 minutes', 'In 10 minutes', 'In 30 minutes');
+    
+    // Add hour options based on how much of the day is left
+    if (hoursLeftToday >= 1) options.push('In 1 hour');
+    if (hoursLeftToday >= 2) options.push('In 2 hours');
+    if (hoursLeftToday >= 3) options.push('In 3 hours');
+    if (hoursLeftToday >= 4) options.push('In 4 hours');
+    
+    // Context-aware same-day options
     if (currentHour < 12) {
-      // Morning: offer afternoon and evening
-      options.push('This afternoon', 'This evening');
-    } else if (currentHour < 17) {
-      // Afternoon: offer evening and tomorrow
-      options.push('This evening', 'Tomorrow morning');
-    } else {
-      // Evening: offer tomorrow options
-      options.push('Tomorrow morning', 'Tomorrow afternoon');
+      // Morning: offer afternoon
+      options.push('This afternoon'); // 2 PM
+    }
+    if (currentHour < 17) {
+      // Before evening: offer evening
+      options.push('This evening'); // 6 PM
+    }
+    if (currentHour < 20) {
+      // Before night: offer tonight
+      options.push('Tonight'); // 9 PM
     }
     
-    // Add weekday options for granular weekly planning
-    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const daysToAdd = [];
+    // PHASE 2: THIS WEEK - Weekday names (granular, no duplicates)
+    // Show upcoming weekdays for the rest of this week
+    const daysUntilSunday = (7 - currentDay) % 7; // Days left in this week
     
-    // Add next 3 weekdays (skipping today)
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 7; i++) {
       const dayIndex = (currentDay + i) % 7;
       const dayName = weekdays[dayIndex];
-      daysToAdd.push(dayName);
+      
+      // Only add if it's within this week (before next Sunday)
+      if (i <= daysUntilSunday) {
+        // Don't add "Tomorrow" as a weekday if we'll have a specific "Tomorrow morning" option
+        if (i === 1) {
+          // Tomorrow - add with time context
+          if (currentHour >= 17) {
+            options.push('Tomorrow morning'); // 9 AM
+          } else {
+            options.push('Tomorrow'); // Same time tomorrow
+          }
+        } else {
+          // Day after tomorrow onwards - just use day name
+          options.push(dayName);
+        }
+      } else {
+        // Next week - stop adding weekdays
+        break;
+      }
     }
     
-    options.push(...daysToAdd);
+    // PHASE 3: NEXT WEEK - Less granular
+    // Only show "Next week" if we're not already at the end of this week
+    if (currentDay < 5) { // Monday to Thursday
+      options.push('Next week'); // Next Monday 9 AM
+    } else if (currentDay === 5 || currentDay === 6) { // Friday or Saturday
+      options.push('Next Monday'); // Specific day name for clarity
+    }
     
-    // Always available future options
-    options.push('Tomorrow', 'This weekend', 'Next week', 'Next month');
+    // PHASE 4: TWO WEEKS - Even less granular
+    const twoWeeksFromNow = new Date(now);
+    twoWeeksFromNow.setDate(currentDate + 14);
+    
+    // Only show "2 weeks" if we're in the first half of the month
+    if (currentDate <= 15) {
+      options.push('In 2 weeks');
+    }
+    
+    // PHASE 5: MONTH - Least granular
+    options.push('Next month');
     
     return options;
   }, []);
