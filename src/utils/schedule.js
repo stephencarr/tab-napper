@@ -65,6 +65,34 @@ export function calculateScheduledTime(whenText) {
       // Set to same time tomorrow
       result.setDate(result.getDate() + 1);
       break;
+    
+    // Weekday options (Monday, Tuesday, etc.)
+    case 'Monday':
+    case 'Tuesday':
+    case 'Wednesday':
+    case 'Thursday':
+    case 'Friday':
+    case 'Saturday':
+    case 'Sunday': {
+      // Map day names to numbers (0 = Sunday, 1 = Monday, etc.)
+      const dayMap = {
+        'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+        'Thursday': 4, 'Friday': 5, 'Saturday': 6
+      };
+      const targetDay = dayMap[whenText];
+      const currentDay = result.getDay();
+      
+      // Calculate days to add (always next occurrence of that day)
+      let daysToAdd = (targetDay - currentDay + 7) % 7;
+      if (daysToAdd === 0) {
+        daysToAdd = 7; // If it's the same day, schedule for next week
+      }
+      
+      result.setDate(result.getDate() + daysToAdd);
+      result.setHours(9, 0, 0, 0); // Set to 9 AM on that day
+      break;
+    }
+    
     case 'This weekend':
       // Set to Saturday 10 AM
       // Calculates days until Saturday (where Sunday=0, Saturday=6); the `|| 7` ensures that if today is Saturday, it schedules for next Saturday.

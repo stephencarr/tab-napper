@@ -33,6 +33,7 @@ function FidgetControl({ item, onAction, className }) {
   const getSmartWhenOptions = useCallback(() => {
     const now = new Date();
     const currentHour = now.getHours();
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const options = [];
     
     // Always available quick options - now including very short intervals
@@ -49,6 +50,19 @@ function FidgetControl({ item, onAction, className }) {
       // Evening: offer tomorrow options
       options.push('Tomorrow morning', 'Tomorrow afternoon');
     }
+    
+    // Add weekday options for granular weekly planning
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const daysToAdd = [];
+    
+    // Add next 3 weekdays (skipping today)
+    for (let i = 1; i <= 3; i++) {
+      const dayIndex = (currentDay + i) % 7;
+      const dayName = weekdays[dayIndex];
+      daysToAdd.push(dayName);
+    }
+    
+    options.push(...daysToAdd);
     
     // Always available future options
     options.push('Tomorrow', 'This weekend', 'Next week', 'Next month');
