@@ -258,6 +258,7 @@ function RecentlyVisited({ className, maxItems = 50 }) {
       <StackList
         items={itemsWithMetadata}
         onItemClick={handleHistoryItemClick}
+        showBookmark={true}
       />
 
       {/* Simple footer */}

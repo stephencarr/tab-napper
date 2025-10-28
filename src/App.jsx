@@ -7,8 +7,9 @@ import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normali
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
-import { openNoteEditor } from './utils/navigation.js';
+import { openNoteEditor, navigateToUrl } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
+import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
@@ -68,6 +69,13 @@ function App() {
         await clearSuggestionsCache();
         console.log('🗑️ Smart Suggestions cache cleared');
       };
+      
+      // Expose auto-pin reset for debugging
+      window.TabNapper_resetPin = async () => {
+        const { resetPinnedFlag } = await import('./utils/autoPin.js');
+        await resetPinnedFlag();
+        console.log('📌 Auto-pin flag reset - next tab will pin');
+      };
     }
     
     return cleanup;
@@ -92,6 +100,9 @@ function App() {
 
         // Set up tab capture listeners
         setupTabCaptureListeners();
+        
+        // Auto-pin the tab to keep Tab Napper always visible
+        autoPinCurrentTab();
         
         setIsLoading(false);
       } catch (err) {
@@ -160,20 +171,21 @@ function App() {
   }, []);
 
   // Handle search result clicks
-  const handleSearchResultClick = (item) => {
+  const handleSearchResultClick = async (item) => {
     // Notes: open in internal editor
     if (item.isNote || item.type === 'note') {
       openNoteEditor(item.id);
       return;
     }
 
-    // If item has a URL, open it in a new tab
+    // If item has a URL, use navigateToUrl for consistent behavior
+    // (includes duplicate tab detection and switching)
     if (item.url) {
-      chrome.tabs.create({ url: item.url }, () => {
-        if (chrome.runtime.lastError) {
-          console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
-        }
-      });
+      try {
+        await navigateToUrl(item.url, item.title);
+      } catch (error) {
+        console.error(`[Tab Napper] Error navigating to ${item.url}:`, error);
+      }
     }
   };
 

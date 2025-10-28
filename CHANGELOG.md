@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Bookmark System with Auto-Pin
+- **📌 Quick Access Bookmarking**: One-click bookmarking from search results
+  - Bookmark button appears in search results for easy saving
+  - Bookmarked items added to Quick Access dashboard widget
+  - Visual indication of bookmarked status in search
+  
+- **🔄 Smart Auto-Pin**: Automatic pinning on Tab Napper tab open
+  - Tab Napper tab automatically pins itself when opened
+  - Pins only once per session to avoid annoying re-pins
+  - Storage flag prevents duplicate pinning attempts
+  - Console helper available for testing: `window.TabNapper_resetPin()`
+  
+- **🎯 Intelligent Link Behavior**: Context-aware tab management
+  - Checks for already-open tabs before creating new ones
+  - Switches to existing tab if URL is already open
+  - Brings window to front when switching tabs
+  - Prevents duplicate tabs in search results
+  - Opens bookmarked links in new tabs (not windows)
+
+### Fixed - Critical Bugs from Rebase
+- **⚠️ Alarm Separator Mismatch**: Fixed scheduled reminders failing silently
+  - Corrected alarm name format: `tabNapper::{action}::{itemId}`
+  - Restored `::` separator (was incorrectly changed to `_`)
+  - Prevents conflicts with underscores in action names
+  
+- **🔄 Tab Switching Regression**: Restored duplicate tab prevention
+  - Re-added logic to check for existing open tabs
+  - Switches to existing tab instead of always creating new ones
+  - Essential for proper tab management in the extension
+
 ### Planned
 - Advanced filtering for search results
 - Full keyboard navigation support

@@ -110,7 +110,8 @@ export function calculateScheduledTime(whenText) {
     }
     
     case 'Next Monday': {
-      // Specific case for end of week
+      // Specific case for Friday/Saturday users - shows "Next Monday" for clarity
+      // (Same behavior as "Next week", but more explicit day name)
       const currentDay = result.getDay();
       const daysToMonday = (1 - currentDay + 7) % 7 || 7;
       result.setDate(result.getDate() + daysToMonday);
@@ -135,7 +136,7 @@ export function calculateScheduledTime(whenText) {
       break;
     }
     case 'In 2 weeks':
-      // Set to same day/time in 2 weeks
+      // Set to 9 AM in 2 weeks (coarse-grained, no specific time)
       result.setDate(result.getDate() + 14);
       result.setHours(9, 0, 0, 0);
       break;
@@ -155,13 +156,14 @@ export function calculateScheduledTime(whenText) {
 
 /**
  * Create a unique alarm name for an item
- * Format: tabNapper_{action}_{itemId}
+ * Format: tabNapper::{action}::{itemId}
+ * Using :: separator to avoid conflicts with underscores in action names
  * @param {Object} item - The item to schedule
  * @param {string} action - The action type (remind_me, follow_up, review)
  * @returns {string} - Unique alarm name
  */
 export function createAlarmName(item, action) {
-  return `tabNapper_${action}_${item.id}`;
+  return `tabNapper::${action}::${item.id}`;
 }
 
 /**

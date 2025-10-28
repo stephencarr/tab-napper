@@ -3,6 +3,7 @@ import { Save, Edit, Eye, FileText } from 'lucide-react';
 import { saveAppState, loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 import { renderMarkdown as renderMarkdownLib } from '../utils/markdown.js';
+import { calculateWordCount } from '../utils/wordCount.js';
 
 // Placeholder text for empty note (used in textarea and preview)
 const PLACEHOLDER_MARKDOWN = `Start typing your note here...
@@ -68,12 +69,7 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       const noteTitle = generateTitle(noteContent);
       
       // Calculate word count from body only (exclude title/heading)
-      const trimmedContent = noteContent.trim();
-      const lines = trimmedContent.split('\n');
-      const firstLine = lines[0] || '';
-      const isHeading = firstLine.trim().startsWith('#');
-      const bodyOnly = isHeading ? lines.slice(1).join('\n').trim() : trimmedContent;
-      const wordCount = bodyOnly ? bodyOnly.split(/\s+/).length : 0;
+      const wordCount = calculateWordCount(noteContent);
       
       const noteItem = {
         id: `note-${crypto.randomUUID()}`,

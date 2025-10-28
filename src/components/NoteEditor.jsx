@@ -4,6 +4,7 @@ import { loadAppState, saveAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 import { useDarkMode } from '../hooks/useDarkMode.js';
 import { renderMarkdown as renderMarkdownLib } from '../utils/markdown.js';
+import { calculateWordCount } from '../utils/wordCount.js';
 
 /**
  * NoteEditor Component
@@ -134,11 +135,7 @@ export default function NoteEditor({ noteId }) {
         const trimmedContent = content.trim();
         
         // Calculate word count from body only (exclude title/heading)
-        const lines = trimmedContent.split('\n');
-        const firstLine = lines[0] || '';
-        const isHeading = firstLine.trim().startsWith('#');
-        const bodyOnly = isHeading ? lines.slice(1).join('\n').trim() : trimmedContent;
-        const wordCount = bodyOnly ? bodyOnly.split(/\s+/).length : 0;
+        const wordCount = calculateWordCount(content);
         
         return {
           ...item,

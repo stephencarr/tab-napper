@@ -5,6 +5,8 @@
 
 /**
  * Switch to an existing tab or open a new one
+ * First checks if the URL is already open, switches to it if found
+ * Otherwise creates a new tab
  */
 async function navigateToUrl(url, title = null) {
   try {

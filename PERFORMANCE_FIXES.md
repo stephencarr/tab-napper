@@ -83,14 +83,25 @@ Tab Napper was experiencing significant CPU spikes when loading, causing the bro
 **background.js:**
 ```diff
 - tabs.forEach(tab => trackTab(tab));
-+ // Process tabs in batches of 20
+- console.log('[Tab Napper] Tracking', tabs.length, 'existing tabs');
++ // Process tabs in smaller batches to avoid blocking
++ const batchSize = 20;
++ let processed = 0;
++ 
 + function processBatch() {
-+   const batch = tabs.slice(processed, processed + 20);
++   const batch = tabs.slice(processed, processed + batchSize);
 +   batch.forEach(tab => trackTab(tab));
++   processed += batchSize;
++   
 +   if (processed < tabs.length) {
++     // Schedule next batch asynchronously
 +     setTimeout(processBatch, 100);
++   } else {
++     console.log('[Tab Napper] Tracking', tabs.length, 'existing tabs');
 +   }
 + }
++ 
++ processBatch();
 ```
 
 **Impact**: Spreads tab tracking load over time instead of blocking startup
