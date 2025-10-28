@@ -3,8 +3,6 @@
  * Handles opening, switching, and managing browser tabs
  */
 
-import { isCurrentTabPinned } from './autoPin.js';
-
 /**
  * Switch to an existing tab or open a new one
  * First checks if the URL is already open, switches to it if found
