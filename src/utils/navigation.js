@@ -7,38 +7,22 @@ import { isCurrentTabPinned } from './autoPin.js';
 
 /**
  * Switch to an existing tab or open a new one
- * Opens in new window if Tab Napper is pinned, otherwise opens in tab
+ * Always opens in new tab in current window
  */
 async function navigateToUrl(url, title = null) {
   try {
     console.log(`[Tab Napper] 🚀 Navigating to: ${url}`);
     
     if (typeof chrome !== 'undefined' && chrome.tabs) {
-      // Check if current Tab Napper tab is pinned
-      const isPinned = await isCurrentTabPinned();
+      // Open in new tab
+      console.log(`[Tab Napper] 🆕 Opening in new tab`);
       
-      if (isPinned) {
-        // Pinned = user wants Tab Napper to stay visible, open in new window
-        console.log(`[Tab Napper] 🆕 Tab is pinned, opening in new window`);
-        
-        const newWindow = await chrome.windows.create({
-          url: url,
-          focused: true,
-          type: 'normal'
-        });
-        
-        return { action: 'created_window', windowId: newWindow.id };
-      } else {
-        // Not pinned = regular tab behavior, open in same window
-        console.log(`[Tab Napper] 🆕 Tab not pinned, opening as tab`);
-        
-        const newTab = await chrome.tabs.create({
-          url: url,
-          active: true
-        });
-        
-        return { action: 'created_tab', tabId: newTab.id };
-      }
+      const newTab = await chrome.tabs.create({
+        url: url,
+        active: true
+      });
+      
+      return { action: 'created_tab', tabId: newTab.id };
     } else {
       console.log('[Tab Napper] Chrome tabs API not available, opening in new window');
       window.open(url, '_blank');

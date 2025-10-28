@@ -171,25 +171,13 @@ function App() {
       return;
     }
 
-    // If item has a URL, check if pinned to decide how to open
+    // If item has a URL, open in new tab
     if (item.url) {
-      const isPinned = await isCurrentTabPinned();
-      
-      if (isPinned) {
-        // Pinned: open in new window
-        chrome.windows.create({ url: item.url, focused: true, type: 'normal' }, () => {
-          if (chrome.runtime.lastError) {
-            console.error(`[Tab Napper] Error creating window for ${item.url}: ${chrome.runtime.lastError.message}`);
-          }
-        });
-      } else {
-        // Not pinned: open as regular tab
-        chrome.tabs.create({ url: item.url, active: true }, () => {
-          if (chrome.runtime.lastError) {
-            console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
-          }
-        });
-      }
+      chrome.tabs.create({ url: item.url, active: true }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
+        }
+      });
     }
   };
 
