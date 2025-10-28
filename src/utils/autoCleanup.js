@@ -26,13 +26,13 @@ export async function runAutoCleanup() {
   try {
     // Step 1: Clean up inbox (move old items to trash)
     const inbox = await loadAppState('triageHub_inbox') || [];
-    const oneWeekAgo = now - ONE_WEEK_MS;
     
     const inboxToKeep = [];
     const inboxToTrash = [];
     
     inbox.forEach(item => {
-      const itemAge = now - (item.timestamp || item.lastAccessed || now);
+      // Items without timestamps are treated as very old (age = now)
+      const itemAge = now - (item.timestamp || item.lastAccessed || 0);
       
       if (itemAge > ONE_WEEK_MS) {
         // Item is older than 1 week, move to trash
@@ -61,7 +61,6 @@ export async function runAutoCleanup() {
     
     // Step 2: Clean up trash (permanently delete old items)
     const trash = await loadAppState('triageHub_trash') || [];
-    const oneMonthAgo = now - ONE_MONTH_MS;
     
     const trashToKeep = [];
     const trashToDelete = [];
@@ -103,7 +102,8 @@ export async function runAutoCleanup() {
  */
 export function shouldCleanFromInbox(item) {
   const now = Date.now();
-  const itemAge = now - (item.timestamp || item.lastAccessed || now);
+  // Items without timestamps are treated as very old (age = now)
+  const itemAge = now - (item.timestamp || item.lastAccessed || 0);
   return itemAge > ONE_WEEK_MS;
 }
 
@@ -124,7 +124,6 @@ export function shouldDeleteFromTrash(item) {
  * @returns {Promise<Object>} Preview of what would be cleaned
  */
 export async function getCleanupPreview() {
-  const now = Date.now();
   const inbox = await loadAppState('triageHub_inbox') || [];
   const trash = await loadAppState('triageHub_trash') || [];
   
