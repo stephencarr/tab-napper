@@ -10,7 +10,7 @@ import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor, navigateToUrl } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
-import { runAutoCleanup } from './utils/autoCleanup.js';
+import { runAutoCleanup, getCleanupPreview } from './utils/autoCleanup.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
@@ -80,7 +80,6 @@ function App() {
       
       // Expose auto-cleanup for manual triggering
       window.TabNapper_runCleanup = async () => {
-        const { runAutoCleanup, getCleanupPreview } = await import('./utils/autoCleanup.js');
         const preview = await getCleanupPreview();
         console.log('🔍 Cleanup preview:', preview);
         const stats = await runAutoCleanup();

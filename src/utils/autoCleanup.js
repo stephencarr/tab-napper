@@ -16,76 +16,61 @@ const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
  */
 export async function runAutoCleanup() {
   console.log('[AutoCleanup] Starting automatic cleanup...');
-  
   const now = Date.now();
-  let stats = {
-    inboxMovedToTrash: 0,
-    trashDeleted: 0
-  };
 
   try {
-    // Step 1: Clean up inbox (move old items to trash)
-    const inbox = await loadAppState('triageHub_inbox') || [];
-    
-    const inboxToKeep = [];
-    const inboxToTrash = [];
-    
-    inbox.forEach(item => {
-      // Items without timestamps are treated as very old (age = now)
-      const itemAge = now - (item.timestamp || item.lastAccessed || 0);
+    // Load all data upfront
+    const [inbox, trash] = await Promise.all([
+      loadAppState('triageHub_inbox') || [],
+      loadAppState('triageHub_trash') || []
+    ]);
+
+    // Partition inbox into items to keep and items to move to trash
+    const { inboxToKeep, inboxToTrash } = inbox.reduce(
+      (acc, item) => {
+        if (shouldCleanFromInbox(item, now)) {
+          acc.inboxToTrash.push({
+            ...item,
+            trashedAt: now,
+            trashedReason: 'auto-cleanup-inbox-aged'
+          });
+        } else {
+          acc.inboxToKeep.push(item);
+        }
+        return acc;
+      },
+      { inboxToKeep: [], inboxToTrash: [] }
+    );
+
+    // Filter trash to find items to keep
+    const trashToKeep = trash.filter(item => !shouldDeleteFromTrash(item, now));
+
+    const inboxMovedCount = inboxToTrash.length;
+    const trashDeletedCount = trash.length - trashToKeep.length;
+
+    // Only perform writes if there are changes
+    if (inboxMovedCount > 0 || trashDeletedCount > 0) {
+      const newTrash = [...trashToKeep, ...inboxToTrash];
+
+      // IMPORTANT: Save trash first. If this succeeds and inbox save fails,
+      // items are duplicated but not lost.
+      await saveAppState('triageHub_trash', newTrash);
       
-      if (itemAge > ONE_WEEK_MS) {
-        // Item is older than 1 week, move to trash
-        inboxToTrash.push({
-          ...item,
-          trashedAt: now,
-          trashedReason: 'auto-cleanup-inbox-aged'
-        });
-      } else {
-        // Keep in inbox
-        inboxToKeep.push(item);
+      if (inboxMovedCount > 0) {
+        await saveAppState('triageHub_inbox', inboxToKeep);
+        console.log(`[AutoCleanup] Moved ${inboxMovedCount} items from inbox to trash`);
       }
-    });
-    
-    // Save cleaned inbox
-    if (inboxToTrash.length > 0) {
-      await saveAppState('triageHub_inbox', inboxToKeep);
       
-      // Add to trash
-      const currentTrash = await loadAppState('triageHub_trash') || [];
-      await saveAppState('triageHub_trash', [...currentTrash, ...inboxToTrash]);
-      
-      stats.inboxMovedToTrash = inboxToTrash.length;
-      console.log(`[AutoCleanup] Moved ${inboxToTrash.length} items from inbox to trash`);
-    }
-    
-    // Step 2: Clean up trash (permanently delete old items)
-    const trash = await loadAppState('triageHub_trash') || [];
-    
-    const trashToKeep = [];
-    const trashToDelete = [];
-    
-    trash.forEach(item => {
-      const trashedTime = item.trashedAt || item.timestamp || 0;
-      const trashAge = now - trashedTime;
-      
-      if (trashAge > ONE_MONTH_MS) {
-        // Item has been in trash for over 1 month, delete permanently
-        trashToDelete.push(item);
-      } else {
-        // Keep in trash
-        trashToKeep.push(item);
+      if (trashDeletedCount > 0) {
+        console.log(`[AutoCleanup] Permanently deleted ${trashDeletedCount} items from trash`);
       }
-    });
-    
-    // Save cleaned trash
-    if (trashToDelete.length > 0) {
-      await saveAppState('triageHub_trash', trashToKeep);
-      
-      stats.trashDeleted = trashToDelete.length;
-      console.log(`[AutoCleanup] Permanently deleted ${trashToDelete.length} items from trash`);
     }
-    
+
+    const stats = {
+      inboxMovedToTrash: inboxMovedCount,
+      trashDeleted: trashDeletedCount
+    };
+
     console.log('[AutoCleanup] Cleanup complete:', stats);
     return stats;
     
@@ -98,10 +83,10 @@ export async function runAutoCleanup() {
 /**
  * Check if an item should be auto-cleaned from inbox
  * @param {Object} item - The item to check
+ * @param {number} [now=Date.now()] - The current timestamp to compare against
  * @returns {boolean}
  */
-export function shouldCleanFromInbox(item) {
-  const now = Date.now();
+export function shouldCleanFromInbox(item, now = Date.now()) {
   // Items without timestamps are treated as very old (age = now)
   const itemAge = now - (item.timestamp || item.lastAccessed || 0);
   return itemAge > ONE_WEEK_MS;
@@ -110,10 +95,10 @@ export function shouldCleanFromInbox(item) {
 /**
  * Check if an item should be permanently deleted from trash
  * @param {Object} item - The item to check
+ * @param {number} [now=Date.now()] - The current timestamp to compare against
  * @returns {boolean}
  */
-export function shouldDeleteFromTrash(item) {
-  const now = Date.now();
+export function shouldDeleteFromTrash(item, now = Date.now()) {
   const trashedTime = item.trashedAt || item.timestamp || 0;
   const trashAge = now - trashedTime;
   return trashAge > ONE_MONTH_MS;
@@ -124,11 +109,12 @@ export function shouldDeleteFromTrash(item) {
  * @returns {Promise<Object>} Preview of what would be cleaned
  */
 export async function getCleanupPreview() {
+  const now = Date.now();
   const inbox = await loadAppState('triageHub_inbox') || [];
   const trash = await loadAppState('triageHub_trash') || [];
   
-  const inboxOldCount = inbox.filter(item => shouldCleanFromInbox(item)).length;
-  const trashOldCount = trash.filter(item => shouldDeleteFromTrash(item)).length;
+  const inboxOldCount = inbox.filter(item => shouldCleanFromInbox(item, now)).length;
+  const trashOldCount = trash.filter(item => shouldDeleteFromTrash(item, now)).length;
   
   return {
     inboxItemsToMove: inboxOldCount,
