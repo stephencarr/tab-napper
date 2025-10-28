@@ -11,7 +11,7 @@ import { cn } from '../utils/cn.js';
 function FidgetControl({ item, onAction, className }) {
   // Control states - simplified to just action and when
   const [actionState, setActionState] = useState('Remind Me');
-  const [whenState, setWhenState] = useState(() => getSmartWhenOptions()[0]);
+  const [whenState, setWhenState] = useState('In 5 minutes');
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   
