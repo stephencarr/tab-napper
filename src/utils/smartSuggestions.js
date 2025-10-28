@@ -97,7 +97,7 @@ async function getLightweightHistory(maxResults = 500) {
       chrome.history.search(
         {
           text: '',
-          maxResults: Math.min(maxResults, 300), // Reduce max to 300 for performance
+          maxResults: Math.min(maxResults, 300), // Limit to 300 results for performance: empirical testing showed that higher values can cause slowdowns or timeouts in Chrome's history API, while 300 provides sufficient data for suggestions without noticeable lag.
           startTime: Date.now() - (SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS * 24 * 60 * 60 * 1000)
         },
         (results) => {
