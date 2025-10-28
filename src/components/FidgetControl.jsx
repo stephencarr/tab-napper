@@ -91,7 +91,7 @@ function FidgetControl({ item, onAction, className }) {
       }
     }
     
-    // PHASE 3: NEXT WEEK - Less granular
+    // PHASE 4: NEXT WEEK - Less granular
     // Only show "Next week" if we're not already at the end of this week
     if (currentDay < 5) { // Monday to Thursday
       options.push('Next week'); // Next Monday 9 AM
