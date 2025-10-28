@@ -1,12 +1,14 @@
 /**
  * Auto-pin utility
  * Pins Tab Napper only once - uses storage to track if pinned
+ * Validates that we're only pinning Tab Napper tabs
  */
 
 import { loadAppState, saveAppState } from './storage.js';
 
 /**
  * Pin the current tab if not already pinned (tracked via storage)
+ * Only pins if current tab is a Tab Napper tab (new tab page)
  * @returns {Promise<boolean>} True if pinned, false if already pinned or failed
  */
 export async function autoPinCurrentTab() {
@@ -16,19 +18,26 @@ export async function autoPinCurrentTab() {
       return false;
     }
 
-    // Check storage flag first (fast, synchronous check)
-    const hasPinnedTab = await loadAppState('tabNapper_hasPinnedTab', false);
-    
-    if (hasPinnedTab) {
-      console.log('[AutoPin] Already have a pinned Tab Napper (from storage flag)');
-      return false;
-    }
-
-    // Get current tab
+    // Get current tab first to validate it's Tab Napper
     const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     if (!currentTab) {
       console.log('[AutoPin] Could not find current tab');
+      return false;
+    }
+
+    // CRITICAL: Only pin if this is actually a Tab Napper tab
+    const isTabNapper = currentTab.url && currentTab.url.includes('triage_hub.html');
+    if (!isTabNapper) {
+      console.log('[AutoPin] Not a Tab Napper tab, skipping pin');
+      return false;
+    }
+
+    // Check storage flag
+    const hasPinnedTab = await loadAppState('tabNapper_hasPinnedTab', false);
+    
+    if (hasPinnedTab) {
+      console.log('[AutoPin] Already have a pinned Tab Napper (from storage flag)');
       return false;
     }
 
@@ -42,6 +51,9 @@ export async function autoPinCurrentTab() {
     // Pin this tab and set storage flag
     await chrome.tabs.update(currentTab.id, { pinned: true });
     await saveAppState('tabNapper_hasPinnedTab', true);
+    
+    // Store the tab ID so we can detect when it's closed
+    await saveAppState('tabNapper_pinnedTabId', currentTab.id);
     
     console.log('[AutoPin] ✅ Tab pinned successfully and flag set');
     return true;

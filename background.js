@@ -442,3 +442,26 @@ chrome.alarms.getAll((alarms) => {
     console.log('[Tab Napper] No active alarms found on startup');
   }
 });
+
+/**
+ * Monitor tab removal to reset auto-pin flag when pinned Tab Napper is closed
+ */
+chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+  try {
+    // Check if this was the pinned Tab Napper tab
+    const result = await chrome.storage.local.get(['tabNapper_pinnedTabId']);
+    const pinnedTabId = result.tabNapper_pinnedTabId;
+    
+    if (pinnedTabId === tabId) {
+      console.log('[Tab Napper] Pinned Tab Napper tab closed, resetting flag');
+      await chrome.storage.local.set({
+        tabNapper_hasPinnedTab: false,
+        tabNapper_pinnedTabId: null
+      });
+    }
+  } catch (error) {
+    console.error('[Tab Napper] Error in tab removal listener:', error);
+  }
+});
+
+console.log('[Tab Napper] Tab removal listener registered for auto-pin reset');
