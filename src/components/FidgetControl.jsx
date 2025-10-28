@@ -13,6 +13,7 @@ function FidgetControl({ item, onAction, className }) {
   const [actionState, setActionState] = useState('Remind Me');
   const [whenState, setWhenState] = useState('In 5 minutes');
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   
   // Action cycle states (removed DELETE NOW)
   const actionCycle = ['Remind Me', 'Follow Up', 'Review'];
@@ -151,6 +152,10 @@ function FidgetControl({ item, onAction, className }) {
         timestamp: Date.now()
       };
       onAction(actionData.action, item, actionData);
+      
+      // Show confirmation
+      setShowConfirmation(true);
+      setTimeout(() => setShowConfirmation(false), 2000);
     }
   }, [actionState, whenState, onAction, item]);
 
@@ -162,15 +167,22 @@ function FidgetControl({ item, onAction, className }) {
 
   return (
     <div className={cn("flex flex-col space-y-2", className)}>
+      {/* Confirmation message */}
+      {showConfirmation && (
+        <div className="text-xs text-green-600 dark:text-green-400 font-medium animate-fade-in">
+          ✓ Moved to Stash
+        </div>
+      )}
+      
       {/* Action Group: Button Group Pattern */}
       <div className="flex items-center justify-end space-x-2">
-        {/* Fidget Pills Button Group */}
+        {/* Fidget Pills Button Group - Fixed width to prevent jumping */}
         <div className="inline-flex rounded-md shadow-sm" role="group">
-          {/* Action Pill */}
+          {/* Action Pill - Fixed width */}
           <button
             onClick={cycleAction}
             className={cn(
-              "relative inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
+              "relative inline-flex items-center justify-center w-24 px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
               "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
             title="Click to cycle through actions"
@@ -178,11 +190,11 @@ function FidgetControl({ item, onAction, className }) {
             {actionState}
           </button>
           
-          {/* When Pill */}
+          {/* When Pill - Fixed width */}
           <button
             onClick={cycleWhen}
             className={cn(
-              "relative -ml-px inline-flex items-center px-3 py-1.5 text-xs font-medium border transition-colors",
+              "relative -ml-px inline-flex items-center justify-center w-40 px-3 py-1.5 text-xs font-medium border transition-colors",
               "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
             title="Click to cycle through timing options"
