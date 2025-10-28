@@ -69,6 +69,13 @@ function App() {
         await clearSuggestionsCache();
         console.log('🗑️ Smart Suggestions cache cleared');
       };
+      
+      // Expose auto-pin reset for debugging
+      window.TabNapper_resetPin = async () => {
+        const { resetPinnedFlag } = await import('./utils/autoPin.js');
+        await resetPinnedFlag();
+        console.log('📌 Auto-pin flag reset - next tab will pin');
+      };
     }
     
     return cleanup;
