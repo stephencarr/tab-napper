@@ -10,6 +10,7 @@ import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor, navigateToUrl } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
+import { runAutoCleanup } from './utils/autoCleanup.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
@@ -76,6 +77,16 @@ function App() {
         await resetPinnedFlag();
         console.log('📌 Auto-pin flag reset - next tab will pin');
       };
+      
+      // Expose auto-cleanup for manual triggering
+      window.TabNapper_runCleanup = async () => {
+        const { runAutoCleanup, getCleanupPreview } = await import('./utils/autoCleanup.js');
+        const preview = await getCleanupPreview();
+        console.log('🔍 Cleanup preview:', preview);
+        const stats = await runAutoCleanup();
+        console.log('✅ Cleanup complete:', stats);
+        return stats;
+      };
     }
     
     return cleanup;
@@ -103,6 +114,17 @@ function App() {
         
         // Auto-pin the tab to keep Tab Napper always visible
         autoPinCurrentTab();
+        
+        // Run auto-cleanup (inbox > 1 week to trash, trash > 1 month deleted)
+        try {
+          const cleanupStats = await runAutoCleanup();
+          if (cleanupStats.inboxMovedToTrash > 0 || cleanupStats.trashDeleted > 0) {
+            console.log('[Tab Napper] Auto-cleanup completed:', cleanupStats);
+          }
+        } catch (cleanupError) {
+          console.error('[Tab Napper] Auto-cleanup failed:', cleanupError);
+          // Don't block app initialization if cleanup fails
+        }
         
         setIsLoading(false);
       } catch (err) {

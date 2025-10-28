@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Auto-Cleanup System
+- **🧹 Automatic Inbox Cleanup**: Items older than 1 week moved to trash
+  - Runs automatically on app startup
+  - Prevents inbox from becoming cluttered
+  - Timestamp-based aging (uses `timestamp` or `lastAccessed`)
+  - Moved items tagged with `trashedReason: 'auto-cleanup-inbox-aged'`
+  
+- **🗑️ Automatic Trash Cleanup**: Items older than 1 month permanently deleted
+  - Trash items older than 30 days are removed
+  - Uses `trashedAt` timestamp for accurate tracking
+  - Keeps trash manageable and performant
+  
+- **🔧 Manual Cleanup Controls**: Console helpers for testing
+  - `window.TabNapper_runCleanup()` - Manually trigger cleanup
+  - Shows preview before execution
+  - Returns cleanup statistics
+
+### Impact
+- Automatic maintenance keeps app performant
+- No user action required - runs on startup
+- Configurable time periods (1 week inbox, 1 month trash)
+- Non-blocking - won't prevent app from loading if cleanup fails
+
+## [0.7.2] - 2025-10-28
+
 ### Added - Bookmark System with Auto-Pin
 - **📌 Quick Access Bookmarking**: One-click bookmarking from search results
   - Bookmark button appears in search results for easy saving
