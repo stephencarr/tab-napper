@@ -72,6 +72,11 @@ export function calculateScheduledTime(whenText) {
       result.setDate(result.getDate() + 1);
       result.setHours(14, 0, 0, 0);
       break;
+    case 'Tomorrow evening':
+      // Set to 6 PM tomorrow
+      result.setDate(result.getDate() + 1);
+      result.setHours(18, 0, 0, 0);
+      break;
     case 'Tomorrow':
       // Set to same time tomorrow
       result.setDate(result.getDate() + 1);

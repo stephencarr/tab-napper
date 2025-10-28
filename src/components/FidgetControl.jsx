@@ -68,28 +68,22 @@ function FidgetControl({ item, onAction, className }) {
       options.push('Tonight'); // 9 PM
     }
     
-    // PHASE 2: THIS WEEK - Weekday names (granular, no duplicates)
+    // PHASE 2: TOMORROW - Time-specific options for next day
+    options.push('Tomorrow morning'); // 9 AM
+    options.push('Tomorrow afternoon'); // 2 PM
+    options.push('Tomorrow evening'); // 6 PM
+    
+    // PHASE 3: THIS WEEK - Weekday names (starting from day after tomorrow)
     // Show upcoming weekdays for the rest of this week
     const daysUntilSunday = (7 - currentDay) % 7; // Days left in this week
     
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 2; i <= 7; i++) { // Start from 2 (day after tomorrow)
       const dayIndex = (currentDay + i) % 7;
       const dayName = weekdays[dayIndex];
       
       // Only add if it's within this week (before next Sunday)
       if (i <= daysUntilSunday) {
-        // Don't add "Tomorrow" as a weekday if we'll have a specific "Tomorrow morning" option
-        if (i === 1) {
-          // Tomorrow - add with time context
-          if (currentHour >= 17) {
-            options.push('Tomorrow morning'); // 9 AM
-          } else {
-            options.push('Tomorrow'); // Same time tomorrow
-          }
-        } else {
-          // Day after tomorrow onwards - just use day name
-          options.push(dayName);
-        }
+        options.push(dayName); // All weekdays default to 9 AM
       } else {
         // Next week - stop adding weekdays
         break;
