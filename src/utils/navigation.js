@@ -7,22 +7,38 @@ import { isCurrentTabPinned } from './autoPin.js';
 
 /**
  * Switch to an existing tab or open a new one
- * Always opens in new tab in current window
+ * First checks if the URL is already open, switches to it if found
+ * Otherwise creates a new tab
  */
 async function navigateToUrl(url, title = null) {
   try {
     console.log(`[Tab Napper] 🚀 Navigating to: ${url}`);
     
     if (typeof chrome !== 'undefined' && chrome.tabs) {
-      // Open in new tab
-      console.log(`[Tab Napper] 🆕 Opening in new tab`);
+      // First, try to find if the tab is already open
+      const existingTab = await findOpenTab(url);
       
-      const newTab = await chrome.tabs.create({
-        url: url,
-        active: true
-      });
-      
-      return { action: 'created_tab', tabId: newTab.id };
+      if (existingTab) {
+        console.log(`[Tab Napper] 🔄 Switching to existing tab: ${existingTab.id}`);
+        
+        // Switch to the existing tab
+        await chrome.tabs.update(existingTab.id, { active: true });
+        
+        // Bring the window to front if needed
+        await chrome.windows.update(existingTab.windowId, { focused: true });
+        
+        return { action: 'switched', tabId: existingTab.id };
+      } else {
+        console.log(`[Tab Napper] 🆕 Opening new tab`);
+        
+        // Create a new tab
+        const newTab = await chrome.tabs.create({
+          url: url,
+          active: true
+        });
+        
+        return { action: 'created', tabId: newTab.id };
+      }
     } else {
       console.log('[Tab Napper] Chrome tabs API not available, opening in new window');
       window.open(url, '_blank');
