@@ -132,6 +132,14 @@ export default function NoteEditor({ noteId }) {
 
       const updateItem = (item) => {
         const trimmedContent = content.trim();
+        
+        // Calculate word count from body only (exclude title/heading)
+        const lines = trimmedContent.split('\n');
+        const firstLine = lines[0] || '';
+        const isHeading = firstLine.trim().startsWith('#');
+        const bodyOnly = isHeading ? lines.slice(1).join('\n').trim() : trimmedContent;
+        const wordCount = bodyOnly ? bodyOnly.split(/\s+/).length : 0;
+        
         return {
           ...item,
           title: newTitle,
@@ -139,7 +147,7 @@ export default function NoteEditor({ noteId }) {
           content,
           timestamp: item.timestamp || Date.now(),
           type: 'note',
-          wordCount: trimmedContent ? trimmedContent.split(/\s+/).length : 0,
+          wordCount,
           lastEditedAt: Date.now(),
         };
       };
