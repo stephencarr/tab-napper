@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tab Napper tab automatically pins itself when opened
   - Pins only once per session to avoid annoying re-pins
   - Storage flag prevents duplicate pinning attempts
-  - Console helper available for testing: `window._resetAutoPinFlag()`
+  - Console helper available for testing: `window.TabNapper_resetPin()`
   
 - **🎯 Intelligent Link Behavior**: Context-aware tab management
   - Checks for already-open tabs before creating new ones
