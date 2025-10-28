@@ -9,7 +9,7 @@ import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
-import { autoPinCurrentTab } from './utils/autoPin.js';
+import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
@@ -164,20 +164,32 @@ function App() {
   }, []);
 
   // Handle search result clicks
-  const handleSearchResultClick = (item) => {
+  const handleSearchResultClick = async (item) => {
     // Notes: open in internal editor
     if (item.isNote || item.type === 'note') {
       openNoteEditor(item.id);
       return;
     }
 
-    // If item has a URL, open it in a new window to keep Tab Napper visible
+    // If item has a URL, check if pinned to decide how to open
     if (item.url) {
-      chrome.windows.create({ url: item.url, focused: true, type: 'normal' }, () => {
-        if (chrome.runtime.lastError) {
-          console.error(`[Tab Napper] Error creating window for ${item.url}: ${chrome.runtime.lastError.message}`);
-        }
-      });
+      const isPinned = await isCurrentTabPinned();
+      
+      if (isPinned) {
+        // Pinned: open in new window
+        chrome.windows.create({ url: item.url, focused: true, type: 'normal' }, () => {
+          if (chrome.runtime.lastError) {
+            console.error(`[Tab Napper] Error creating window for ${item.url}: ${chrome.runtime.lastError.message}`);
+          }
+        });
+      } else {
+        // Not pinned: open as regular tab
+        chrome.tabs.create({ url: item.url, active: true }, () => {
+          if (chrome.runtime.lastError) {
+            console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
+          }
+        });
+      }
     }
   };
 

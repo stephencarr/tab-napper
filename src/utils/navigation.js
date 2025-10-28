@@ -3,27 +3,44 @@
  * Handles opening, switching, and managing browser tabs
  */
 
+import { isCurrentTabPinned } from './autoPin.js';
+
 /**
  * Switch to an existing tab or open a new one
- * Now opens in new window to keep Tab Napper always visible
+ * Opens in new window if Tab Napper is pinned, otherwise opens in tab
  */
 async function navigateToUrl(url, title = null) {
   try {
     console.log(`[Tab Napper] 🚀 Navigating to: ${url}`);
     
-    if (typeof chrome !== 'undefined' && chrome.windows) {
-      // Open in new window instead of tab to keep Tab Napper visible
-      console.log(`[Tab Napper] 🆕 Opening in new window`);
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
+      // Check if current Tab Napper tab is pinned
+      const isPinned = await isCurrentTabPinned();
       
-      const newWindow = await chrome.windows.create({
-        url: url,
-        focused: true,
-        type: 'normal'
-      });
-      
-      return { action: 'created_window', windowId: newWindow.id };
+      if (isPinned) {
+        // Pinned = user wants Tab Napper to stay visible, open in new window
+        console.log(`[Tab Napper] 🆕 Tab is pinned, opening in new window`);
+        
+        const newWindow = await chrome.windows.create({
+          url: url,
+          focused: true,
+          type: 'normal'
+        });
+        
+        return { action: 'created_window', windowId: newWindow.id };
+      } else {
+        // Not pinned = regular tab behavior, open in same window
+        console.log(`[Tab Napper] 🆕 Tab not pinned, opening as tab`);
+        
+        const newTab = await chrome.tabs.create({
+          url: url,
+          active: true
+        });
+        
+        return { action: 'created_tab', tabId: newTab.id };
+      }
     } else {
-      console.log('[Tab Napper] Chrome windows API not available, opening in new window');
+      console.log('[Tab Napper] Chrome tabs API not available, opening in new window');
       window.open(url, '_blank');
       return { action: 'external', tabId: null };
     }
