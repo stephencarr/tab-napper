@@ -30,6 +30,18 @@ function FidgetControl({ item, onAction, className }) {
     return () => clearTimeout(timeoutId);
   }, [deleteConfirmation]);
   
+  // Auto-hide confirmation message after 2 seconds
+  useEffect(() => {
+    if (!showConfirmation) return;
+    
+    const timerId = setTimeout(() => {
+      setShowConfirmation(false);
+    }, 2000);
+    
+    // Cleanup timeout on unmount or when showConfirmation becomes false
+    return () => clearTimeout(timerId);
+  }, [showConfirmation]);
+  
   // Smart contextual "when" options - completely overhauled for context-sensitivity
   const getSmartWhenOptions = () => {
     const now = new Date();
@@ -153,9 +165,8 @@ function FidgetControl({ item, onAction, className }) {
       };
       onAction(actionData.action, item, actionData);
       
-      // Show confirmation
+      // Show confirmation (useEffect will handle auto-hide)
       setShowConfirmation(true);
-      setTimeout(() => setShowConfirmation(false), 2000);
     }
   }, [actionState, whenState, onAction, item]);
 
