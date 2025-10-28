@@ -110,7 +110,8 @@ export function calculateScheduledTime(whenText) {
     }
     
     case 'Next Monday': {
-      // Specific case for end of week
+      // Specific case for Friday/Saturday users - shows "Next Monday" for clarity
+      // (Same behavior as "Next week", but more explicit day name)
       const currentDay = result.getDay();
       const daysToMonday = (1 - currentDay + 7) % 7 || 7;
       result.setDate(result.getDate() + daysToMonday);
