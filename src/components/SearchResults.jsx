@@ -169,6 +169,7 @@ function SearchResults({
                 items={items}
                 onItemClick={onItemClick}
                 highlightText={highlightTextWithTerm}
+                showBookmark={true}
               />
             </div>
           );

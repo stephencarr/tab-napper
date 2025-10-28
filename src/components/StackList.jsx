@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
+import BookmarkButton from './BookmarkButton.jsx';
 
 /**
  * Favicon component with error handling
@@ -37,7 +38,7 @@ function FaviconIcon({ url }) {
  * Implements Tailwind UI stack pattern for consistent list display
  * Used by RecentlyVisited, SearchResults, and other list views
  */
-function StackList({ items, onItemClick, renderIcon, highlightText }) {
+function StackList({ items, onItemClick, renderIcon, highlightText, showBookmark = false }) {
   // Default icon renderer if none provided
   const defaultRenderIcon = (item) => <FaviconIcon url={item.url} />;
 
@@ -82,6 +83,20 @@ function StackList({ items, onItemClick, renderIcon, highlightText }) {
                 </div>
               )}
             </div>
+            
+            {/* Bookmark Button - Right side */}
+            {showBookmark && item.url && (
+              <div className="flex-shrink-0 mt-0.5">
+                <BookmarkButton 
+                  item={item} 
+                  size="sm"
+                  onBookmarkChange={() => {
+                    // Trigger reactive update if needed
+                    window.dispatchEvent(new CustomEvent('storage-updated'));
+                  }}
+                />
+              </div>
+            )}
           </div>
         </li>
       ))}
