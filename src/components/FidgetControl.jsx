@@ -3,6 +3,93 @@ import { ChevronRight, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
+ * Smart contextual "when" options generator
+ * Moved outside component to avoid recreation on every render
+ */
+const getSmartWhenOptions = () => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const currentDate = now.getDate();
+  const currentMonth = now.getMonth();
+  const options = [];
+  
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  // PHASE 1: TODAY - Fine-grained hour-based options
+  // Only show hour options that make sense for remaining hours in the day
+  const hoursLeftToday = 23 - currentHour;
+  
+  // Always show very short intervals
+  options.push('In 5 minutes', 'In 10 minutes', 'In 30 minutes');
+  
+  // Add hour options based on how much of the day is left
+  if (hoursLeftToday >= 1) options.push('In 1 hour');
+  if (hoursLeftToday >= 2) options.push('In 2 hours');
+  if (hoursLeftToday >= 3) options.push('In 3 hours');
+  if (hoursLeftToday >= 4) options.push('In 4 hours');
+  
+  // Context-aware same-day options
+  if (currentHour < 12) {
+    // Morning: offer afternoon
+    options.push('This afternoon'); // 2 PM
+  }
+  if (currentHour < 17) {
+    // Before evening: offer evening
+    options.push('This evening'); // 6 PM
+  }
+  if (currentHour < 20) {
+    // Before night: offer tonight
+    options.push('Tonight'); // 9 PM
+  }
+  
+  // PHASE 2: TOMORROW - Time-specific options for next day
+  options.push('Tomorrow morning'); // 9 AM
+  options.push('Tomorrow afternoon'); // 2 PM
+  options.push('Tomorrow evening'); // 6 PM
+  
+  // PHASE 3: THIS WEEK - Weekday names (starting from day after tomorrow)
+  // Show upcoming weekdays for the rest of this week
+  const daysUntilSunday = (7 - currentDay) % 7; // Days left in this week
+  
+  for (let i = 2; i <= 7; i++) { // Start from 2 (day after tomorrow)
+    const dayIndex = (currentDay + i) % 7;
+    const dayName = weekdays[dayIndex];
+    
+    // Only add if it's within this week (before next Sunday)
+    if (i <= daysUntilSunday) {
+      options.push(dayName); // All weekdays default to 9 AM
+    } else {
+      // Next week - stop adding weekdays
+      break;
+    }
+  }
+  
+  // PHASE 4: NEXT WEEK - Less granular
+  // Only show "Next week" if we're not already at the end of this week
+  if (currentDay < 5) { // Monday to Thursday
+    options.push('Next week'); // Next Monday 9 AM
+  } else if (currentDay === 5 || currentDay === 6) { // Friday or Saturday
+    options.push('Next Monday'); // Specific day name for clarity
+  }
+  
+  // PHASE 5: TWO WEEKS - Even less granular
+  const twoWeeksFromNow = new Date(now);
+  twoWeeksFromNow.setDate(currentDate + 14);
+  
+  // Only show "2 weeks" if we're in the first half of the month
+  if (currentDate <= 15) {
+    options.push('In 2 weeks');
+  }
+  
+  // PHASE 6: MONTH - Least granular
+  options.push('Next month');
+  
+  return options;
+};
+
+/**
  * FidgetControl - ADHD-Friendly Fidget Control Logic and UI Component
  * 
  * A tactile, low-friction interface for scheduling and managing stashed items.
@@ -41,90 +128,6 @@ function FidgetControl({ item, onAction, className }) {
     // Cleanup timeout on unmount or when showConfirmation becomes false
     return () => clearTimeout(timerId);
   }, [showConfirmation]);
-  
-  // Smart contextual "when" options - completely overhauled for context-sensitivity
-  const getSmartWhenOptions = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const currentDate = now.getDate();
-    const currentMonth = now.getMonth();
-    const options = [];
-    
-    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
-    // PHASE 1: TODAY - Fine-grained hour-based options
-    // Only show hour options that make sense for remaining hours in the day
-    const hoursLeftToday = 23 - currentHour;
-    
-    // Always show very short intervals
-    options.push('In 5 minutes', 'In 10 minutes', 'In 30 minutes');
-    
-    // Add hour options based on how much of the day is left
-    if (hoursLeftToday >= 1) options.push('In 1 hour');
-    if (hoursLeftToday >= 2) options.push('In 2 hours');
-    if (hoursLeftToday >= 3) options.push('In 3 hours');
-    if (hoursLeftToday >= 4) options.push('In 4 hours');
-    
-    // Context-aware same-day options
-    if (currentHour < 12) {
-      // Morning: offer afternoon
-      options.push('This afternoon'); // 2 PM
-    }
-    if (currentHour < 17) {
-      // Before evening: offer evening
-      options.push('This evening'); // 6 PM
-    }
-    if (currentHour < 20) {
-      // Before night: offer tonight
-      options.push('Tonight'); // 9 PM
-    }
-    
-    // PHASE 2: TOMORROW - Time-specific options for next day
-    options.push('Tomorrow morning'); // 9 AM
-    options.push('Tomorrow afternoon'); // 2 PM
-    options.push('Tomorrow evening'); // 6 PM
-    
-    // PHASE 3: THIS WEEK - Weekday names (starting from day after tomorrow)
-    // Show upcoming weekdays for the rest of this week
-    const daysUntilSunday = (7 - currentDay) % 7; // Days left in this week
-    
-    for (let i = 2; i <= 7; i++) { // Start from 2 (day after tomorrow)
-      const dayIndex = (currentDay + i) % 7;
-      const dayName = weekdays[dayIndex];
-      
-      // Only add if it's within this week (before next Sunday)
-      if (i <= daysUntilSunday) {
-        options.push(dayName); // All weekdays default to 9 AM
-      } else {
-        // Next week - stop adding weekdays
-        break;
-      }
-    }
-    
-    // PHASE 4: NEXT WEEK - Less granular
-    // Only show "Next week" if we're not already at the end of this week
-    if (currentDay < 5) { // Monday to Thursday
-      options.push('Next week'); // Next Monday 9 AM
-    } else if (currentDay === 5 || currentDay === 6) { // Friday or Saturday
-      options.push('Next Monday'); // Specific day name for clarity
-    }
-    
-    // PHASE 5: TWO WEEKS - Even less granular
-    const twoWeeksFromNow = new Date(now);
-    twoWeeksFromNow.setDate(currentDate + 14);
-    
-    // Only show "2 weeks" if we're in the first half of the month
-    if (currentDate <= 15) {
-      options.push('In 2 weeks');
-    }
-    
-    // PHASE 6: MONTH - Least granular
-    options.push('Next month');
-    
-    return options;
-  };
 
   // Cycle to next action state
   const cycleAction = useCallback(() => {
@@ -139,7 +142,7 @@ function FidgetControl({ item, onAction, className }) {
     const currentIndex = whenOptions.indexOf(whenState);
     const nextIndex = (currentIndex + 1) % whenOptions.length;
     setWhenState(whenOptions[nextIndex]);
-  }, [whenState, getSmartWhenOptions]);
+  }, [whenState]); // Now only depends on whenState
 
   // Handle delete button click
   const handleDelete = useCallback(() => {

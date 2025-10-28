@@ -47,8 +47,10 @@ function DevPanel({ isOpen, onClose, className }) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Intercept console.log to capture logs
+  // Intercept console.log to capture logs (only when panel is open)
   useEffect(() => {
+    if (!isOpen) return; // Don't intercept if panel is closed
+    
     const originalLog = console.log;
     const originalError = console.error;
     const originalWarn = console.warn;
@@ -85,7 +87,7 @@ function DevPanel({ isOpen, onClose, className }) {
       console.error = originalError;
       console.warn = originalWarn;
     };
-  }, [addLog]);
+  }, [isOpen, addLog]);
 
   // Quick action buttons
   const quickActions = [

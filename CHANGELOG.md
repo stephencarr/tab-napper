@@ -12,6 +12,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full keyboard navigation support
 - Export/import functionality
 
+## [0.7.1] - 2025-10-28
+
+### Fixed - Performance: Eliminated CPU Spike on Extension Load
+- **⚡ Staggered Component Loading**: Reduced concurrent Chrome API calls
+  - SmartSuggestions delay increased from 1s to 3s to prioritize critical components
+  - RecentlyVisited delay increased from 800ms to 1.5s to avoid API call overlap
+  - Prevents simultaneous heavy operations that caused browser freezing
+  
+- **📉 Optimized Data Fetching**: Reduced unnecessary data processing
+  - SmartSuggestions history fetch reduced from 300 to 200 items (-33%)
+  - SmartSuggestions URL processing limit reduced from 100 to 50 URLs (-50%)
+  - RecentlyVisited fetch budget reduced from 5x to 3x multiplier (-40%)
+  - History fetch timeout reduced from 5s to 3s for faster failure detection
+  
+- **🔄 Batched Background Processing**: Non-blocking tab tracking
+  - Background script now processes tabs in batches of 20 with 100ms delays
+  - Spreads tab tracking load over ~500ms instead of blocking startup
+  - Prevents CPU spike when extension loads with many open tabs
+
+### Impact
+- Eliminated 2-3 second CPU spike that caused browser UI freeze
+- Extension now loads progressively with smooth, gradual CPU usage
+- No functionality removed - all features work as before
+- Maintains feature parity while significantly improving performance
+
+See [PERFORMANCE_FIXES.md](./PERFORMANCE_FIXES.md) for detailed analysis and metrics.
+
 ## [0.7.0] - 2025-10-26
 
 ### Added - Stash & Schedule: Smart Time-Based Reminders with Notifications

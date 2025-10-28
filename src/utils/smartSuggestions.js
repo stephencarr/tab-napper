@@ -97,7 +97,7 @@ async function getLightweightHistory(maxResults = 500) {
       chrome.history.search(
         {
           text: '',
-          maxResults: Math.min(maxResults, 300), // Limit to 300 results for performance: empirical testing showed that higher values can cause slowdowns or timeouts in Chrome's history API, while 300 provides sufficient data for suggestions without noticeable lag.
+          maxResults: Math.min(maxResults, 200), // Reduced from 300 to 200 for faster performance: still provides sufficient data for suggestions while reducing processing time
           startTime: Date.now() - (SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS * 24 * 60 * 60 * 1000)
         },
         (results) => {
@@ -110,9 +110,9 @@ async function getLightweightHistory(maxResults = 500) {
       );
     });
     
-    // Timeout after 5 seconds
+    // Timeout after 3 seconds (reduced from 5s for faster failure)
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('History fetch timeout')), 5000)
+      setTimeout(() => reject(new Error('History fetch timeout')), 3000)
     );
     
     const historyItems = await Promise.race([fetchPromise, timeoutPromise]);
@@ -426,7 +426,7 @@ export async function generateSmartSuggestions() {
     debugLog('Suggestions', `Found ${urlGroups.size} unique URLs to analyze`);
     
     // Limit processing to prevent hang on large datasets
-    const MAX_URLS_TO_PROCESS = 100; // Safety limit
+    const MAX_URLS_TO_PROCESS = 50; // Reduced from 100 for faster processing
     if (urlGroups.size > MAX_URLS_TO_PROCESS) {
       console.warn(`[SmartSuggestions] Large dataset detected (${urlGroups.size} URLs). Processing first ${MAX_URLS_TO_PROCESS} for performance.`);
       debugLog('Suggestions', `⚠️ Limiting analysis to ${MAX_URLS_TO_PROCESS} URLs for performance`);

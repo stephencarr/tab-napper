@@ -17,13 +17,14 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
 
   // Load suggestions on component mount - with error handling for large datasets
   useEffect(() => {
-    // Delay initial load slightly to avoid blocking extension startup
+    // Delay initial load to avoid blocking extension startup
+    // Increased to 3 seconds to let other critical components load first
     const timeoutId = setTimeout(() => {
       loadSuggestions().catch(err => {
         console.error('[SmartSuggestions] Failed to load on mount:', err);
         setError('Failed to load suggestions');
       });
-    }, 1000); // 1 second delay to let extension fully initialize
+    }, 3000); // 3 second delay to prioritize inbox/stashed items
     
     return () => clearTimeout(timeoutId);
   }, []);

@@ -125,16 +125,15 @@ export function calculateScheduledTime(whenText) {
       result.setDate(result.getDate() + daysUntilSaturday);
       result.setHours(10, 0, 0, 0);
       break;
-    case 'Next week':
+    case 'Next week': {
       // Set to Monday 9 AM next week
+      // The `|| 7` ensures we always jump to the *next* Monday (if today is Monday, it adds 7 days)
       const day = result.getDay();
-      const daysToNextMonday = (1 - day + 7) % 7;
+      const daysToNextMonday = (1 - day + 7) % 7 || 7;
       result.setDate(result.getDate() + daysToNextMonday);
-      if (daysToNextMonday === 0) { // If it's Monday, go to next week's Monday
-        result.setDate(result.getDate() + 7);
-      }
       result.setHours(9, 0, 0, 0);
       break;
+    }
     case 'In 2 weeks':
       // Set to same day/time in 2 weeks
       result.setDate(result.getDate() + 14);

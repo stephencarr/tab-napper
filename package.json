@@ -1,6 +1,6 @@
 {
   "name": "triage-hub",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "ADHD-friendly Chrome extension with stash & schedule, quick note capture, and intelligent notifications",
   "private": true,
   "type": "module",
