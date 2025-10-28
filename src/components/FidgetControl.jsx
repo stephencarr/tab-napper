@@ -120,7 +120,7 @@ function FidgetControl({ item, onAction, className }) {
       options.push('In 2 weeks');
     }
     
-    // PHASE 5: MONTH - Least granular
+    // PHASE 6: MONTH - Least granular
     options.push('Next month');
     
     return options;
