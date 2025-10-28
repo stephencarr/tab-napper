@@ -27,11 +27,18 @@ export async function autoPinCurrentTab() {
     }
 
     // CRITICAL: Only pin if this is actually a Tab Napper tab
-    const isTabNapper = currentTab.url && currentTab.url.includes('triage_hub.html');
+    // Check for both the extension URL and chrome://newtab (which redirects to us)
+    const isTabNapper = 
+      (currentTab.url && currentTab.url.includes('triage_hub.html')) ||
+      currentTab.url === 'chrome://newtab/' ||
+      currentTab.pendingUrl?.includes('triage_hub.html');
+    
     if (!isTabNapper) {
-      console.log('[AutoPin] Not a Tab Napper tab, skipping pin');
+      console.log('[AutoPin] Not a Tab Napper tab, skipping pin. URL:', currentTab.url);
       return false;
     }
+
+    console.log('[AutoPin] Tab Napper detected, checking pin status...');
 
     // Check storage flag
     const hasPinnedTab = await loadAppState('tabNapper_hasPinnedTab', false);
