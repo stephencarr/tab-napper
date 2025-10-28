@@ -138,7 +138,6 @@ export function calculateScheduledTime(whenText) {
     case 'In 2 weeks':
       // Set to same day/time in 2 weeks
       result.setDate(result.getDate() + 14);
-      break;
       result.setHours(9, 0, 0, 0);
       break;
     case 'Next month':
