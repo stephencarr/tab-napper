@@ -55,12 +55,27 @@ export default function NoteEditor({ noteId }) {
         const fromInbox = (inbox || []).find((n) => n.id === noteId);
         const note = fromNotes || fromInbox;
         currentCollectionsRef.current = { inInbox: !!fromInbox, inNotes: !!fromNotes };
+        
+        console.log('[NoteEditor] Loading note:', noteId, note);
+        
         if (note) {
-          setContent(note.description || note.content || '');
-          const t = note.title || generateTitle(note.description || note.content || '');
+          const noteContent = note.description || note.content || '';
+          setContent(noteContent);
+          
+          // Generate title from content if title is default or empty
+          const hasDefaultTitle = !note.title || note.title === 'Untitled Note';
+          const t = hasDefaultTitle ? generateTitle(noteContent) : note.title;
+          
+          console.log('[NoteEditor] Title logic:', { 
+            hasDefaultTitle, 
+            noteTitle: note.title, 
+            generatedTitle: t,
+            contentLength: noteContent.length 
+          });
+          
           setTitle(t);
           document.title = `${t} • Note`;
-          lastSavedContentRef.current = note.description || note.content || '';
+          lastSavedContentRef.current = noteContent;
         } else {
           // Create a placeholder note in notes collection
           const now = Date.now();
