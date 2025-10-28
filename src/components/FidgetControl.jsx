@@ -56,7 +56,7 @@ const getSmartWhenOptions = () => {
     const dayName = weekdays[dayIndex];
     
     // Only add if it's within this week (before next Sunday)
-    if (i <= daysRemainingInWeek) {
+    if (i < daysRemainingInWeek) {
       options.push(dayName); // All weekdays default to 9 AM
     } else {
       // Next week - stop adding weekdays

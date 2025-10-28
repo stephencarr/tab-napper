@@ -91,8 +91,8 @@ function StackList({ items, onItemClick, renderIcon, highlightText, showBookmark
                   item={item} 
                   size="sm"
                   onBookmarkChange={() => {
-                    // Trigger reactive update if needed
-                    window.dispatchEvent(new CustomEvent('storage-updated'));
+                    // The reactive store is already updated by bookmarkItem/unbookmarkItem
+                    // No manual event dispatch needed
                   }}
                 />
               </div>

@@ -23,9 +23,19 @@ export default function BookmarkButton({
 
   // Check bookmark status on mount and when item changes
   useEffect(() => {
+    let isMounted = true;
+    
     if (item?.url) {
-      isBookmarked(item.url).then(setBookmarked);
+      isBookmarked(item.url).then(result => {
+        if (isMounted) {
+          setBookmarked(result);
+        }
+      });
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [item?.url]);
 
   const handleClick = async (e) => {

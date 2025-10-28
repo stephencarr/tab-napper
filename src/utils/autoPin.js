@@ -41,7 +41,7 @@ export async function autoPinCurrentTab() {
     console.log('[AutoPin] Tab Napper detected, checking pin status...');
 
     // Check storage flag
-    const hasPinnedTab = await loadAppState('tabNapper_hasPinnedTab', false);
+    const hasPinnedTab = await loadAppState('tabNapper_hasPinnedTab') || false;
     
     if (hasPinnedTab) {
       console.log('[AutoPin] Already have a pinned Tab Napper (from storage flag)');

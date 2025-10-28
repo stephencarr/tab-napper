@@ -253,6 +253,18 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 // Handle tab removal - capture regular tabs, re-triage notes
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   try {
+    // Check if this was the pinned Tab Napper tab
+    const result = await chrome.storage.local.get(['tabNapper_pinnedTabId']);
+    const pinnedTabId = result.tabNapper_pinnedTabId;
+    
+    if (pinnedTabId === tabId) {
+      console.log('[Tab Napper] Pinned Tab Napper tab closed, resetting flag');
+      await chrome.storage.local.set({
+        tabNapper_hasPinnedTab: false,
+        tabNapper_pinnedTabId: null
+      });
+    }
+    
     // Check if this was a note tab
     const noteId = noteTabTracker.get(tabId);
     
@@ -443,25 +455,4 @@ chrome.alarms.getAll((alarms) => {
   }
 });
 
-/**
- * Monitor tab removal to reset auto-pin flag when pinned Tab Napper is closed
- */
-chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-  try {
-    // Check if this was the pinned Tab Napper tab
-    const result = await chrome.storage.local.get(['tabNapper_pinnedTabId']);
-    const pinnedTabId = result.tabNapper_pinnedTabId;
-    
-    if (pinnedTabId === tabId) {
-      console.log('[Tab Napper] Pinned Tab Napper tab closed, resetting flag');
-      await chrome.storage.local.set({
-        tabNapper_hasPinnedTab: false,
-        tabNapper_pinnedTabId: null
-      });
-    }
-  } catch (error) {
-    console.error('[Tab Napper] Error in tab removal listener:', error);
-  }
-});
-
-console.log('[Tab Napper] Tab removal listener registered for auto-pin reset');
+// (Auto-pin reset logic consolidated into main tab removal listener above)
