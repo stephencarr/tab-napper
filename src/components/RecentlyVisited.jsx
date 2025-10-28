@@ -66,7 +66,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
  * Recently Visited component for the Left Column
  * Shows browser history with visual status indicators
  */
-function RecentlyVisited({ className, maxItems = 50 }) {
+function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 30 for performance
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -110,13 +110,13 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   // Load history on component mount and when stashed tabs change
   useEffect(() => {
     // Debounce rapid triggers so we don't hammer chrome.history.search
-    // Increased initial delay to stagger with other startup operations
+    // Increased delay to reduce frequency of expensive history queries
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
     debounceRef.current = setTimeout(() => {
       loadHistory();
-    }, 1500); // Increased from 800ms to 1500ms to avoid overlap with SmartSuggestions
+    }, 2000); // Increased from 1500ms to 2000ms to reduce API calls
   }, [maxItems, stashedTabsLength, loadHistory]);
 
   // Handle clicking on a history item

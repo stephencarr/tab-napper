@@ -24,8 +24,9 @@ function ContextualComponent({ className }) {
   useEffect(() => {
     loadContextualMatch();
     
-    // Check for contextual matches less frequently to reduce noise
-    const interval = setInterval(loadContextualMatch, 120000); // Every 2 minutes instead of 30 seconds
+    // PERFORMANCE: Increased to 5 minutes to reduce CPU usage
+    // This feature queries all open tabs and runs matching algorithm
+    const interval = setInterval(loadContextualMatch, 300000); // Every 5 minutes (was 2 minutes)
     
     return () => clearInterval(interval);
   }, [stashedTabs]); // Add stashedTabs as dependency

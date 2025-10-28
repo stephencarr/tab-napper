@@ -97,7 +97,7 @@ async function getLightweightHistory(maxResults = 500) {
       chrome.history.search(
         {
           text: '',
-          maxResults: Math.min(maxResults, 200), // Reduced from 300 to 200 for faster performance: still provides sufficient data for suggestions while reducing processing time
+          maxResults: Math.min(maxResults, 100), // Reduced from 200 to 100 for better performance: sufficient for suggestions while reducing CPU load
           startTime: Date.now() - (SUGGESTION_CONFIG.ANALYSIS_WINDOW_DAYS * 24 * 60 * 60 * 1000)
         },
         (results) => {
