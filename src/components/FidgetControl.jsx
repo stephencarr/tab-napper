@@ -111,7 +111,7 @@ function FidgetControl({ item, onAction, className }) {
       options.push('Next Monday'); // Specific day name for clarity
     }
     
-    // PHASE 4: TWO WEEKS - Even less granular
+    // PHASE 5: TWO WEEKS - Even less granular
     const twoWeeksFromNow = new Date(now);
     twoWeeksFromNow.setDate(currentDate + 14);
     
