@@ -155,13 +155,14 @@ export function calculateScheduledTime(whenText) {
 
 /**
  * Create a unique alarm name for an item
- * Format: tabNapper_{action}_{itemId}
+ * Format: tabNapper::{action}::{itemId}
+ * Using :: separator to avoid conflicts with underscores in action names
  * @param {Object} item - The item to schedule
  * @param {string} action - The action type (remind_me, follow_up, review)
  * @returns {string} - Unique alarm name
  */
 export function createAlarmName(item, action) {
-  return `tabNapper_${action}_${item.id}`;
+  return `tabNapper::${action}::${item.id}`;
 }
 
 /**
