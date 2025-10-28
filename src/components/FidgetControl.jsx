@@ -9,10 +9,8 @@ import { cn } from '../utils/cn.js';
 const getSmartWhenOptions = () => {
   const now = new Date();
   const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
   const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
   const currentDate = now.getDate();
-  const currentMonth = now.getMonth();
   const options = [];
   
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
