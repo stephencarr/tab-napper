@@ -82,7 +82,7 @@ function App() {
       window.TabNapper_runCleanup = async () => {
         const preview = await getCleanupPreview();
         console.log('🔍 Cleanup preview:', preview);
-        const stats = await runAutoCleanup();
+        const stats = await runAutoCleanup(true); // Force = true for manual trigger
         console.log('✅ Cleanup complete:', stats);
         return stats;
       };

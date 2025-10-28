@@ -9,12 +9,37 @@ import { loadAppState, saveAppState } from './storage.js';
 // Time constants
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Run auto-cleanup on inbox and trash
+ * Check if cleanup should run (throttle to once per hour)
+ * @returns {Promise<boolean>}
+ */
+async function shouldRunCleanup() {
+  const lastCleanup = await loadAppState('tabNapper_lastCleanup') || 0;
+  const now = Date.now();
+  return (now - lastCleanup) > ONE_HOUR_MS;
+}
+
+/**
+ * Record that cleanup was run
+ */
+async function recordCleanupRun() {
+  await saveAppState('tabNapper_lastCleanup', Date.now());
+}
+
+/**
+ * Run auto-cleanup on inbox and trash (throttled to once per hour)
+ * @param {boolean} force - Force cleanup even if throttled
  * @returns {Promise<Object>} Cleanup statistics
  */
-export async function runAutoCleanup() {
+export async function runAutoCleanup(force = false) {
+  // Throttle: only run once per hour unless forced
+  if (!force && !(await shouldRunCleanup())) {
+    console.log('[AutoCleanup] Skipping - last run was less than 1 hour ago');
+    return { inboxMovedToTrash: 0, trashDeleted: 0, skipped: true };
+  }
+  
   console.log('[AutoCleanup] Starting automatic cleanup...');
   const now = Date.now();
 
@@ -70,6 +95,9 @@ export async function runAutoCleanup() {
       inboxMovedToTrash: inboxMovedCount,
       trashDeleted: trashDeletedCount
     };
+
+    // Record successful cleanup run
+    await recordCleanupRun();
 
     console.log('[AutoCleanup] Cleanup complete:', stats);
     return stats;
