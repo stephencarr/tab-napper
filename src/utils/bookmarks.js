@@ -14,7 +14,7 @@ export async function bookmarkItem(item) {
   try {
     console.log('[Bookmarks] Adding bookmark:', item.title || item.url);
     
-    const quickAccessCards = await loadAppState('triageHub_quickAccessCards', []);
+    const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
     
     // Check if already bookmarked
     const alreadyBookmarked = quickAccessCards.some(card => card.url === item.url);
@@ -53,7 +53,7 @@ export async function unbookmarkItem(url) {
   try {
     console.log('[Bookmarks] Removing bookmark:', url);
     
-    const quickAccessCards = await loadAppState('triageHub_quickAccessCards', []);
+    const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
     const updated = quickAccessCards.filter(card => card.url !== url);
     
     await saveAppState('triageHub_quickAccessCards', updated);
@@ -72,7 +72,7 @@ export async function unbookmarkItem(url) {
  */
 export async function isBookmarked(url) {
   try {
-    const quickAccessCards = await loadAppState('triageHub_quickAccessCards', []);
+    const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
     return quickAccessCards.some(card => card.url === url);
   } catch (error) {
     console.error('[Bookmarks] Error checking bookmark:', error);
@@ -86,7 +86,7 @@ export async function isBookmarked(url) {
  */
 export async function getAllBookmarks() {
   try {
-    const quickAccessCards = await loadAppState('triageHub_quickAccessCards', []);
+    const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
     return quickAccessCards.filter(card => card.type === 'bookmark' || card.source === 'user-bookmark');
   } catch (error) {
     console.error('[Bookmarks] Error getting bookmarks:', error);
