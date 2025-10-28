@@ -31,7 +31,7 @@ function FidgetControl({ item, onAction, className }) {
   }, [deleteConfirmation]);
   
   // Smart contextual "when" options - completely overhauled for context-sensitivity
-  const getSmartWhenOptions = useCallback(() => {
+  const getSmartWhenOptions = () => {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -112,7 +112,7 @@ function FidgetControl({ item, onAction, className }) {
     options.push('Next month');
     
     return options;
-  }, []);
+  };
 
   // Cycle to next action state
   const cycleAction = useCallback(() => {
