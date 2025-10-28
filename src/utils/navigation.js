@@ -5,38 +5,25 @@
 
 /**
  * Switch to an existing tab or open a new one
+ * Now opens in new window to keep Tab Napper always visible
  */
 async function navigateToUrl(url, title = null) {
   try {
     console.log(`[Tab Napper] 🚀 Navigating to: ${url}`);
     
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
-      // First, try to find if the tab is already open
-      const existingTab = await findOpenTab(url);
+    if (typeof chrome !== 'undefined' && chrome.windows) {
+      // Open in new window instead of tab to keep Tab Napper visible
+      console.log(`[Tab Napper] 🆕 Opening in new window`);
       
-      if (existingTab) {
-        console.log(`[Tab Napper] 🔄 Switching to existing tab: ${existingTab.id}`);
-        
-        // Switch to the existing tab
-        await chrome.tabs.update(existingTab.id, { active: true });
-        
-        // Bring the window to front if needed
-        await chrome.windows.update(existingTab.windowId, { focused: true });
-        
-        return { action: 'switched', tabId: existingTab.id };
-      } else {
-        console.log(`[Tab Napper] 🆕 Opening new tab`);
-        
-        // Create a new tab
-        const newTab = await chrome.tabs.create({
-          url: url,
-          active: true
-        });
-        
-        return { action: 'created', tabId: newTab.id };
-      }
+      const newWindow = await chrome.windows.create({
+        url: url,
+        focused: true,
+        type: 'normal'
+      });
+      
+      return { action: 'created_window', windowId: newWindow.id };
     } else {
-      console.log('[Tab Napper] Chrome tabs API not available, opening in new window');
+      console.log('[Tab Napper] Chrome windows API not available, opening in new window');
       window.open(url, '_blank');
       return { action: 'external', tabId: null };
     }

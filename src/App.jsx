@@ -9,6 +9,7 @@ import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
 import { openNoteEditor } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
+import { autoPinCurrentTab } from './utils/autoPin.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
@@ -93,6 +94,9 @@ function App() {
         // Set up tab capture listeners
         setupTabCaptureListeners();
         
+        // Auto-pin the tab to keep Tab Napper always visible
+        autoPinCurrentTab();
+        
         setIsLoading(false);
       } catch (err) {
         console.error('[Tab Napper] Initialization error:', err);
@@ -167,11 +171,11 @@ function App() {
       return;
     }
 
-    // If item has a URL, open it in a new tab
+    // If item has a URL, open it in a new window to keep Tab Napper visible
     if (item.url) {
-      chrome.tabs.create({ url: item.url }, () => {
+      chrome.windows.create({ url: item.url, focused: true, type: 'normal' }, () => {
         if (chrome.runtime.lastError) {
-          console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
+          console.error(`[Tab Napper] Error creating window for ${item.url}: ${chrome.runtime.lastError.message}`);
         }
       });
     }
