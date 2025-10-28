@@ -51,12 +51,19 @@ export default function NoteEditor({ noteId }) {
           loadAppState('triageHub_notes'),
           loadAppState('triageHub_inbox')
         ]);
+        
+        console.log('[NoteEditor] All notes:', notes);
+        console.log('[NoteEditor] All inbox:', inbox);
+        console.log('[NoteEditor] Looking for noteId:', noteId);
+        
         const fromNotes = (notes || []).find((n) => n.id === noteId);
         const fromInbox = (inbox || []).find((n) => n.id === noteId);
         const note = fromNotes || fromInbox;
         currentCollectionsRef.current = { inInbox: !!fromInbox, inNotes: !!fromNotes };
         
-        console.log('[NoteEditor] Loading note:', noteId, note);
+        console.log('[NoteEditor] Found in notes:', fromNotes);
+        console.log('[NoteEditor] Found in inbox:', fromInbox);
+        console.log('[NoteEditor] Using note:', note);
         
         if (note) {
           const noteContent = note.description || note.content || '';
