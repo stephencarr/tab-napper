@@ -48,15 +48,15 @@ const getSmartWhenOptions = () => {
   options.push('Tomorrow evening'); // 6 PM
   
   // PHASE 3: THIS WEEK - Weekday names (starting from day after tomorrow)
-  // Show upcoming weekdays for the rest of this week
-  const daysUntilSunday = (7 - currentDay) % 7; // Days left in this week
+  // Show upcoming weekdays for the rest of this week (before reaching Sunday)
+  const daysRemainingInWeek = currentDay === 0 ? 7 : 7 - currentDay; // Days until next Sunday
   
   for (let i = 2; i <= 7; i++) { // Start from 2 (day after tomorrow)
     const dayIndex = (currentDay + i) % 7;
     const dayName = weekdays[dayIndex];
     
     // Only add if it's within this week (before next Sunday)
-    if (i <= daysUntilSunday) {
+    if (i <= daysRemainingInWeek) {
       options.push(dayName); // All weekdays default to 9 AM
     } else {
       // Next week - stop adding weekdays
