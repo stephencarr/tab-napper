@@ -7,7 +7,7 @@ import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normali
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
-import { openNoteEditor } from './utils/navigation.js';
+import { openNoteEditor, navigateToUrl } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
@@ -178,13 +178,14 @@ function App() {
       return;
     }
 
-    // If item has a URL, open in new tab
+    // If item has a URL, use navigateToUrl for consistent behavior
+    // (includes duplicate tab detection and switching)
     if (item.url) {
-      chrome.tabs.create({ url: item.url, active: true }, () => {
-        if (chrome.runtime.lastError) {
-          console.error(`[Tab Napper] Error creating tab for ${item.url}: ${chrome.runtime.lastError.message}`);
-        }
-      });
+      try {
+        await navigateToUrl(item.url, item.title);
+      } catch (error) {
+        console.error(`[Tab Napper] Error navigating to ${item.url}:`, error);
+      }
     }
   };
 
