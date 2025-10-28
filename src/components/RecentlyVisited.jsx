@@ -14,9 +14,8 @@ async function getLightweightRecentHistory(maxItems = 50) {
   }
   
   try {
-    // Fetch up to 5x the requested items to account for filtering out excluded patterns
-    // (e.g., chrome://, file://, etc.) and ensure enough valid items remain after filtering.
-    const searchBudget = Math.max(50, maxItems * 5);
+    // Reduced from 5x to 3x for better performance while still accounting for filtering
+    const searchBudget = Math.max(50, maxItems * 3);
     
     const historyItems = await new Promise((resolve, reject) => {
       chrome.history.search(
@@ -111,12 +110,13 @@ function RecentlyVisited({ className, maxItems = 50 }) {
   // Load history on component mount and when stashed tabs change
   useEffect(() => {
     // Debounce rapid triggers so we don't hammer chrome.history.search
+    // Increased initial delay to stagger with other startup operations
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
     debounceRef.current = setTimeout(() => {
       loadHistory();
-    }, 400);
+    }, 1500); // Increased from 800ms to 1500ms to avoid overlap with SmartSuggestions
   }, [maxItems, stashedTabsLength, loadHistory]);
 
   // Handle clicking on a history item

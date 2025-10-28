@@ -3,6 +3,93 @@ import { ChevronRight, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
+ * Smart contextual "when" options generator
+ * Moved outside component to avoid recreation on every render
+ */
+const getSmartWhenOptions = () => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const currentDate = now.getDate();
+  const currentMonth = now.getMonth();
+  const options = [];
+  
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  // PHASE 1: TODAY - Fine-grained hour-based options
+  // Only show hour options that make sense for remaining hours in the day
+  const hoursLeftToday = 23 - currentHour;
+  
+  // Always show very short intervals
+  options.push('In 5 minutes', 'In 10 minutes', 'In 30 minutes');
+  
+  // Add hour options based on how much of the day is left
+  if (hoursLeftToday >= 1) options.push('In 1 hour');
+  if (hoursLeftToday >= 2) options.push('In 2 hours');
+  if (hoursLeftToday >= 3) options.push('In 3 hours');
+  if (hoursLeftToday >= 4) options.push('In 4 hours');
+  
+  // Context-aware same-day options
+  if (currentHour < 12) {
+    // Morning: offer afternoon
+    options.push('This afternoon'); // 2 PM
+  }
+  if (currentHour < 17) {
+    // Before evening: offer evening
+    options.push('This evening'); // 6 PM
+  }
+  if (currentHour < 20) {
+    // Before night: offer tonight
+    options.push('Tonight'); // 9 PM
+  }
+  
+  // PHASE 2: TOMORROW - Time-specific options for next day
+  options.push('Tomorrow morning'); // 9 AM
+  options.push('Tomorrow afternoon'); // 2 PM
+  options.push('Tomorrow evening'); // 6 PM
+  
+  // PHASE 3: THIS WEEK - Weekday names (starting from day after tomorrow)
+  // Show upcoming weekdays for the rest of this week
+  const daysUntilSunday = (7 - currentDay) % 7; // Days left in this week
+  
+  for (let i = 2; i <= 7; i++) { // Start from 2 (day after tomorrow)
+    const dayIndex = (currentDay + i) % 7;
+    const dayName = weekdays[dayIndex];
+    
+    // Only add if it's within this week (before next Sunday)
+    if (i <= daysUntilSunday) {
+      options.push(dayName); // All weekdays default to 9 AM
+    } else {
+      // Next week - stop adding weekdays
+      break;
+    }
+  }
+  
+  // PHASE 4: NEXT WEEK - Less granular
+  // Only show "Next week" if we're not already at the end of this week
+  if (currentDay < 5) { // Monday to Thursday
+    options.push('Next week'); // Next Monday 9 AM
+  } else if (currentDay === 5 || currentDay === 6) { // Friday or Saturday
+    options.push('Next Monday'); // Specific day name for clarity
+  }
+  
+  // PHASE 5: TWO WEEKS - Even less granular
+  const twoWeeksFromNow = new Date(now);
+  twoWeeksFromNow.setDate(currentDate + 14);
+  
+  // Only show "2 weeks" if we're in the first half of the month
+  if (currentDate <= 15) {
+    options.push('In 2 weeks');
+  }
+  
+  // PHASE 6: MONTH - Least granular
+  options.push('Next month');
+  
+  return options;
+};
+
+/**
  * FidgetControl - ADHD-Friendly Fidget Control Logic and UI Component
  * 
  * A tactile, low-friction interface for scheduling and managing stashed items.
@@ -11,8 +98,9 @@ import { cn } from '../utils/cn.js';
 function FidgetControl({ item, onAction, className }) {
   // Control states - simplified to just action and when
   const [actionState, setActionState] = useState('Remind Me');
-  const [whenState, setWhenState] = useState('In 1 hour');
+  const [whenState, setWhenState] = useState('In 5 minutes');
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   
   // Action cycle states (removed DELETE NOW)
   const actionCycle = ['Remind Me', 'Follow Up', 'Review'];
@@ -29,32 +117,17 @@ function FidgetControl({ item, onAction, className }) {
     return () => clearTimeout(timeoutId);
   }, [deleteConfirmation]);
   
-  // Smart contextual "when" options that always make logical sense
-  const getSmartWhenOptions = useCallback(() => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const options = [];
+  // Auto-hide confirmation message after 2 seconds
+  useEffect(() => {
+    if (!showConfirmation) return;
     
-    // Always available quick options
-    options.push('In 30 minutes', 'In 1 hour', 'In 2 hours', 'In 3 hours');
+    const timerId = setTimeout(() => {
+      setShowConfirmation(false);
+    }, 2000);
     
-    // Context-aware options based on time of day
-    if (currentHour < 12) {
-      // Morning: offer afternoon and evening
-      options.push('This afternoon', 'This evening');
-    } else if (currentHour < 17) {
-      // Afternoon: offer evening and tomorrow
-      options.push('This evening', 'Tomorrow morning');
-    } else {
-      // Evening: offer tomorrow options
-      options.push('Tomorrow morning', 'Tomorrow afternoon');
-    }
-    
-    // Always available future options
-    options.push('Tomorrow', 'This weekend', 'Next week', 'Next month');
-    
-    return options;
-  }, []);
+    // Cleanup timeout on unmount or when showConfirmation becomes false
+    return () => clearTimeout(timerId);
+  }, [showConfirmation]);
 
   // Cycle to next action state
   const cycleAction = useCallback(() => {
@@ -69,7 +142,7 @@ function FidgetControl({ item, onAction, className }) {
     const currentIndex = whenOptions.indexOf(whenState);
     const nextIndex = (currentIndex + 1) % whenOptions.length;
     setWhenState(whenOptions[nextIndex]);
-  }, [whenState, getSmartWhenOptions]);
+  }, [whenState]); // Now only depends on whenState
 
   // Handle delete button click
   const handleDelete = useCallback(() => {
@@ -94,6 +167,9 @@ function FidgetControl({ item, onAction, className }) {
         timestamp: Date.now()
       };
       onAction(actionData.action, item, actionData);
+      
+      // Show confirmation (useEffect will handle auto-hide)
+      setShowConfirmation(true);
     }
   }, [actionState, whenState, onAction, item]);
 
@@ -105,15 +181,22 @@ function FidgetControl({ item, onAction, className }) {
 
   return (
     <div className={cn("flex flex-col space-y-2", className)}>
+      {/* Confirmation message */}
+      {showConfirmation && (
+        <div className="text-xs text-green-600 dark:text-green-400 font-medium animate-fade-in">
+          ✓ Moved to Stash
+        </div>
+      )}
+      
       {/* Action Group: Button Group Pattern */}
       <div className="flex items-center justify-end space-x-2">
-        {/* Fidget Pills Button Group */}
+        {/* Fidget Pills Button Group - Fixed width to prevent jumping */}
         <div className="inline-flex rounded-md shadow-sm" role="group">
-          {/* Action Pill */}
+          {/* Action Pill - Fixed width */}
           <button
             onClick={cycleAction}
             className={cn(
-              "relative inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
+              "relative inline-flex items-center justify-center w-24 px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors",
               "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
             title="Click to cycle through actions"
@@ -121,11 +204,11 @@ function FidgetControl({ item, onAction, className }) {
             {actionState}
           </button>
           
-          {/* When Pill */}
+          {/* When Pill - Fixed width */}
           <button
             onClick={cycleWhen}
             className={cn(
-              "relative -ml-px inline-flex items-center px-3 py-1.5 text-xs font-medium border transition-colors",
+              "relative -ml-px inline-flex items-center justify-center w-40 px-3 py-1.5 text-xs font-medium border transition-colors",
               "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750"
             )}
             title="Click to cycle through timing options"

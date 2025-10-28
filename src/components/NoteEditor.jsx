@@ -51,16 +51,38 @@ export default function NoteEditor({ noteId }) {
           loadAppState('triageHub_notes'),
           loadAppState('triageHub_inbox')
         ]);
+        
+        console.log('[NoteEditor] All notes:', notes);
+        console.log('[NoteEditor] All inbox:', inbox);
+        console.log('[NoteEditor] Looking for noteId:', noteId);
+        
         const fromNotes = (notes || []).find((n) => n.id === noteId);
         const fromInbox = (inbox || []).find((n) => n.id === noteId);
         const note = fromNotes || fromInbox;
         currentCollectionsRef.current = { inInbox: !!fromInbox, inNotes: !!fromNotes };
+        
+        console.log('[NoteEditor] Found in notes:', fromNotes);
+        console.log('[NoteEditor] Found in inbox:', fromInbox);
+        console.log('[NoteEditor] Using note:', note);
+        
         if (note) {
-          setContent(note.description || note.content || '');
-          const t = note.title || generateTitle(note.description || note.content || '');
+          const noteContent = note.description || note.content || '';
+          setContent(noteContent);
+          
+          // Generate title from content if title is default or empty
+          const hasDefaultTitle = !note.title || note.title === 'Untitled Note';
+          const t = hasDefaultTitle ? generateTitle(noteContent) : note.title;
+          
+          console.log('[NoteEditor] Title logic:', { 
+            hasDefaultTitle, 
+            noteTitle: note.title, 
+            generatedTitle: t,
+            contentLength: noteContent.length 
+          });
+          
           setTitle(t);
           document.title = `${t} • Note`;
-          lastSavedContentRef.current = note.description || note.content || '';
+          lastSavedContentRef.current = noteContent;
         } else {
           // Create a placeholder note in notes collection
           const now = Date.now();
@@ -110,6 +132,14 @@ export default function NoteEditor({ noteId }) {
 
       const updateItem = (item) => {
         const trimmedContent = content.trim();
+        
+        // Calculate word count from body only (exclude title/heading)
+        const lines = trimmedContent.split('\n');
+        const firstLine = lines[0] || '';
+        const isHeading = firstLine.trim().startsWith('#');
+        const bodyOnly = isHeading ? lines.slice(1).join('\n').trim() : trimmedContent;
+        const wordCount = bodyOnly ? bodyOnly.split(/\s+/).length : 0;
+        
         return {
           ...item,
           title: newTitle,
@@ -117,7 +147,7 @@ export default function NoteEditor({ noteId }) {
           content,
           timestamp: item.timestamp || Date.now(),
           type: 'note',
-          wordCount: trimmedContent ? trimmedContent.split(/\s+/).length : 0,
+          wordCount,
           lastEditedAt: Date.now(),
         };
       };

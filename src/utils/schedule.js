@@ -9,7 +9,7 @@ const MS_PER_DAY = 86400000;
 
 /**
  * Calculate the timestamp for a given "when" string
- * @param {string} whenText - Human-readable time text (e.g., "In 1 hour", "Tomorrow morning")
+ * @param {string} whenText - Human-readable time text (e.g., "In 5 minutes", "In 1 hour", "Tomorrow morning")
  * @returns {number} - Unix timestamp in milliseconds
  */
 export function calculateScheduledTime(whenText) {
@@ -17,6 +17,12 @@ export function calculateScheduledTime(whenText) {
   const result = new Date(now);
 
   switch (whenText) {
+    case 'In 5 minutes':
+      result.setMinutes(result.getMinutes() + 5);
+      break;
+    case 'In 10 minutes':
+      result.setMinutes(result.getMinutes() + 10);
+      break;
     case 'In 30 minutes':
       result.setMinutes(result.getMinutes() + 30);
       break;
@@ -28,6 +34,9 @@ export function calculateScheduledTime(whenText) {
       break;
     case 'In 3 hours':
       result.setHours(result.getHours() + 3);
+      break;
+    case 'In 4 hours':
+      result.setHours(result.getHours() + 4);
       break;
     case 'This afternoon':
       // Set to 2 PM today
@@ -45,6 +54,14 @@ export function calculateScheduledTime(whenText) {
         result.setDate(result.getDate() + 1);
       }
       break;
+    case 'Tonight':
+      // Set to 9 PM today
+      result.setHours(21, 0, 0, 0);
+      // If we're already past 9 PM, add a day
+      if (result <= now) {
+        result.setDate(result.getDate() + 1);
+      }
+      break;
     case 'Tomorrow morning':
       // Set to 9 AM tomorrow
       result.setDate(result.getDate() + 1);
@@ -55,10 +72,52 @@ export function calculateScheduledTime(whenText) {
       result.setDate(result.getDate() + 1);
       result.setHours(14, 0, 0, 0);
       break;
+    case 'Tomorrow evening':
+      // Set to 6 PM tomorrow
+      result.setDate(result.getDate() + 1);
+      result.setHours(18, 0, 0, 0);
+      break;
     case 'Tomorrow':
       // Set to same time tomorrow
       result.setDate(result.getDate() + 1);
       break;
+    
+    // Weekday options (Monday, Tuesday, etc.)
+    case 'Monday':
+    case 'Tuesday':
+    case 'Wednesday':
+    case 'Thursday':
+    case 'Friday':
+    case 'Saturday':
+    case 'Sunday': {
+      // Map day names to numbers (0 = Sunday, 1 = Monday, etc.)
+      const dayMap = {
+        'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+        'Thursday': 4, 'Friday': 5, 'Saturday': 6
+      };
+      const targetDay = dayMap[whenText];
+      const currentDay = result.getDay();
+      
+      // Calculate days to add (always next occurrence of that day within this week or next week)
+      let daysToAdd = (targetDay - currentDay + 7) % 7;
+      if (daysToAdd === 0) {
+        daysToAdd = 7; // If it's the same day, schedule for next week
+      }
+      
+      result.setDate(result.getDate() + daysToAdd);
+      result.setHours(9, 0, 0, 0); // Set to 9 AM on that day
+      break;
+    }
+    
+    case 'Next Monday': {
+      // Specific case for end of week
+      const currentDay = result.getDay();
+      const daysToMonday = (1 - currentDay + 7) % 7 || 7;
+      result.setDate(result.getDate() + daysToMonday);
+      result.setHours(9, 0, 0, 0);
+      break;
+    }
+    
     case 'This weekend':
       // Set to Saturday 10 AM
       // Calculates days until Saturday (where Sunday=0, Saturday=6); the `|| 7` ensures that if today is Saturday, it schedules for next Saturday.
@@ -66,14 +125,18 @@ export function calculateScheduledTime(whenText) {
       result.setDate(result.getDate() + daysUntilSaturday);
       result.setHours(10, 0, 0, 0);
       break;
-    case 'Next week':
+    case 'Next week': {
       // Set to Monday 9 AM next week
+      // The `|| 7` ensures we always jump to the *next* Monday (if today is Monday, it adds 7 days)
       const day = result.getDay();
-      const daysToAdd = (1 - day + 7) % 7;
-      result.setDate(result.getDate() + daysToAdd);
-      if (daysToAdd === 0) { // If it's Monday, go to next week's Monday
-        result.setDate(result.getDate() + 7);
-      }
+      const daysToNextMonday = (1 - day + 7) % 7 || 7;
+      result.setDate(result.getDate() + daysToNextMonday);
+      result.setHours(9, 0, 0, 0);
+      break;
+    }
+    case 'In 2 weeks':
+      // Set to same day/time in 2 weeks
+      result.setDate(result.getDate() + 14);
       result.setHours(9, 0, 0, 0);
       break;
     case 'Next month':

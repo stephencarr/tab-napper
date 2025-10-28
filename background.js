@@ -192,14 +192,31 @@ async function retriageNote(noteId) {
 
 // (Removed unused isNoteTab helper)
 
-// Initialize tab tracking on startup
+// Initialize tab tracking on startup (batched to reduce initial load)
 chrome.tabs.query({}, (tabs) => {
   if (chrome.runtime.lastError) {
     console.error('[Tab Napper] Error querying tabs on startup:', chrome.runtime.lastError.message);
     return;
   }
-  tabs.forEach(tab => trackTab(tab));
-  console.log('[Tab Napper] Tracking', tabs.length, 'existing tabs');
+  
+  // Process tabs in smaller batches to avoid blocking
+  const batchSize = 20;
+  let processed = 0;
+  
+  function processBatch() {
+    const batch = tabs.slice(processed, processed + batchSize);
+    batch.forEach(tab => trackTab(tab));
+    processed += batchSize;
+    
+    if (processed < tabs.length) {
+      // Schedule next batch asynchronously
+      setTimeout(processBatch, 100);
+    } else {
+      console.log('[Tab Napper] Tracking', tabs.length, 'existing tabs');
+    }
+  }
+  
+  processBatch();
 });
 
 // Track new tabs when created
@@ -299,8 +316,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       return;
     }
     
-    // Parse alarm name: tabNapper_{action}_{itemId}
-    const alarmNameRegex = /^tabNapper_(remind_me|follow_up|review)_(.+)$/;
+    // Parse alarm name: tabNapper::{action}::{itemId}
+    const alarmNameRegex = /^tabNapper::(remind_me|follow_up|review)::(.+)$/;
     const match = alarm.name.match(alarmNameRegex);
     if (!match) {
       console.warn('[Tab Napper] Invalid alarm name format:', alarm.name);

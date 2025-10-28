@@ -66,13 +66,22 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       // Create note item
       const timestamp = Date.now();
       const noteTitle = generateTitle(noteContent);
+      
+      // Calculate word count from body only (exclude title/heading)
+      const trimmedContent = noteContent.trim();
+      const lines = trimmedContent.split('\n');
+      const firstLine = lines[0] || '';
+      const isHeading = firstLine.trim().startsWith('#');
+      const bodyOnly = isHeading ? lines.slice(1).join('\n').trim() : trimmedContent;
+      const wordCount = bodyOnly ? bodyOnly.split(/\s+/).length : 0;
+      
       const noteItem = {
         id: `note-${crypto.randomUUID()}`,
         title: noteTitle,
         content: noteContent,
         timestamp: timestamp,
         type: 'note',
-        wordCount: noteContent.trim().split(/\s+/).length
+        wordCount
       };      // Add to beginning of inbox (most recent first)
       const updatedInbox = [noteItem, ...currentInbox];
       

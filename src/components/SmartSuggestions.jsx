@@ -15,9 +15,18 @@ function SmartSuggestions({ className, onSuggestionPinned }) {
   const [stats, setStats] = useState(null);
   const [showStats, setShowStats] = useState(false);
 
-  // Load suggestions on component mount and when pinned items change
+  // Load suggestions on component mount - with error handling for large datasets
   useEffect(() => {
-    loadSuggestions();
+    // Delay initial load to avoid blocking extension startup
+    // Increased to 3 seconds to let other critical components load first
+    const timeoutId = setTimeout(() => {
+      loadSuggestions().catch(err => {
+        console.error('[SmartSuggestions] Failed to load on mount:', err);
+        setError('Failed to load suggestions');
+      });
+    }, 3000); // 3 second delay to prioritize inbox/stashed items
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Refresh suggestions when pinning state changes
