@@ -381,6 +381,48 @@ function AlarmsTab({ addLog, showToast }) {
     }
   };
 
+  // Phase 2: Find and close duplicate tabs
+  const findDuplicateTabs = async () => {
+    try {
+      addLog('🔍 Scanning for duplicate tabs...', 'info');
+      const { findAndCloseDuplicateTabs } = await import('../utils/navigation.js');
+      
+      // Dry run first to show what would be closed
+      const dryRun = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: true });
+      
+      if (dryRun.duplicates.length === 0) {
+        addLog('✅ No duplicate tabs found', 'success');
+        showToast('No duplicates found', 'success');
+        return;
+      }
+      
+      addLog(`📊 Found ${dryRun.duplicates.length} URLs with duplicates`, 'info');
+      addLog(`Would close ${dryRun.closed} tabs, keeping ${dryRun.kept}`, 'info');
+      
+      const confirmMsg = `Found ${dryRun.duplicates.length} duplicate URLs.\nWill close ${dryRun.closed} tabs, keeping the newest of each.\n\nProceed?`;
+      if (!window.confirm(confirmMsg)) {
+        addLog('❌ Duplicate cleanup cancelled', 'info');
+        return;
+      }
+      
+      // Actually close the duplicates
+      addLog('🗑️ Closing duplicate tabs...', 'info');
+      showToast('⏳ Closing duplicates...', 'info');
+      
+      const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
+      addLog(`✅ Closed ${result.closed} duplicate tabs`, 'success');
+      showToast(`Closed ${result.closed} duplicates`, 'success');
+      
+      // Log details
+      result.duplicates.forEach(dup => {
+        addLog(`  - ${dup.url.substring(0, 50)}...: kept 1, closed ${dup.closedTabs.length}`, 'info');
+      });
+    } catch (error) {
+      addLog(`❌ Error finding duplicates: ${error.message}`, 'error');
+      showToast('Error finding duplicates', 'error');
+    }
+  };
+
   const triggerAllScheduledAlarms = async () => {
     console.log('[DevPanel] triggerAllScheduledAlarms called');
     
@@ -643,6 +685,13 @@ function AlarmsTab({ addLog, showToast }) {
             description="Clear all alarms and move ALL stashed items to inbox"
             onClick={flushAllStashed}
             color="red"
+          />
+          <ActionButton
+            icon={X}
+            label="🔍 Find & Close Duplicate Tabs"
+            description="Scan for and close duplicate tabs (keeps newest)"
+            onClick={findDuplicateTabs}
+            color="orange"
           />
         </div>
       </Section>

@@ -13,6 +13,89 @@ const tabTracker = new Map(); // Map<tabId, tabInfo>
 const noteTabTracker = new Map(); // Map<tabId, noteId>
 
 /**
+ * Deduplicate items in a collection, keeping only the most recent
+ */
+function deduplicateItems(items) {
+  const urlMap = new Map();
+  const notesAndOthers = []; // Items without URLs (notes, etc.)
+  
+  // Separate items with URLs from notes/items without URLs
+  items.forEach(item => {
+    if (!item.url) {
+      // Notes and other items without URLs - keep all of them
+      notesAndOthers.push(item);
+      return;
+    }
+    
+    const normalized = normalizeUrl(item.url);
+    if (!urlMap.has(normalized)) {
+      urlMap.set(normalized, []);
+    }
+    urlMap.get(normalized).push(item);
+  });
+  
+  // For each URL, keep only the most recent item
+  const deduplicated = [...notesAndOthers]; // Start with all notes
+  urlMap.forEach((duplicates, url) => {
+    if (duplicates.length === 1) {
+      deduplicated.push(duplicates[0]);
+    } else {
+      // Sort by timestamp (most recent first)
+      const sorted = duplicates.sort((a, b) => {
+        const timeA = a.timestamp || a.capturedAt || a.stashedAt || 0;
+        const timeB = b.timestamp || b.capturedAt || b.stashedAt || 0;
+        return timeB - timeA;
+      });
+      // Keep the most recent
+      deduplicated.push(sorted[0]);
+      console.log(`[Tab Napper] 🧹 Removed ${sorted.length - 1} duplicate(s) of: ${sorted[0].title}`);
+    }
+  });
+  
+  return deduplicated;
+}
+
+/**
+ * Clean up duplicates across all collections
+ */
+async function cleanupDuplicates() {
+  console.log('[Tab Napper] 🧹 Starting periodic duplicate cleanup...');
+  
+  try {
+    const collections = {
+      triageHub_inbox: 'Inbox',
+      triageHub_stashedTabs: 'Stashed',
+      triageHub_trash: 'Trash'
+    };
+    const keys = Object.keys(collections);
+    const result = await chrome.storage.local.get(keys);
+    
+    let changed = false;
+
+    for (const key of keys) {
+      const items = result[key];
+      if (items && items.length > 0) {
+        const originalCount = items.length;
+        const cleaned = deduplicateItems(items);
+        if (cleaned.length !== originalCount) {
+          await chrome.storage.local.set({ [key]: cleaned });
+          console.log(`[Tab Napper] 🧹 ${collections[key]}: ${originalCount} → ${cleaned.length} items`);
+          changed = true;
+        }
+      }
+    }
+    
+    if (changed) {
+      console.log('[Tab Napper] ✅ Duplicate cleanup complete');
+    } else {
+      console.log('[Tab Napper] ✅ No duplicates found');
+    }
+  } catch (error) {
+    console.error('[Tab Napper] ❌ Error during duplicate cleanup:', error);
+  }
+}
+
+/**
  * Normalize URL for deduplication
  */
 function normalizeUrl(url) {
@@ -305,6 +388,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
     console.log('[Tab Napper] ⏰ Alarm fired:', alarm.name);
     
+    // Handle periodic duplicate cleanup
+    if (alarm.name === 'cleanup-duplicates') {
+      console.log('[Tab Napper] Running periodic duplicate cleanup...');
+      await cleanupDuplicates();
+      return;
+    }
+    
     // Handle test alarms
     if (alarm.name === 'test-alarm') {
       console.log('[Tab Napper] ✅ Test alarm fired successfully!');
@@ -456,3 +546,19 @@ chrome.alarms.getAll((alarms) => {
 });
 
 // (Auto-pin reset logic consolidated into main tab removal listener above)
+
+// =============================================================================
+// PERIODIC DEDUPLICATION
+// =============================================================================
+
+// Run cleanup immediately on startup
+console.log('[Tab Napper] 🚀 Running initial duplicate cleanup...');
+cleanupDuplicates();
+
+// Set up periodic cleanup using chrome.alarms (every 5 minutes)
+chrome.alarms.create('cleanup-duplicates', {
+  periodInMinutes: 5
+});
+
+console.log('[Tab Napper] ⏰ Scheduled periodic duplicate cleanup (every 5 minutes)');
+// Note: The cleanup alarm is handled by the existing chrome.alarms.onAlarm listener above
