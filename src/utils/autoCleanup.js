@@ -81,8 +81,14 @@ export async function runAutoCleanup(force = false) {
     if (inboxMovedCount > 0 || trashDeletedCount > 0) {
       const newTrash = [...trashToKeep, ...inboxToTrash];
 
-      // IMPORTANT: Save trash first. If this succeeds and inbox save fails,
-      // items are duplicated but not lost.
+      // CRITICAL: Save trash FIRST to prevent data loss
+      // If trash save succeeds but inbox save fails:
+      //   → Items are duplicated (inbox + trash) = SAFE, no data loss
+      // If trash save fails:
+      //   → Nothing happens, inbox unchanged = SAFE
+      // 
+      // DO NOT save inbox first! If inbox succeeds but trash fails:
+      //   → Items removed from inbox, never added to trash = DATA LOSS!
       await saveAppState('triageHub_trash', newTrash);
       
       if (inboxMovedCount > 0) {
@@ -119,8 +125,18 @@ export async function runAutoCleanup(force = false) {
  * @returns {boolean}
  */
 export function shouldCleanFromInbox(item, now = Date.now()) {
-  // Items without timestamps are treated as very old (age = now)
-  const itemAge = now - (item.timestamp || item.lastAccessed || 0);
+  const itemTimestamp = item.timestamp || item.lastAccessed || 0;
+  
+  // Log warning if item has no timestamp (likely corrupted data)
+  if (itemTimestamp === 0) {
+    console.warn('[AutoCleanup] Item without timestamp will be cleaned:', {
+      title: item.title,
+      url: item.url,
+      id: item.id
+    });
+  }
+  
+  const itemAge = now - itemTimestamp;
   return itemAge > ONE_WEEK_MS;
 }
 

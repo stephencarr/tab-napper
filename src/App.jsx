@@ -118,7 +118,15 @@ function App() {
         try {
           const cleanupStats = await runAutoCleanup();
           if (cleanupStats.inboxMovedToTrash > 0 || cleanupStats.trashDeleted > 0) {
-            console.log('[Tab Napper] Auto-cleanup completed:', cleanupStats);
+            console.log('[Tab Napper] 🧹 Auto-cleanup completed:', cleanupStats);
+            
+            // User-friendly notification
+            if (cleanupStats.inboxMovedToTrash > 0) {
+              console.log(`[Tab Napper] 📦 ${cleanupStats.inboxMovedToTrash} old inbox items moved to trash (>1 week old)`);
+            }
+            if (cleanupStats.trashDeleted > 0) {
+              console.log(`[Tab Napper] 🗑️ ${cleanupStats.trashDeleted} items permanently deleted from trash (>1 month old)`);
+            }
           }
         } catch (cleanupError) {
           console.error('[Tab Napper] Auto-cleanup failed:', cleanupError);
