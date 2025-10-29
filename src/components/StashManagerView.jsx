@@ -164,12 +164,14 @@ function StashManagerView({
     if (result.failed > 0) {
       console.warn(`[Tab Napper] ⚠️ Failed to close ${result.failed} tabs`);
     }
-    
+
     // Show result message
+    let message = `✅ Closed ${result.closed} tabs`;
     if (result.skipped > 0) {
-      alert(`✅ Closed ${result.closed} tabs\n📌 Preserved ${result.skipped} pinned tabs`);
+      message += `\n📌 Preserved ${result.skipped} pinned tabs`;
     }
-    
+    alert(message);
+
     // Refresh the open tabs status
     await refreshOpenTabs();
   };
@@ -418,7 +420,7 @@ function StashManagerView({
             
             {filteredItems.length > 10 && (
               <div className="mt-6 text-center text-sm text-calm-500 dark:text-calm-400">
-                Showing {showOnlyOpen ? `${filteredItems.length} open items` : `all ${filteredItems.length} items`}
+                Showing {showOnlyOpen ? `${filteredItems.length} open items` : `all ${currentData.items.length} items`}
               </div>
             )}
           </div>

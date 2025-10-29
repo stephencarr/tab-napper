@@ -242,6 +242,9 @@ async function findAndCloseDuplicateTabs(options = {}) {
       }
       
       // Sort unpinned tabs - newest first or oldest first based on option
+      // NOTE: This assumes newer tabs have higher IDs. Chrome typically assigns IDs sequentially,
+      // but may reuse IDs after browser restarts or when reaching maximum ID values.
+      // For most use cases (same session), this ordering is reliable.
       const sortedUnpinned = [...unpinnedTabs].sort((a, b) => {
         if (keepNewest) {
           return b.id - a.id; // Newer tabs have higher IDs

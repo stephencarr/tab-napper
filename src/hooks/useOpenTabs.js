@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { findOpenTab } from '../utils/navigation.js';
 
+// Configuration: Debounce delay for tab event handling (in milliseconds)
+// Prevents excessive checks when tabs are rapidly created/updated/removed
+const DEBOUNCE_DELAY_MS = 500;
+
 /**
  * Custom hook to track which items are currently open in browser tabs
  * Phase 2: Enhanced with real-time Chrome tab event listeners
@@ -76,7 +80,7 @@ export function useOpenTabs(items = [], pollInterval = 10000, useRealTimeEvents 
   }, [items]);
   
   /**
-   * Debounced check - waits 500ms after last call before executing
+   * Debounced check - waits DEBOUNCE_DELAY_MS after last call before executing
    * Prevents redundant checks when multiple tabs change rapidly
    */
   const debouncedCheck = useCallback(() => {
@@ -89,7 +93,7 @@ export function useOpenTabs(items = [], pollInterval = 10000, useRealTimeEvents 
     debounceTimerRef.current = setTimeout(() => {
       console.log('[useOpenTabs] ⏱️ Debounced check executing...');
       checkOpenTabs();
-    }, 500);
+    }, DEBOUNCE_DELAY_MS);
   }, [checkOpenTabs]);
 
   /**

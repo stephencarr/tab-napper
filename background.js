@@ -62,40 +62,26 @@ async function cleanupDuplicates() {
   console.log('[Tab Napper] 🧹 Starting periodic duplicate cleanup...');
   
   try {
-    const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_stashedTabs', 'triageHub_trash']);
+    const collections = {
+      triageHub_inbox: 'Inbox',
+      triageHub_stashedTabs: 'Stashed',
+      triageHub_trash: 'Trash'
+    };
+    const keys = Object.keys(collections);
+    const result = await chrome.storage.local.get(keys);
     
     let changed = false;
-    
-    // Clean inbox
-    if (result.triageHub_inbox && result.triageHub_inbox.length > 0) {
-      const originalCount = result.triageHub_inbox.length;
-      const cleaned = deduplicateItems(result.triageHub_inbox);
-      if (cleaned.length !== originalCount) {
-        await chrome.storage.local.set({ triageHub_inbox: cleaned });
-        console.log(`[Tab Napper] 🧹 Inbox: ${originalCount} → ${cleaned.length} items`);
-        changed = true;
-      }
-    }
-    
-    // Clean stashed
-    if (result.triageHub_stashedTabs && result.triageHub_stashedTabs.length > 0) {
-      const originalCount = result.triageHub_stashedTabs.length;
-      const cleaned = deduplicateItems(result.triageHub_stashedTabs);
-      if (cleaned.length !== originalCount) {
-        await chrome.storage.local.set({ triageHub_stashedTabs: cleaned });
-        console.log(`[Tab Napper] 🧹 Stashed: ${originalCount} → ${cleaned.length} items`);
-        changed = true;
-      }
-    }
-    
-    // Clean trash
-    if (result.triageHub_trash && result.triageHub_trash.length > 0) {
-      const originalCount = result.triageHub_trash.length;
-      const cleaned = deduplicateItems(result.triageHub_trash);
-      if (cleaned.length !== originalCount) {
-        await chrome.storage.local.set({ triageHub_trash: cleaned });
-        console.log(`[Tab Napper] 🧹 Trash: ${originalCount} → ${cleaned.length} items`);
-        changed = true;
+
+    for (const key of keys) {
+      const items = result[key];
+      if (items && items.length > 0) {
+        const originalCount = items.length;
+        const cleaned = deduplicateItems(items);
+        if (cleaned.length !== originalCount) {
+          await chrome.storage.local.set({ [key]: cleaned });
+          console.log(`[Tab Napper] 🧹 ${collections[key]}: ${originalCount} → ${cleaned.length} items`);
+          changed = true;
+        }
       }
     }
     
