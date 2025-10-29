@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FileText, RotateCcw, Clock, AlertCircle } from 'lucide-react';
+import { FileText, RotateCcw, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
 import { navigateToUrl, openNoteEditor } from '../utils/navigation.js';
@@ -15,6 +15,7 @@ function StashCard({
   onItemAction,
   showFidgetControls = true,
   isTrashView = false,
+  isCurrentlyOpen = false,
   className
 }) {
   // Track whether we're showing reschedule controls for scheduled items
@@ -103,7 +104,24 @@ function StashCard({
         console.error('[Tab Napper] Error opening note:', error);
       }
     } else if (item.url) {
-      // Open URL in new tab
+      // Phase 2: Smart navigation - switch to tab if already open
+      if (isCurrentlyOpen) {
+        console.log('[Tab Napper] 🔄 Tab already open, switching to it:', item.title);
+        try {
+          const { findOpenTab } = await import('../utils/navigation.js');
+          const openTab = await findOpenTab(item.url);
+          if (openTab && typeof chrome !== 'undefined' && chrome.tabs) {
+            await chrome.tabs.update(openTab.id, { active: true });
+            await chrome.windows.update(openTab.windowId, { focused: true });
+            console.log('[Tab Napper] ✅ Switched to existing tab');
+            return;
+          }
+        } catch (error) {
+          console.error('[Tab Napper] Error switching to tab, falling back to navigation:', error);
+        }
+      }
+      
+      // Regular navigation (opens new tab or reuses existing)
       console.log('[Tab Napper] Navigating to:', item.title);
       try {
         await navigateToUrl(item.url, item.title);
@@ -157,10 +175,21 @@ function StashCard({
         
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title */}
-          <p className="text-sm font-semibold text-calm-900 dark:text-calm-100 truncate group-hover:text-calm-700 dark:group-hover:text-calm-200">
-            {item.title || item.name || 'Untitled'}
-          </p>
+          {/* Title with Active Tab Indicator */}
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-calm-900 dark:text-calm-100 truncate group-hover:text-calm-700 dark:group-hover:text-calm-200">
+              {item.title || item.name || 'Untitled'}
+            </p>
+            {isCurrentlyOpen && !isNote && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800"
+                title="This tab is currently active"
+              >
+                <ExternalLink className="h-3 w-3" />
+                <span>Active</span>
+              </span>
+            )}
+          </div>
           
           {/* URL/Domain */}
           <p className="text-sm text-calm-600 dark:text-calm-400 truncate">
