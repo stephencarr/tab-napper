@@ -27,8 +27,9 @@ const LOCAL_STORAGE_KEYS = new Set([
   'triageHub_stashedTabs',     // StashedTabs (bulk data)
   'triageHub_trash',           // Trash (bulk data)
   'triageHub_notes',           // Notes (bulk data)
-  'triageHub_suggestionMetadata', // Smart suggestion metadata (pinned items, cooldowns)
   'tabNapper_lastCleanup',     // Last auto-cleanup timestamp (performance optimization)
+  'tabNapper_hasPinnedTab',    // Auto-pin flag (prevents duplicate pinning)
+  'tabNapper_pinnedTabId',     // ID of pinned Tab Napper tab
 ]);
 
 /**
