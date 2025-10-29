@@ -66,6 +66,27 @@ export async function unbookmarkItem(url) {
 }
 
 /**
+ * Remove item from Quick Access by ID (unbookmark it)
+ * @param {string} id - ID of item to remove
+ * @returns {Promise<void>}
+ */
+export async function unbookmarkItemById(id) {
+  try {
+    console.log('[Bookmarks] Removing bookmark by ID:', id);
+    
+    const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
+    const updated = quickAccessCards.filter(card => card.id !== id);
+    
+    await saveAppState('triageHub_quickAccessCards', updated);
+    
+    console.log('[Bookmarks] ✅ Bookmark removed');
+  } catch (error) {
+    console.error('[Bookmarks] Error removing bookmark:', error);
+    throw error;
+  }
+}
+
+/**
  * Check if item is bookmarked
  * @param {string} url - URL to check
  * @returns {Promise<boolean>}

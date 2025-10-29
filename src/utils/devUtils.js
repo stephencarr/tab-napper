@@ -4,7 +4,6 @@
  */
 
 import { saveAppState } from './storage.js';
-import { getSuggestionStats, clearAllSuggestionData } from './smartSuggestions.js';
 
 /**
  * Add sample data for testing purposes
@@ -351,51 +350,6 @@ async function generateTestBrowsingHistory() {
 /**
  * Test smart suggestions algorithm
  */
-async function testSmartSuggestions() {
-  try {
-    console.log('[Tab Napper] Testing smart suggestions algorithm...');
-    
-    // First, let's see if we have any history data
-    console.log('[Tab Napper] Checking for mock history data...');
-    console.log('[Tab Napper] window object available:', typeof window !== 'undefined');
-    console.log('[Tab Napper] window._mockHistoryData exists:', typeof window !== 'undefined' && window._mockHistoryData !== undefined);
-    
-    if (typeof window !== 'undefined' && window._mockHistoryData) {
-      console.log(`[Tab Napper] Found ${window._mockHistoryData.length} mock history entries`);
-      console.log('[Tab Napper] Sample entry:', window._mockHistoryData[0]);
-    } else {
-      console.log('[Tab Napper] No mock history data found');
-      console.log('[Tab Napper] 💡 TIP: Run TriageHub_generateTestHistory() first to generate test data');
-    }
-    
-    const stats = await getSuggestionStats();
-    if (stats) {
-      console.log('[Tab Napper] Smart Suggestions Stats:', stats);
-      
-      if (stats.suggestions.length > 0) {
-        console.log('[Tab Napper] Top suggestions:');
-        stats.suggestions.forEach((suggestion, index) => {
-          console.log(`  ${index + 1}. ${suggestion.title}`);
-          console.log(`     Score: ${suggestion.score.toFixed(3)}, Days: ${suggestion.daysVisited}, Recent: ${suggestion.daysSinceRecent}d ago`);
-          console.log(`     Reason: ${suggestion.reason}`);
-        });
-      } else {
-        console.log('[Tab Napper] No suggestions generated.');
-        console.log('[Tab Napper] Debug info:');
-        console.log('  - Total candidates analyzed:', stats.totalCandidates);
-        console.log('  - History items count:', stats.historyItemsCount);
-        console.log('  - Already pinned items count:', stats.alreadyPinnedCount);
-        console.log('  - Analysis window (days):', stats.analysisWindowDays);
-      }
-    } else {
-      console.log('[Tab Napper] Failed to get suggestion stats');
-    }
-    
-  } catch (error) {
-    console.error('[Tab Napper] Error testing smart suggestions:', error);
-  }
-}
-
 /**
  * List all active Chrome alarms for debugging
  */
@@ -517,7 +471,6 @@ if (typeof window !== 'undefined') {
   window.TriageHub_addSampleData = addSampleData;
   window.TriageHub_clearSampleData = clearSampleData;
   window.TriageHub_generateTestHistory = generateTestBrowsingHistory;
-  window.TriageHub_testSmartSuggestions = testSmartSuggestions;
   window.TriageHub_listAlarms = listActiveAlarms;
   window.TriageHub_testNotification = testNotification;
   window.TriageHub_testAlarm = testAlarm;
@@ -527,7 +480,6 @@ export {
   addSampleData,
   clearSampleData,
   generateTestBrowsingHistory,
-  testSmartSuggestions,
   listActiveAlarms,
   testNotification,
   testAlarm

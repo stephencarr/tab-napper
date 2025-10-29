@@ -3,7 +3,7 @@ import { Star, ExternalLink, Clock, PinOff, Pin } from 'lucide-react';
 import { saveAppState } from '../utils/storage.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { navigateToUrl } from '../utils/navigation.js';
-import { unpinItem } from '../utils/smartSuggestions.js';
+import { unbookmarkItemById } from '../utils/bookmarks.js';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -66,7 +66,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     console.log('[Tab Napper] 📌 Unpinning item:', item.title);
     
     try {
-      await unpinItem(item.id);
+      await unbookmarkItemById(item.id);
       console.log('[Tab Napper] ✅ Successfully unpinned item');
     } catch (error) {
       console.error('[Tab Napper] ❌ Error unpinning item:', error);
