@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Impact
 - **Performance**: 6.5% smaller bundle, faster startup
-- **Simplicity**: ~600 lines of code removed
+- **Simplicity**: ~1,300 lines of code removed
 - **User Experience**: Bookmarks provide explicit control
 - **Migration**: Users should use bookmark feature for frequently accessed sites
 
