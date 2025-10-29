@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
 import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
-import { addSampleData, clearSampleData, generateTestBrowsingHistory, testSmartSuggestions } from './utils/devUtils.js';
+import { addSampleData, clearSampleData, generateTestBrowsingHistory } from './utils/devUtils.js';
 import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
@@ -20,7 +20,6 @@ import UniversalSearch from './components/UniversalSearch.jsx';
 import SearchResults from './components/SearchResults.jsx';
 import RecentlyVisited from './components/RecentlyVisited.jsx';
 import QuickAccessCards from './components/QuickAccessCards.jsx';
-import SmartSuggestions from './components/SmartSuggestions.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
@@ -62,13 +61,6 @@ function App() {
         toggleDevMode();
         setShowDevPanel(true);
         console.log('🎉 Dev Mode:', !isDevMode ? 'ENABLED' : 'DISABLED');
-      };
-      
-      // Expose cache clear for SmartSuggestions
-      window._clearSuggestionCache = async () => {
-        const { clearSuggestionsCache } = await import('./utils/smartSuggestions.js');
-        await clearSuggestionsCache();
-        console.log('🗑️ Smart Suggestions cache cleared');
       };
       
       // Expose auto-pin reset for debugging
@@ -370,15 +362,6 @@ function App() {
     }
   };
 
-  // Handle testing smart suggestions
-  const handleTestSuggestions = async () => {
-    try {
-      await testSmartSuggestions();
-    } catch (error) {
-      console.error('[Tab Napper] Error testing suggestions:', error);
-    }
-  };
-
   // Add items to stashed tabs to test deduplication
   const handleSetupDedupeTest = async () => {
     try {
@@ -462,9 +445,6 @@ function App() {
         <div className="space-y-6">
           <div className="calm-card p-6">
             <QuickAccessCards maxItems={6} />
-          </div>
-          <div className="calm-card p-6">
-            <SmartSuggestions />
           </div>
         </div>
       </div>

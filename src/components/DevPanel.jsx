@@ -5,7 +5,6 @@ import {
   addSampleData,
   clearSampleData,
   generateTestBrowsingHistory,
-  testSmartSuggestions,
   listActiveAlarms,
   testNotification,
   testAlarm
@@ -60,8 +59,8 @@ function DevPanel({ isOpen, onClose, className }) {
       const message = args.map(arg => 
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' ');
-      // Capture Tab Napper logs, DevPanel logs, and SmartSuggestions logs
-      if (message.includes('[Tab Napper]') || message.includes('[DevPanel]') || message.includes('[SmartSuggestions]')) {
+      // Capture Tab Napper logs and DevPanel logs
+      if (message.includes('[Tab Napper]') || message.includes('[DevPanel]')) {
         addLog(message, 'info');
       }
     };

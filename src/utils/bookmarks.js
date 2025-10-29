@@ -30,6 +30,8 @@ export async function bookmarkItem(item) {
       url: item.url,
       favicon: item.favicon || item.favIconUrl || `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=32`,
       timestamp: item.timestamp || Date.now(),
+      lastAccessed: Date.now(), // Set lastAccessed when bookmarked
+      accessCount: 0, // Initialize access count
       type: 'bookmark',
       source: 'user-bookmark'
     };
@@ -55,6 +57,27 @@ export async function unbookmarkItem(url) {
     
     const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
     const updated = quickAccessCards.filter(card => card.url !== url);
+    
+    await saveAppState('triageHub_quickAccessCards', updated);
+    
+    console.log('[Bookmarks] ✅ Bookmark removed');
+  } catch (error) {
+    console.error('[Bookmarks] Error removing bookmark:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove item from Quick Access by ID (unbookmark it)
+ * @param {string} id - ID of item to remove
+ * @returns {Promise<void>}
+ */
+export async function unbookmarkItemById(id) {
+  try {
+    console.log('[Bookmarks] Removing bookmark by ID:', id);
+    
+    const quickAccessCards = await loadAppState('triageHub_quickAccessCards') || [];
+    const updated = quickAccessCards.filter(card => card.id !== id);
     
     await saveAppState('triageHub_quickAccessCards', updated);
     

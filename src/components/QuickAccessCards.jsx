@@ -3,7 +3,7 @@ import { Star, ExternalLink, Clock, PinOff, Pin } from 'lucide-react';
 import { saveAppState } from '../utils/storage.js';
 import { useReactiveStorage } from '../utils/reactiveStorage.js';
 import { navigateToUrl } from '../utils/navigation.js';
-import { unpinItem } from '../utils/smartSuggestions.js';
+import { unbookmarkItemById } from '../utils/bookmarks.js';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -66,7 +66,7 @@ function QuickAccessCards({ className, maxItems = 6 }) {
     console.log('[Tab Napper] 📌 Unpinning item:', item.title);
     
     try {
-      await unpinItem(item.id);
+      await unbookmarkItemById(item.id);
       console.log('[Tab Napper] ✅ Successfully unpinned item');
     } catch (error) {
       console.error('[Tab Napper] ❌ Error unpinning item:', error);
@@ -146,8 +146,18 @@ function QuickAccessCards({ className, maxItems = 6 }) {
 
   // Get time ago string
   const getTimeAgo = (timestamp) => {
+    // Handle missing or invalid timestamps (null, undefined, NaN)
+    if (timestamp == null || isNaN(timestamp)) {
+      return '0m ago';
+    }
+    
     const now = Date.now();
     const diff = now - timestamp;
+    
+    // Handle negative differences (future timestamps)
+    if (diff < 0) {
+      return '0m ago';
+    }
     
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -260,12 +270,6 @@ function QuickAccessCards({ className, maxItems = 6 }) {
                       </span>
                     </div>
                   </div>
-                  {item.type === 'smart-suggestion' && (
-                    <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-                      <Pin className="h-3 w-3" />
-                      <span>Smart suggestion</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Actions */}

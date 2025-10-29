@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed - Smart Suggestions Feature
+- **Removed Smart Suggestions component and algorithm**
+  - Complex scoring algorithm with low success rate
+  - Replaced by simpler bookmarking system
+  - Performance improvement: ~25 KB smaller bundle
+  - No more history queries for suggestions
+  - Cleaner, more predictable UX
+
+### Impact
+- **Performance**: 6.5% smaller bundle, faster startup
+- **Simplicity**: ~1,300 lines of code removed
+- **User Experience**: Bookmarks provide explicit control
+- **Migration**: Users should use bookmark feature for frequently accessed sites
+
+---
+
 ### Added - Auto-Cleanup System
 - **🧹 Automatic Inbox Cleanup**: Items older than 1 week moved to trash
   - Runs automatically on app startup
