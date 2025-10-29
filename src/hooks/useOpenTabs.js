@@ -9,7 +9,14 @@ import { findOpenTab } from '../utils/navigation.js';
  * @param {Array} items - Array of items to check (must have .url property)
  * @param {number} pollInterval - How often to check (ms), default 10 seconds
  * @param {boolean} useRealTimeEvents - Use Chrome tab events for instant updates (default true)
- * @returns {Object} - { openItems: Set<itemId>, isOpen: (item) => boolean, refreshOpenTabs: () => void }
+ * @returns {Object} - {
+ *   openItemIds: Set<itemId>,           // Set of open item IDs
+ *   uniqueTabCount: number,             // Number of unique browser tabs open for these items
+ *   isOpen: (item) => boolean,          // Function to check if a specific item is open
+ *   isChecking: boolean,                // Whether a check is currently in progress
+ *   lastCheckTime: number,              // Timestamp of the last check (ms since epoch)
+ *   refreshOpenTabs: () => void         // Function to manually refresh open tab status
+ * }
  */
 export function useOpenTabs(items = [], pollInterval = 10000, useRealTimeEvents = true) {
   const [openItemIds, setOpenItemIds] = useState(new Set());

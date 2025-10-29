@@ -52,7 +52,7 @@ We've successfully implemented **Phase 2 of Open Tab Detection** plus **Duplicat
 
 **New Utility Function:**
 ```javascript
-closeOpenTabs(items) → { closed: number, failed: number, errors: Array }
+closeOpenTabs(items) → { closed: number, failed: number, skipped: number, errors: Array }
 ```
 
 **User Experience:**
@@ -95,6 +95,7 @@ findAndCloseDuplicateTabs(options) → {
   duplicates: Array,
   closed: number,
   kept: number,
+  skipped: number,
   dryRun: boolean 
 }
 ```

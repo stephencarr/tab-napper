@@ -42,16 +42,17 @@ function StashManagerView({
   useEffect(() => {
     console.log('[Tab Napper] View changed or mounted, forcing open tabs check...');
     refreshOpenTabs();
-  }, [activeTab]); // Re-check when switching between inbox/stashed/trash
+  }, [activeTab, refreshOpenTabs]); // Re-check when switching between inbox/stashed/trash or refreshOpenTabs changes
   
-  // Phase 2: Check for duplicate tabs when component mounts or items change
+  // Phase 2: Check for duplicate tabs - only run on manual trigger or view change
+  // Don't tie to openItemIds to avoid excessive checks
   useEffect(() => {
     const checkDuplicates = async () => {
       if (activeTab === 'trash') {
         setDuplicateCount(0);
         return;
       }
-      
+
       setIsCheckingDuplicates(true);
       try {
         const dryRun = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: true });
@@ -63,9 +64,9 @@ function StashManagerView({
         setIsCheckingDuplicates(false);
       }
     };
-    
+
     checkDuplicates();
-  }, [activeTab, openItemIds]); // Re-check when tabs change or view changes
+  }, [activeTab]); // Only re-check when view changes, not on every tab event
   
 
   // Get current tab data

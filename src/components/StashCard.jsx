@@ -183,7 +183,7 @@ function StashCard({
             {isCurrentlyOpen && !isNote && (
               <span 
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800"
-                title="This tab is currently active"
+                title="This tab is currently open in your browser"
               >
                 <ExternalLink className="h-3 w-3" />
                 <span>Active</span>

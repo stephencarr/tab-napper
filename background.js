@@ -402,6 +402,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
     console.log('[Tab Napper] ⏰ Alarm fired:', alarm.name);
     
+    // Handle periodic duplicate cleanup
+    if (alarm.name === 'cleanup-duplicates') {
+      console.log('[Tab Napper] Running periodic duplicate cleanup...');
+      await cleanupDuplicates();
+      return;
+    }
+    
     // Handle test alarms
     if (alarm.name === 'test-alarm') {
       console.log('[Tab Napper] ✅ Test alarm fired successfully!');
@@ -568,11 +575,4 @@ chrome.alarms.create('cleanup-duplicates', {
 });
 
 console.log('[Tab Napper] ⏰ Scheduled periodic duplicate cleanup (every 5 minutes)');
-
-// Update the existing alarm listener to handle cleanup
-const originalAlarmHandler = chrome.alarms.onAlarm;
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'cleanup-duplicates') {
-    cleanupDuplicates();
-  }
-});
+// Note: The cleanup alarm is handled by the existing chrome.alarms.onAlarm listener above
