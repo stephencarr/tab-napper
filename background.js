@@ -17,10 +17,15 @@ const noteTabTracker = new Map(); // Map<tabId, noteId>
  */
 function deduplicateItems(items) {
   const urlMap = new Map();
+  const notesAndOthers = []; // Items without URLs (notes, etc.)
   
-  // Group by normalized URL, keeping track of all items with that URL
+  // Separate items with URLs from notes/items without URLs
   items.forEach(item => {
-    if (!item.url) return;
+    if (!item.url) {
+      // Notes and other items without URLs - keep all of them
+      notesAndOthers.push(item);
+      return;
+    }
     
     const normalized = normalizeUrl(item.url);
     if (!urlMap.has(normalized)) {
@@ -30,7 +35,7 @@ function deduplicateItems(items) {
   });
   
   // For each URL, keep only the most recent item
-  const deduplicated = [];
+  const deduplicated = [...notesAndOthers]; // Start with all notes
   urlMap.forEach((duplicates, url) => {
     if (duplicates.length === 1) {
       deduplicated.push(duplicates[0]);
