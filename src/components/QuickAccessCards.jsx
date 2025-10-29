@@ -146,8 +146,8 @@ function QuickAccessCards({ className, maxItems = 6 }) {
 
   // Get time ago string
   const getTimeAgo = (timestamp) => {
-    // Handle missing or invalid timestamps
-    if (!timestamp || isNaN(timestamp)) {
+    // Handle missing or invalid timestamps (null, undefined, NaN)
+    if (timestamp == null || isNaN(timestamp)) {
       return '0m ago';
     }
     
