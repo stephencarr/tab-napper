@@ -131,7 +131,8 @@ export function shouldCleanFromInbox(item, now = Date.now()) {
  * @returns {boolean}
  */
 export function shouldDeleteFromTrash(item, now = Date.now()) {
-  const trashedTime = item.trashedAt || item.timestamp || 0;
+  // Check trashedAt (auto-cleanup), deletedAt (manual delete), or timestamp (fallback)
+  const trashedTime = item.trashedAt || item.deletedAt || item.timestamp || 0;
   const trashAge = now - trashedTime;
   return trashAge > ONE_MONTH_MS;
 }
