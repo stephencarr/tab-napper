@@ -30,6 +30,8 @@ export async function bookmarkItem(item) {
       url: item.url,
       favicon: item.favicon || item.favIconUrl || `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=32`,
       timestamp: item.timestamp || Date.now(),
+      lastAccessed: Date.now(), // Set lastAccessed when bookmarked
+      accessCount: 0, // Initialize access count
       type: 'bookmark',
       source: 'user-bookmark'
     };
