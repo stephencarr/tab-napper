@@ -44,11 +44,15 @@ export async function runAutoCleanup(force = false) {
   const now = Date.now();
 
   try {
-    // Load all data upfront
-    const [inbox, trash] = await Promise.all([
-      loadAppState('triageHub_inbox') || [],
-      loadAppState('triageHub_trash') || []
+    // Load all data upfront in parallel
+    const [inboxData, trashData] = await Promise.all([
+      loadAppState('triageHub_inbox'),
+      loadAppState('triageHub_trash')
     ]);
+    
+    // Apply fallbacks after promise resolution
+    const inbox = inboxData || [];
+    const trash = trashData || [];
 
     // Partition inbox into items to keep and items to move to trash
     const { inboxToKeep, inboxToTrash } = inbox.reduce(
@@ -138,8 +142,8 @@ export function shouldDeleteFromTrash(item, now = Date.now()) {
  */
 export async function getCleanupPreview() {
   const now = Date.now();
-  const inbox = await loadAppState('triageHub_inbox') || [];
-  const trash = await loadAppState('triageHub_trash') || [];
+  const inbox = (await loadAppState('triageHub_inbox')) || [];
+  const trash = (await loadAppState('triageHub_trash')) || [];
   
   const inboxOldCount = inbox.filter(item => shouldCleanFromInbox(item, now)).length;
   const trashOldCount = trash.filter(item => shouldDeleteFromTrash(item, now)).length;
