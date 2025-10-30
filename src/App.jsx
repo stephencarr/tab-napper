@@ -11,6 +11,7 @@ import { openNoteEditor, navigateToUrl } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
 import { runAutoCleanup, getCleanupPreview } from './utils/autoCleanup.js';
+import { updateFavicon } from './utils/favicon.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
@@ -37,6 +38,12 @@ function App() {
   
   // Use the reactive store hook for guaranteed fresh data
   const appState = useReactiveStore();
+  
+  // Update favicon based on scheduled items count
+  useEffect(() => {
+    const scheduledCount = appState?.scheduled?.length || 0;
+    updateFavicon(scheduledCount);
+  }, [appState?.scheduled?.length]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
