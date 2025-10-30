@@ -427,6 +427,7 @@ function StashManagerView({
                       showFidgetControls={activeTab !== 'trash'}
                       isTrashView={activeTab === 'trash'}
                       isArchiveView={activeTab === 'archive'}
+                      isScheduledView={activeTab === 'scheduled'}
                       isCurrentlyOpen={isOpen(item)}
                     />
                   </li>

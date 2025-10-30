@@ -16,6 +16,7 @@ function StashCard({
   showFidgetControls = true,
   isTrashView = false,
   isArchiveView = false,
+  isScheduledView = false,
   isCurrentlyOpen = false,
   className
 }) {
@@ -321,7 +322,7 @@ function StashCard({
               }
               setShowingReschedule(false);
             }}
-            showMarkDone={!isArchiveView}
+            showMarkDone={!isArchiveView && showingReschedule}
             className="w-full"
           />
           <button
@@ -359,7 +360,7 @@ function StashCard({
                 }
               }
             }}
-            showMarkDone={!isArchiveView}
+            showMarkDone={isScheduledView && !isArchiveView}
             className="w-full"
           />
         </div>
