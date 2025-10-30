@@ -47,11 +47,17 @@ export async function autoPinCurrentTab() {
       return false;
     }
 
-    // Check if ANY other Tab Napper tab is already pinned
-    const anyPinned = await isAnyTabNapperPinned();
+    // Check if ANY other Tab Napper tab is already pinned (not just open, but PINNED)
+    const allTabs = await chrome.tabs.query({});
+    const otherPinnedTabNapper = allTabs.find(tab => 
+      tab.pinned && 
+      tab.id !== currentTab.id && 
+      tab.url && 
+      tab.url.includes('triage_hub.html')
+    );
     
-    if (anyPinned) {
-      console.log('[AutoPin] Already have another pinned Tab Napper instance');
+    if (otherPinnedTabNapper) {
+      console.log('[AutoPin] Already have another pinned Tab Napper instance (tab ID:', otherPinnedTabNapper.id, ')');
       await saveAppState('tabNapper_hasPinnedTab', true);
       return false;
     }
