@@ -228,7 +228,7 @@ function App() {
           // Restore item from trash back to inbox using the proper capture API
           
           // Step 1: Remove from trash
-          const currentTrash = await loadAppState('triageHub_trash', []);
+          const currentTrash = await loadAppState('triageHub_trash');
           const updatedTrash = currentTrash.filter(i => i.id !== item.id);
           await saveAppState('triageHub_trash', updatedTrash);
           
@@ -247,9 +247,9 @@ function App() {
         case 'delete':
           // Move item to trash
           
-          const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
-          const currentStashed = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
-          const currentTrashForDelete = await loadAppState('triageHub_trash', []);
+          const currentInboxForDelete = await loadAppState('triageHub_inbox');
+          const currentStashed = await loadAppState(STORAGE_KEYS.SCHEDULED);
+          const currentTrashForDelete = await loadAppState('triageHub_trash');
           
           
           // Remove from inbox or stashed
@@ -293,11 +293,11 @@ function App() {
           }
           
           // Step 3: Remove from inbox (if present)
-          const currentInboxForSchedule = await loadAppState('triageHub_inbox', []);
+          const currentInboxForSchedule = await loadAppState('triageHub_inbox');
           const updatedInboxForSchedule = currentInboxForSchedule.filter(i => i.id !== item.id);
           
           // Step 4: Update in stashed tabs with new scheduling metadata
-          const currentStashedForSchedule = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
+          const currentStashedForSchedule = await loadAppState(STORAGE_KEYS.SCHEDULED);
           
           // Remove old version from stashed (if it was already there)
           const filteredStashed = currentStashedForSchedule.filter(i => i.id !== item.id);
@@ -329,8 +329,8 @@ function App() {
           await clearAllAlarmsForItem(item);
           
           // Determine source list - check which list contains this item
-          const currentInbox = await loadAppState(STORAGE_KEYS.INBOX, []);
-          const currentScheduled = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
+          const currentInbox = await loadAppState(STORAGE_KEYS.INBOX);
+          const currentScheduled = await loadAppState(STORAGE_KEYS.SCHEDULED);
           
           const isInInbox = currentInbox.some(i => i.id === item.id);
           const sourceList = isInInbox ? 'inbox' : 'scheduled';
