@@ -13,7 +13,7 @@ export const STORAGE_KEYS = {
   COMPLETED: 'triageHub_completed',
   
   // Legacy keys (for migration)
-  LEGACY_STASHED: 'triageHub_stashedTabs',
+  LEGACY_SCHEDULED: 'triageHub_stashedTabs',
   
   // App state
   CURRENT_NOTE_ID: 'triageHub_currentNoteId',
@@ -54,8 +54,8 @@ export async function migrateStorageKey(oldKey, newKey) {
 export async function runStorageMigrations() {
   console.log('[Migration] Running storage migrations...');
   
-  // Migrate stashedTabs → scheduled
-  await migrateStorageKey(STORAGE_KEYS.LEGACY_STASHED, STORAGE_KEYS.SCHEDULED);
+  // Migrate triageHub_stashedTabs → triageHub_scheduled
+  await migrateStorageKey(STORAGE_KEYS.LEGACY_SCHEDULED, STORAGE_KEYS.SCHEDULED);
   
   console.log('[Migration] ✓ All migrations complete');
 }

@@ -36,15 +36,15 @@ async function testEnhancedOmnisearch() {
       
       // Verify segmentation
       const inboxResults = results.filter(r => r.source === 'inbox');
-      const stashedResults = results.filter(r => r.source === 'stashedTabs');
+      const scheduledResults = results.filter(r => r.source === 'scheduled');
       const historyResults = results.filter(r => r.source === 'recentHistory');
       
       console.log('🎯 Segmentation check:');
       console.log(`  - Inbox results: ${inboxResults.length}`);
-      console.log(`  - Stashed results: ${stashedResults.length}`);
+      console.log(`  - Scheduled results: ${scheduledResults.length}`);
       console.log(`  - History results: ${historyResults.length}`);
       
-      if (inboxResults.length > 0 || stashedResults.length > 0) {
+      if (inboxResults.length > 0 || scheduledResults.length > 0) {
         console.log('✅ Tab Napper items found - segmentation working!');
       }
       
@@ -107,7 +107,7 @@ console.log(`
 
 New Features:
 ✅ Better browser history connection with permission checks
-✅ Proper result segmentation (inbox & stashed at top)
+✅ Proper result segmentation (inbox & scheduled at top)
 ✅ Enhanced error handling for history API
 ✅ Visual priority indicators in search results
 ✅ Improved relevance scoring with source priorities
@@ -118,7 +118,7 @@ Test Functions:
 
 Expected Behavior:
 1. Search results show Inbox items first (highest priority)
-2. Stashed Tabs appear second (high priority) 
+2. Scheduled items appear second (high priority) 
 3. Browser History appears after Tab Napper items
 4. Each segment is clearly labeled with counts
 5. Better error handling if history permissions are denied

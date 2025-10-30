@@ -138,7 +138,7 @@ async function captureClosedTab(tabInfo) {
     // Load all collections
     const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled', 'triageHub_trash']);
     const triageInbox = result.triageHub_inbox || [];
-    const stashedTabs = result.triageHub_stashedTabs || [];
+    const scheduledTabs = result.triageHub_scheduled || [];
     const trash = result.triageHub_trash || [];
     
     let removedFrom = [];
@@ -151,12 +151,12 @@ async function captureClosedTab(tabInfo) {
       removedFrom.push(`inbox (${inboxDuplicates.length})`);
     }
     
-    // Remove duplicates from stashed tabs
-    const stashedDuplicates = stashedTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
-    if (stashedDuplicates.length > 0) {
-      const cleanedScheduled = stashedTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await chrome.storage.local.set({ triageHub_stashedTabs: cleanedScheduled });
-      removedFrom.push(`stashed (${stashedDuplicates.length})`);
+    // Remove duplicates from scheduled tabs
+    const scheduledDuplicates = scheduledTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
+    if (scheduledDuplicates.length > 0) {
+      const cleanedScheduled = scheduledTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      await chrome.storage.local.set({ triageHub_scheduled: cleanedScheduled });
+      removedFrom.push(`scheduled (${scheduledDuplicates.length})`);
     }
     
     // Remove duplicates from trash
@@ -443,14 +443,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     
     // Load current data
     const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
-    const stashedTabs = result.triageHub_stashedTabs || [];
+    const scheduledTabs = result.triageHub_scheduled || [];
     const inbox = result.triageHub_inbox || [];
     
-    // Find the item in stashed tabs
-    const item = stashedTabs.find(i => i.id === itemId);
+    // Find the item in scheduled tabs
+    const item = scheduledTabs.find(i => i.id === itemId);
     
     if (!item) {
-      console.log('[Tab Napper] Item not found in stashed tabs:', itemId);
+      console.log('[Tab Napper] Item not found in scheduled tabs:', itemId);
       return;
     }
     
@@ -468,12 +468,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const updatedInbox = [retriagedItem, ...inbox];
     
     // Remove from stashed tabs
-    const updatedScheduled = stashedTabs.filter(i => i.id !== itemId);
+    const updatedScheduled = scheduledTabs.filter(i => i.id !== itemId);
     
     // Save updated data
     await chrome.storage.local.set({
       triageHub_inbox: updatedInbox,
-      triageHub_stashedTabs: updatedScheduled
+      triageHub_scheduled: updatedScheduled
     });
     
     console.log('[Tab Napper] ✓ Item re-triaged from scheduled reminder:', item.title);
@@ -576,26 +576,26 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
     // Update the scheduled time in storage
     const storageResult = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled']);
     const inbox = storageResult.triageHub_inbox || [];
-    const stashed = storageResult.triageHub_stashedTabs || [];
+    const scheduled = storageResult.triageHub_scheduled || [];
     
     // Find and update the item
     const inboxIndex = inbox.findIndex(i => i.id === itemId);
-    const stashedIndex = stashed.findIndex(i => i.id === itemId);
+    const scheduledIndex = scheduled.findIndex(i => i.id === itemId);
     
     if (inboxIndex !== -1) {
       inbox[inboxIndex].scheduledFor = snoozeTime;
       inbox[inboxIndex].scheduledWhen = 'In 15 minutes';
-      // Move back to stashed if it was retriaged
-      stashed.unshift(inbox[inboxIndex]);
+      // Move back to scheduled if it was retriaged
+      scheduled.unshift(inbox[inboxIndex]);
       inbox.splice(inboxIndex, 1);
-    } else if (stashedIndex !== -1) {
-      stashed[stashedIndex].scheduledFor = snoozeTime;
-      stashed[stashedIndex].scheduledWhen = 'In 15 minutes';
+    } else if (scheduledIndex !== -1) {
+      scheduled[scheduledIndex].scheduledFor = snoozeTime;
+      scheduled[scheduledIndex].scheduledWhen = 'In 15 minutes';
     }
     
     await chrome.storage.local.set({
       triageHub_inbox: inbox,
-      triageHub_stashedTabs: stashed
+      triageHub_scheduled: scheduled
     });
     
     console.log('[Tab Napper] ✓ Item snoozed for 15 minutes');
