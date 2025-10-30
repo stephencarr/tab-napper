@@ -23,7 +23,7 @@ export async function autoPinCurrentTab() {
     const existingPinnedTabNapper = allTabs.find(tab => 
       tab.pinned && 
       tab.url && 
-      tab.url.includes('triage_hub.html')
+      (tab.url.includes('triage_hub.html') || tab.url === 'chrome://newtab/')
     );
     
     if (existingPinnedTabNapper) {

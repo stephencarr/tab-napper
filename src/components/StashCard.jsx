@@ -175,8 +175,15 @@ function StashCard({
     >
       {/* Celebration Animation Overlay */}
       {showCelebration && (
-        <div className="absolute inset-0 flex items-center justify-center bg-green-50/90 dark:bg-green-900/50 rounded-lg z-10 animate-pulse">
-          <div className="text-6xl animate-bounce">🎉</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50/95 to-emerald-100/95 dark:from-green-900/70 dark:to-emerald-800/70 rounded-lg z-10 backdrop-blur-sm">
+          <div className="relative">
+            <div className="text-6xl animate-celebrate">🎉</div>
+            {/* Confetti particles */}
+            <div className="absolute top-0 left-0 text-2xl animate-confetti" style={{ animationDelay: '0ms' }}>✨</div>
+            <div className="absolute top-0 right-0 text-2xl animate-confetti" style={{ animationDelay: '100ms' }}>⭐</div>
+            <div className="absolute bottom-0 left-0 text-2xl animate-confetti" style={{ animationDelay: '200ms' }}>💫</div>
+            <div className="absolute bottom-0 right-0 text-2xl animate-confetti" style={{ animationDelay: '150ms' }}>✨</div>
+          </div>
         </div>
       )}
       
@@ -255,7 +262,7 @@ function StashCard({
           </button>
         </div>
       ) : isArchiveView && showingReschedule ? (
-        /* Archive view rescheduling: Show fidget controls with Mark Done and cancel option */
+        /* Archive view rescheduling: Show fidget controls without Mark Done (already done!) */
         <div 
           className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
           onClick={(e) => e.stopPropagation()}
@@ -263,13 +270,13 @@ function StashCard({
           <FidgetControl
             item={item}
             onAction={(action, item, actionData) => {
-              // After action is taken, hide reschedule controls
+              // Archive items can only be rescheduled, not marked done again
               if (onItemAction) {
                 onItemAction(action, item, actionData);
               }
               setShowingReschedule(false);
             }}
-            showMarkDone={true}
+            showMarkDone={false}
             className="w-full"
           />
           <button
@@ -308,9 +315,21 @@ function StashCard({
           <FidgetControl
             item={item}
             onAction={(action, item, actionData) => {
-              // After action is taken, hide reschedule controls
-              if (onItemAction) {
-                onItemAction(action, item, actionData);
+              // Show celebration when marking done
+              if (action === 'mark_done') {
+                setShowCelebration(true);
+                setTimeout(() => {
+                  if (onItemAction) {
+                    onItemAction(action, item, actionData);
+                  }
+                  // Hide celebration after action completes
+                  setTimeout(() => setShowCelebration(false), 500);
+                }, 800);
+              } else {
+                // After action is taken, hide reschedule controls
+                if (onItemAction) {
+                  onItemAction(action, item, actionData);
+                }
               }
               setShowingReschedule(false);
             }}
@@ -364,7 +383,7 @@ function StashCard({
           </button>
         </div>
       ) : showFidgetControls ? (
-        /* Normal view: Show fidget controls - Only show Mark Done in Scheduled view */
+        /* Normal view (Inbox): Show fidget controls to schedule items - NO Mark Done */
         <div 
           className="flex-shrink-0 ml-4"
           onClick={(e) => e.stopPropagation()}
@@ -372,23 +391,12 @@ function StashCard({
           <FidgetControl
             item={item}
             onAction={(action, item, actionData) => {
-              // Show celebration when marking done
-              if (action === 'mark_done') {
-                setShowCelebration(true);
-                setTimeout(() => {
-                  if (onItemAction) {
-                    onItemAction(action, item, actionData);
-                  }
-                  // Hide celebration after action completes
-                  setTimeout(() => setShowCelebration(false), 500);
-                }, 800);
-              } else {
-                if (onItemAction) {
-                  onItemAction(action, item, actionData);
-                }
+              // Inbox items can only be scheduled, not marked done
+              if (onItemAction) {
+                onItemAction(action, item, actionData);
               }
             }}
-            showMarkDone={isScheduledView}
+            showMarkDone={false}
             className="w-full"
           />
         </div>

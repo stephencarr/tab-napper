@@ -7,6 +7,7 @@ import StackList from './StackList.jsx';
 
 /**
  * Lightweight history fetch for RecentlyVisited component
+ * Returns items sorted by most recent first (Chrome API default behavior)
  */
 async function getLightweightRecentHistory(maxItems = 50) {
   if (typeof chrome === 'undefined' || !chrome.history) {
@@ -22,7 +23,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
         {
           text: '',
           maxResults: searchBudget,
-          // Removed startTime to get most recent items regardless of date
+          // No startTime specified - Chrome returns most recent items first by default
         },
         (results) => {
           if (chrome.runtime.lastError) {
@@ -35,7 +36,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
       );
     });
     
-    // Filter out unwanted URLs
+    // Filter out unwanted URLs (results are already sorted by Chrome - most recent first)
     const excludePatterns = [
       'chrome://', 'chrome-extension://', 'moz-extension://',
       'data:', 'blob:', 'javascript:'
@@ -52,7 +53,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
         description: item.url
       }));
 
-    // Ensure we only return up to requested maxItems
+    // Ensure we only return up to requested maxItems (maintaining sort order)
     const sliced = filtered.slice(0, Math.max(0, maxItems));
     return sliced;
     
