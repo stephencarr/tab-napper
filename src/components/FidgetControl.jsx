@@ -93,7 +93,7 @@ const getSmartWhenOptions = () => {
  * A tactile, low-friction interface for scheduling and managing items.
  * Features button group design with action/timing pills and execute button.
  */
-function FidgetControl({ item, onAction, className }) {
+function FidgetControl({ item, onAction, showMarkDone = true, className }) {
   // Control states - simplified to just action and when
   const [actionState, setActionState] = useState('Remind Me');
   const [whenState, setWhenState] = useState('In 5 minutes');
@@ -234,17 +234,19 @@ function FidgetControl({ item, onAction, className }) {
           </button>
         </div>
 
-        {/* Mark Done Button */}
-        <button
-          onClick={handleMarkDone}
-          className={cn(
-            "inline-flex items-center justify-center h-8 w-8 rounded-md border transition-colors",
-            "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-500 dark:text-calm-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-700"
-          )}
-          title="Mark as done"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-        </button>
+        {/* Mark Done Button - only show if not in archive view */}
+        {showMarkDone && (
+          <button
+            onClick={handleMarkDone}
+            className={cn(
+              "inline-flex items-center justify-center h-8 w-8 rounded-md border transition-colors",
+              "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-500 dark:text-calm-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-700"
+            )}
+            title="Mark as done"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+          </button>
+        )}
 
         {/* Delete Button */}
         <button

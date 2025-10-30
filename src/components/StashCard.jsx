@@ -15,15 +15,19 @@ function StashCard({
   onItemAction,
   showFidgetControls = true,
   isTrashView = false,
+  isArchiveView = false,
   isCurrentlyOpen = false,
   className
 }) {
   // Track whether we're showing reschedule controls for scheduled items
   const [showingReschedule, setShowingReschedule] = useState(false);
+  // Track celebration animation for marking done
+  const [showCelebration, setShowCelebration] = useState(false);
   
   // Reset reschedule state when item changes
   useEffect(() => {
     setShowingReschedule(false);
+    setShowCelebration(false);
   }, [item.id]);
   
   // Check if item is scheduled (memoized for performance)
@@ -133,6 +137,9 @@ function StashCard({
   // Special handling for notes
   const isNote = item.type === 'note';
   
+  // Check if item is archived (has archivedAt timestamp)
+  const isArchived = useMemo(() => !!item.archivedAt, [item.archivedAt]);
+  
   // Get icon - use note icon for notes, favicon for tabs
   const getIcon = () => {
     if (isNote) {
@@ -239,6 +246,23 @@ function StashCard({
             Restore
           </button>
         </div>
+      ) : isArchiveView ? (
+        /* Archive view: Show Reschedule button (items are already done) */
+        <div 
+          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Rescheduling archived item:', item.title);
+              setShowingReschedule(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            Reschedule
+          </button>
+        </div>
       ) : isScheduled ? (
         /* Scheduled item: Show scheduled time and reschedule button */
         <div 
@@ -290,6 +314,7 @@ function StashCard({
               }
               setShowingReschedule(false);
             }}
+            showMarkDone={!isArchiveView}
             className="w-full"
           />
           <button
@@ -310,7 +335,24 @@ function StashCard({
         >
           <FidgetControl
             item={item}
-            onAction={onItemAction}
+            onAction={(action, item, actionData) => {
+              // Show celebration when marking done
+              if (action === 'mark_done') {
+                setShowCelebration(true);
+                setTimeout(() => {
+                  if (onItemAction) {
+                    onItemAction(action, item, actionData);
+                  }
+                  // Hide celebration after action completes
+                  setTimeout(() => setShowCelebration(false), 500);
+                }, 800);
+              } else {
+                if (onItemAction) {
+                  onItemAction(action, item, actionData);
+                }
+              }
+            }}
+            showMarkDone={!isArchiveView}
             className="w-full"
           />
         </div>
