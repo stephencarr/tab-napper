@@ -73,9 +73,9 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
   const debounceRef = useRef(null);
   const mountedRef = useRef(true); // Start as true since we're in the component
   
-  // Watch for changes in stashed tabs to update history status
-  const { data: scheduledTabs } = useReactiveStorage('triageHub_scheduled', []);
-  const scheduledTabsLength = scheduledTabs?.length || 0;
+  // Watch for changes in scheduled tabs to update history status
+  const { data: scheduledData } = useReactiveStorage('triageHub_scheduled', []);
+  const scheduledDataLength = scheduledData?.length || 0;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -107,7 +107,7 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
     }
   }, [maxItems]);
 
-  // Load history on component mount and when stashed tabs change
+  // Load history on component mount and when scheduled tabs change
   useEffect(() => {
     // Debounce rapid triggers so we don't hammer chrome.history.search
     // Increased delay to reduce frequency of expensive history queries
@@ -117,7 +117,7 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
     debounceRef.current = setTimeout(() => {
       loadHistory();
     }, 2000); // Increased from 1500ms to 2000ms to reduce API calls
-  }, [maxItems, scheduledTabsLength, loadHistory]);
+  }, [maxItems, scheduledDataLength, loadHistory]);
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {
