@@ -18,7 +18,7 @@ function ContextualComponent({ className }) {
   const [error, setError] = useState(null);
   
   // Watch for changes in stashed tabs to update contextual matches
-  const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
+  const { data: stashedTabs } = useReactiveStorage('triageHub_scheduled', []);
 
   // Load contextual data on component mount and when stashed tabs change
   useEffect(() => {

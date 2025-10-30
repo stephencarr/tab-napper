@@ -14,22 +14,25 @@
 
 import { encryptString, decryptString } from './encryption.js';
 import { notifyStorageChange } from './reactiveStorage.js';
+import { STORAGE_KEYS } from './storageKeys.js';
 
 // Storage key mapping - determines which keys go to sync vs local storage
 const SYNC_STORAGE_KEYS = new Set([
   'triageHub_encryptionKey',     // E2EE key
-  'triageHub_quickAccessCards',  // Quick Access Cards (small, critical)
+  STORAGE_KEYS.QUICK_ACCESS_CARDS,  // Quick Access Cards (small, critical)
   'triageHub_userPreferences',   // User settings
 ]);
 
 const LOCAL_STORAGE_KEYS = new Set([
-  'triageHub_inbox',           // _Triage_Inbox (bulk data)
-  'triageHub_stashedTabs',     // StashedTabs (bulk data)
-  'triageHub_trash',           // Trash (bulk data)
-  'triageHub_notes',           // Notes (bulk data)
-  'tabNapper_lastCleanup',     // Last auto-cleanup timestamp (performance optimization)
-  'tabNapper_hasPinnedTab',    // Auto-pin flag (prevents duplicate pinning)
-  'tabNapper_pinnedTabId',     // ID of pinned Tab Napper tab
+  STORAGE_KEYS.INBOX,              // Inbox (bulk data)
+  STORAGE_KEYS.SCHEDULED,          // Scheduled items (bulk data)
+  STORAGE_KEYS.LEGACY_STASHED,     // Legacy key (for migration)
+  STORAGE_KEYS.TRASH,              // Trash (bulk data)
+  STORAGE_KEYS.COMPLETED,          // Completed items (bulk data)
+  'triageHub_notes',               // Notes (bulk data)
+  'tabNapper_lastCleanup',         // Last auto-cleanup timestamp (performance optimization)
+  'tabNapper_hasPinnedTab',        // Auto-pin flag (prevents duplicate pinning)
+  'tabNapper_pinnedTabId',         // ID of pinned Tab Napper tab
 ]);
 
 /**
@@ -134,9 +137,10 @@ async function saveAppState(key, data) {
  */
 async function initializeBulkData() {
   const bulkDataKeys = [
-    'triageHub_inbox',
-    'triageHub_stashedTabs', 
-    'triageHub_trash',
+    STORAGE_KEYS.INBOX,
+    STORAGE_KEYS.SCHEDULED,
+    STORAGE_KEYS.TRASH,
+    STORAGE_KEYS.COMPLETED,
     'triageHub_notes'
   ];
   
@@ -180,44 +184,50 @@ function deduplicateById(items) {
  * Load all application data into a single state object
  */
 async function loadAllAppData() {
+  // Run migrations first
+  const { runStorageMigrations } = await import('./storageKeys.js');
+  await runStorageMigrations();
+  
   // Initialize bulk data if needed
   await initializeBulkData();
   
-  // Load all data
+  // Load all data using centralized keys
   const [
     quickAccessCards,
     userPreferences,
     inbox,
-    stashedTabs,
-    trash
+    scheduled,
+    trash,
+    completed
   ] = await Promise.all([
-    loadAppState('triageHub_quickAccessCards'),
+    loadAppState(STORAGE_KEYS.QUICK_ACCESS_CARDS),
     loadAppState('triageHub_userPreferences'),
-    loadAppState('triageHub_inbox'),
-    loadAppState('triageHub_stashedTabs'),
-    loadAppState('triageHub_trash')
+    loadAppState(STORAGE_KEYS.INBOX),
+    loadAppState(STORAGE_KEYS.SCHEDULED),
+    loadAppState(STORAGE_KEYS.TRASH),
+    loadAppState(STORAGE_KEYS.COMPLETED)
   ]);
   
-  // Deduplicate arrays (especially trash which can accumulate duplicates)
+  // Deduplicate arrays
   const originalInboxLength = Array.isArray(inbox) ? inbox.length : undefined;
-  const originalStashedLength = Array.isArray(stashedTabs) ? stashedTabs.length : undefined;
+  const originalScheduledLength = Array.isArray(scheduled) ? scheduled.length : undefined;
   const originalTrashLength = Array.isArray(trash) ? trash.length : undefined;
   const deduplicatedInbox = deduplicateById(inbox || []);
-  const deduplicatedStashed = deduplicateById(stashedTabs || []);
+  const deduplicatedScheduled = deduplicateById(scheduled || []);
   const deduplicatedTrash = deduplicateById(trash || []);
   
   // If we removed duplicates, save the cleaned data back to storage
   if (deduplicatedInbox.length !== originalInboxLength) {
     console.log('[Storage] Deduplicating inbox:', originalInboxLength, '→', deduplicatedInbox.length);
-    await saveAppState('triageHub_inbox', deduplicatedInbox);
+    await saveAppState(STORAGE_KEYS.INBOX, deduplicatedInbox);
   }
-  if (deduplicatedStashed.length !== originalStashedLength) {
-    console.log('[Storage] Deduplicating stashed:', originalStashedLength, '→', deduplicatedStashed.length);
-    await saveAppState('triageHub_stashedTabs', deduplicatedStashed);
+  if (deduplicatedScheduled.length !== originalScheduledLength) {
+    console.log('[Storage] Deduplicating scheduled:', originalScheduledLength, '→', deduplicatedScheduled.length);
+    await saveAppState(STORAGE_KEYS.SCHEDULED, deduplicatedScheduled);
   }
   if (deduplicatedTrash.length !== originalTrashLength) {
     console.log('[Storage] Deduplicating trash:', originalTrashLength, '→', deduplicatedTrash.length);
-    await saveAppState('triageHub_trash', deduplicatedTrash);
+    await saveAppState(STORAGE_KEYS.TRASH, deduplicatedTrash);
   }
   
   return {
@@ -230,8 +240,9 @@ async function loadAllAppData() {
     
     // Local storage data (bulk, now deduplicated)
     inbox: deduplicatedInbox,
-    stashedTabs: deduplicatedStashed,
-    trash: deduplicatedTrash
+    scheduled: deduplicatedScheduled,
+    trash: deduplicatedTrash,
+    completed: completed || []
   };
 }
 
@@ -240,5 +251,5 @@ export {
   saveAppState,
   initializeBulkData,
   loadAllAppData,
-  getStorageType
+  STORAGE_KEYS
 };

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronRight, Trash2, CheckCircle2 } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -90,7 +90,7 @@ const getSmartWhenOptions = () => {
 /**
  * FidgetControl - ADHD-Friendly Fidget Control Logic and UI Component
  * 
- * A tactile, low-friction interface for scheduling and managing stashed items.
+ * A tactile, low-friction interface for scheduling and managing items.
  * Features button group design with action/timing pills and execute button.
  */
 function FidgetControl({ item, onAction, className }) {
@@ -156,6 +156,13 @@ function FidgetControl({ item, onAction, className }) {
     }
   }, [deleteConfirmation, onAction, item]);
 
+  // Handle mark as done
+  const handleMarkDone = useCallback(() => {
+    if (onAction) {
+      onAction('mark_done', item);
+    }
+  }, [onAction, item]);
+
   // Handle execute action
   const handleExecute = useCallback(() => {
     if (onAction) {
@@ -182,7 +189,7 @@ function FidgetControl({ item, onAction, className }) {
       {/* Confirmation message */}
       {showConfirmation && (
         <div className="text-xs text-green-600 dark:text-green-400 font-medium animate-fade-in">
-          ✓ Moved to Stash
+          ✓ Scheduled
         </div>
       )}
       
@@ -226,6 +233,18 @@ function FidgetControl({ item, onAction, className }) {
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Mark Done Button */}
+        <button
+          onClick={handleMarkDone}
+          className={cn(
+            "inline-flex items-center justify-center h-8 w-8 rounded-md border transition-colors",
+            "border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-500 dark:text-calm-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-700"
+          )}
+          title="Mark as done"
+        >
+          <CheckCircle2 className="h-4 w-4" />
+        </button>
 
         {/* Delete Button */}
         <button
