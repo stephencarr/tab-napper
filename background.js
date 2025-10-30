@@ -138,7 +138,7 @@ async function captureClosedTab(tabInfo) {
     // Load all collections
     const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled', 'triageHub_trash']);
     const triageInbox = result.triageHub_inbox || [];
-    const scheduledTabs = result.triageHub_scheduled || [];
+    const scheduledData = result.triageHub_scheduled || [];
     const trash = result.triageHub_trash || [];
     
     let removedFrom = [];
@@ -152,9 +152,9 @@ async function captureClosedTab(tabInfo) {
     }
     
     // Remove duplicates from scheduled tabs
-    const scheduledDuplicates = scheduledTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
+    const scheduledDuplicates = scheduledData.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
     if (scheduledDuplicates.length > 0) {
-      const cleanedScheduled = scheduledTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      const cleanedScheduled = scheduledData.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
       await chrome.storage.local.set({ triageHub_scheduled: cleanedScheduled });
       removedFrom.push(`scheduled (${scheduledDuplicates.length})`);
     }
@@ -443,11 +443,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     
     // Load current data
     const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
-    const scheduledTabs = result.triageHub_scheduled || [];
+    const scheduledData = result.triageHub_scheduled || [];
     const inbox = result.triageHub_inbox || [];
     
     // Find the item in scheduled tabs
-    const item = scheduledTabs.find(i => i.id === itemId);
+    const item = scheduledData.find(i => i.id === itemId);
     
     if (!item) {
       console.log('[Tab Napper] Item not found in scheduled tabs:', itemId);
@@ -467,8 +467,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     // Add to beginning of inbox for re-triage
     const updatedInbox = [retriagedItem, ...inbox];
     
-    // Remove from stashed tabs
-    const updatedScheduled = scheduledTabs.filter(i => i.id !== itemId);
+    // Remove from scheduled tabs
+    const updatedScheduled = scheduledData.filter(i => i.id !== itemId);
     
     // Save updated data
     await chrome.storage.local.set({

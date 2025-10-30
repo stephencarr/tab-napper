@@ -17,10 +17,10 @@ function ContextualComponent({ className }) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [error, setError] = useState(null);
   
-  // Watch for changes in stashed tabs to update contextual matches
-  const { data: scheduledTabs } = useReactiveStorage('triageHub_scheduled', []);
+  // Watch for changes in scheduled tabs to update contextual matches
+  const { data: scheduledData } = useReactiveStorage('triageHub_scheduled', []);
 
-  // Load contextual data on component mount and when stashed tabs change
+  // Load contextual data on component mount and when scheduled tabs change
   useEffect(() => {
     loadContextualMatch();
     
@@ -29,7 +29,7 @@ function ContextualComponent({ className }) {
     const interval = setInterval(loadContextualMatch, 300000); // Every 5 minutes (was 2 minutes)
     
     return () => clearInterval(interval);
-  }, [scheduledTabs]); // Add scheduledTabs as dependency
+  }, [scheduledData]); // Add scheduledData as dependency
 
   const loadContextualMatch = async () => {
     try {
@@ -40,19 +40,19 @@ function ContextualComponent({ className }) {
       const openTabs = await getCurrentlyOpenTabs();
       
       // Use reactive scheduled tabs data
-      const currentScheduledTabs = scheduledTabs || [];
+      const currentScheduledData = scheduledData || [];
       
-      debugLog('Contextual', `Matching - Open tabs: ${openTabs.length}, Scheduled tabs: ${currentScheduledTabs.length}`);
+      debugLog('Contextual', `Matching - Open tabs: ${openTabs.length}, Scheduled tabs: ${currentScheduledData.length}`);
       
-      if (openTabs.length === 0 || currentScheduledTabs.length === 0) {
-        debugLog('Contextual', `No contextual matches possible - openTabs: ${openTabs.length}, scheduledTabs: ${currentScheduledTabs.length}`);
+      if (openTabs.length === 0 || currentScheduledData.length === 0) {
+        debugLog('Contextual', `No contextual matches possible - openTabs: ${openTabs.length}, scheduledData: ${currentScheduledData.length}`);
         setContextualItem(null);
         setIsLoading(false);
         return;
       }
       
       // Find contextual matches based on domain or keywords
-      const contextualMatch = findContextualMatch(openTabs, currentScheduledTabs);
+      const contextualMatch = findContextualMatch(openTabs, currentScheduledData);
       
       if (contextualMatch) {
         debugLog('Contextual', `Found match: ${contextualMatch.title} (${contextualMatch.matchReason}, score: ${contextualMatch.contextScore})`);
@@ -71,7 +71,7 @@ function ContextualComponent({ className }) {
   };
 
   // Find a relevant stashed item based on currently open tabs
-  const findContextualMatch = (openTabs, scheduledTabs) => {
+  const findContextualMatch = (openTabs, scheduledData) => {
     debugLog('Contextual', 'Starting contextual matching...');
     
     // Get domains and keywords from open tabs
@@ -106,7 +106,7 @@ function ContextualComponent({ className }) {
     debugLog('Contextual', `Open domains: ${openDomains.size}, Open keywords: ${openKeywords.size}`);
     
     // Score stashed items for relevance
-    const scoredItems = scheduledTabs.map(item => {
+    const scoredItems = scheduledData.map(item => {
       let score = 0;
       let matchReason = '';
       

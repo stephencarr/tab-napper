@@ -61,10 +61,10 @@ function normalizeUrl(url) {
  */
 async function findDuplicateInStashed(url) {
   try {
-    const scheduledTabs = await loadAppState('triageHub_scheduled') || [];
+    const scheduledData = await loadAppState('triageHub_scheduled') || [];
     const normalizedUrl = normalizeUrl(url);
     
-    return scheduledTabs.find(tab => 
+    return scheduledData.find(tab => 
       normalizeUrl(tab.url || '') === normalizedUrl
     );
   } catch (error) {
@@ -78,10 +78,10 @@ async function findDuplicateInStashed(url) {
  */
 async function removeDuplicateFromStashed(duplicateItem) {
   try {
-    const scheduledTabs = await loadAppState('triageHub_scheduled') || [];
-    const originalCount = scheduledTabs.length;
+    const scheduledData = await loadAppState('triageHub_scheduled') || [];
+    const originalCount = scheduledData.length;
 
-    const updatedScheduled = scheduledTabs.filter(tab => tab.id !== duplicateItem.id);
+    const updatedScheduled = scheduledData.filter(tab => tab.id !== duplicateItem.id);
     const newCount = updatedScheduled.length;
     
     await saveAppState('triageHub_scheduled', updatedScheduled);
@@ -142,7 +142,7 @@ async function captureClosedTab(tabInfo) {
     debugLog('Capture', `🔍 Checking for duplicates of: ${normalizedUrl}`);
     
     // Load all collections
-    const [triageInbox, scheduledTabs, trash] = await Promise.all([
+    const [triageInbox, scheduledData, trash] = await Promise.all([
       loadAppState('triageHub_inbox', []),
       loadAppState('triageHub_scheduled', []),
       loadAppState('triageHub_trash', [])
@@ -160,12 +160,12 @@ async function captureClosedTab(tabInfo) {
     }
     
     // Check and remove from scheduled
-    const scheduledDuplicates = scheduledTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
+    const scheduledDuplicates = scheduledData.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
     if (scheduledDuplicates.length > 0) {
-      const cleanedScheduled = scheduledTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await saveAppState('triageHub_scheduled', cleanedStashed);
-      removedFrom.push(`stashed (${stashedDuplicates.length})`);
-      debugLog('Capture', `🗑️ Removed ${stashedDuplicates.length} duplicates from scheduled`);
+      const cleanedScheduled = scheduledData.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      await saveAppState('triageHub_scheduled', cleanedScheduled);
+      removedFrom.push(`scheduled (${scheduledDuplicates.length})`);
+      debugLog('Capture', `🗑️ Removed ${scheduledDuplicates.length} duplicates from scheduled`);
     }
     
     // Check and remove from trash (optional - might want to keep trash separate)

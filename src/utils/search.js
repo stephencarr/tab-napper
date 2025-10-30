@@ -46,7 +46,7 @@ async function searchAllData(searchTerm) {
     console.log(`[Tab Napper] 🔍 Starting search for: "${searchTerm}"`);
     
     // Load our internal data sources
-    const [inbox, scheduledTabs, quickAccessCards, trash] = await Promise.all([
+    const [inbox, scheduledData, quickAccessCards, trash] = await Promise.all([
       loadAppState('triageHub_inbox'),
       loadAppState('triageHub_scheduled'),
       loadAppState('triageHub_quickAccessCards'),
@@ -70,14 +70,14 @@ async function searchAllData(searchTerm) {
     }
     
     // Search scheduled (high priority)
-    if (scheduledTabs && scheduledTabs.length > 0) {
-      console.log(`[Tab Napper] 🔍 Searching ${scheduledTabs.length} scheduled items...`);
-      scheduledTabs.forEach(item => {
+    if (scheduledData && scheduledData.length > 0) {
+      console.log(`[Tab Napper] 🔍 Searching ${scheduledData.length} scheduled items...`);
+      scheduledData.forEach(item => {
         if (searchInItem(item, searchTerm)) {
           results.push({
             ...item,
             source: 'scheduled',
-            relevance: calculateRelevance(item, searchTerm) + 8 // Stashed items get high priority
+            relevance: calculateRelevance(item, searchTerm) + 8 // Scheduled items get high priority
           });
         }
       });

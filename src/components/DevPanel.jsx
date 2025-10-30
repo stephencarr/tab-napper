@@ -322,13 +322,13 @@ function AlarmsTab({ addLog, showToast }) {
 
       // Get all data
       const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
-      const scheduledTabs = result.triageHub_scheduled || [];
+      const scheduledData = result.triageHub_scheduled || [];
       const inbox = result.triageHub_inbox || [];
 
-      console.log('[DevPanel] Flushing', scheduledTabs.length, 'scheduled items');
-      addLog(`📋 Found ${scheduledTabs.length} scheduled items`, 'info');
+      console.log('[DevPanel] Flushing', scheduledData.length, 'scheduled items');
+      addLog(`📋 Found ${scheduledData.length} scheduled items`, 'info');
 
-      if (scheduledTabs.length === 0) {
+      if (scheduledData.length === 0) {
         showToast('Nothing to flush', 'info');
         addLog('No scheduled items found', 'info');
         return;
@@ -350,7 +350,7 @@ function AlarmsTab({ addLog, showToast }) {
       }
 
       // Remove scheduled metadata from all items
-      const cleanedItems = scheduledTabs.map(item => {
+      const cleanedItems = scheduledData.map(item => {
         const cleaned = { ...item };
         delete cleaned.scheduledFor;
         delete cleaned.scheduledAction;
@@ -367,8 +367,8 @@ function AlarmsTab({ addLog, showToast }) {
       });
 
       console.log('[DevPanel] Flush complete');
-      showToast(`✅ Flushed ${scheduledTabs.length} items!`, 'success');
-      addLog(`✅ Flushed ${scheduledTabs.length} items to inbox`, 'success');
+      showToast(`✅ Flushed ${scheduledData.length} items!`, 'success');
+      addLog(`✅ Flushed ${scheduledData.length} items to inbox`, 'success');
 
       // Trigger UI refresh
       window.dispatchEvent(new CustomEvent('storage-updated'));
@@ -488,13 +488,13 @@ function AlarmsTab({ addLog, showToast }) {
           console.log('[DevPanel] Parsed - action:', action, 'itemId:', itemId);
           addLog(`⏰ Triggering: ${alarm.name}`, 'info');
 
-          // Get the stashed item
+          // Get the scheduled item
           const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
-          const scheduledTabs = result.triageHub_scheduled || [];
+          const scheduledData = result.triageHub_scheduled || [];
           const inbox = result.triageHub_inbox || [];
 
-          console.log('[DevPanel] Scheduled tabs:', scheduledTabs.length);
-          const item = scheduledTabs.find(i => i.id === itemId);
+          console.log('[DevPanel] Scheduled tabs:', scheduledData.length);
+          const item = scheduledData.find(i => i.id === itemId);
           console.log('[DevPanel] Found item:', item ? item.title : 'NOT FOUND');
 
           if (!item) {
@@ -511,7 +511,7 @@ function AlarmsTab({ addLog, showToast }) {
 
           // Move to inbox
           const updatedInbox = [retriagedItem, ...inbox];
-          const updatedScheduled = scheduledTabs.filter(i => i.id !== itemId);
+          const updatedScheduled = scheduledData.filter(i => i.id !== itemId);
 
           await chrome.storage.local.set({
             triageHub_inbox: updatedInbox,

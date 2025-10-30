@@ -236,8 +236,8 @@ async function getCurrentlyOpenTabs() {
  */
 async function getStashedUrls() {
   try {
-    const scheduledTabs = await loadAppState('triageHub_scheduled') || [];
-    return scheduledTabs.map(tab => normalizeUrl(tab.url || ''));
+    const scheduledData = await loadAppState('triageHub_scheduled') || [];
+    return scheduledData.map(tab => normalizeUrl(tab.url || ''));
   } catch (error) {
     console.error('[Tab Napper] Error fetching stashed URLs:', error);
     return [];

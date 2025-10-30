@@ -597,8 +597,8 @@ function ContextualCardWrapper() {
       try {
         // This is a simplified check - in a real implementation you'd want to
         // share state or use a context, but for now we'll just check if there's potential content
-        const scheduledTabs = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
-        setHasContent(scheduledTabs.length > 0);
+        const scheduledData = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
+        setHasContent(scheduledData.length > 0);
       } catch (error) {
         setHasContent(false);
       }
