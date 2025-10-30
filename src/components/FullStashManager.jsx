@@ -4,7 +4,7 @@ import { loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 
 /**
- * full scheduled Manager Button Component
+ * Full Scheduled Manager Button Component
  * Provides navigation to the full scheduled management interface
  */
 function FullStashManager({ className, onNavigate }) {
@@ -39,7 +39,7 @@ function FullStashManager({ className, onNavigate }) {
   };
   
   const handleClick = () => {
-    console.log('[Tab Napper] 📁 full scheduled Manager clicked');
+    console.log('[Tab Napper] 📁 Full Scheduled Manager clicked');
     
     // For now, we'll just log the action
     // In a future implementation, this could:
@@ -51,7 +51,7 @@ function FullStashManager({ className, onNavigate }) {
       onNavigate('stash-manager');
     } else {
       // Default behavior: log the intended action
-      console.log('[Tab Napper] full scheduled Manager would open here');
+      console.log('[Tab Napper] Full Scheduled Manager would open here');
       console.log('[Tab Napper] Future implementation: Modal or dedicated stash management view');
     }
   };
@@ -72,7 +72,7 @@ function FullStashManager({ className, onNavigate }) {
               <Archive className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <h3 className="font-medium text-sm">full scheduled Manager</h3>
+              <h3 className="font-medium text-sm">Full Scheduled Manager</h3>
               <p className="text-xs text-calm-200 group-hover:text-white transition-colors">
                 Organize & manage all scheduled items
               </p>
