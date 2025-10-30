@@ -48,19 +48,30 @@ export default function NoteEditor({ noteId }) {
     (async () => {
       setLoading(true);
       try {
-        const [notes, inbox] = await Promise.all([
+        const [notes, inbox, scheduled, archive] = await Promise.all([
           loadAppState('triageHub_notes'),
-          loadAppState('triageHub_inbox')
+          loadAppState('triageHub_inbox'),
+          loadAppState('triageHub_scheduled'),
+          loadAppState('triageHub_archive')
         ]);
         
         console.log('[NoteEditor] All notes:', notes);
         console.log('[NoteEditor] All inbox:', inbox);
+        console.log('[NoteEditor] All scheduled:', scheduled);
+        console.log('[NoteEditor] All archive:', archive);
         console.log('[NoteEditor] Looking for noteId:', noteId);
         
         const fromNotes = (notes || []).find((n) => n.id === noteId);
         const fromInbox = (inbox || []).find((n) => n.id === noteId);
-        const note = fromNotes || fromInbox;
-        currentCollectionsRef.current = { inInbox: !!fromInbox, inNotes: !!fromNotes };
+        const fromScheduled = (scheduled || []).find((n) => n.id === noteId);
+        const fromArchive = (archive || []).find((n) => n.id === noteId);
+        const note = fromNotes || fromInbox || fromScheduled || fromArchive;
+        currentCollectionsRef.current = { 
+          inInbox: !!fromInbox, 
+          inNotes: !!fromNotes,
+          inScheduled: !!fromScheduled,
+          inArchive: !!fromArchive
+        };
         
         console.log('[NoteEditor] Found in notes:', fromNotes);
         console.log('[NoteEditor] Found in inbox:', fromInbox);
@@ -126,9 +137,11 @@ export default function NoteEditor({ noteId }) {
       setTitle(newTitle);
       document.title = `${newTitle} • Note`;
 
-      const [notes, inbox] = await Promise.all([
+      const [notes, inbox, scheduled, archive] = await Promise.all([
         loadAppState('triageHub_notes').then((v) => v || []),
-        loadAppState('triageHub_inbox').then((v) => v || [])
+        loadAppState('triageHub_inbox').then((v) => v || []),
+        loadAppState('triageHub_scheduled').then((v) => v || []),
+        loadAppState('triageHub_archive').then((v) => v || [])
       ]);
 
       const updateItem = (item) => {
@@ -151,9 +164,13 @@ export default function NoteEditor({ noteId }) {
 
       let notesUpdated = false;
       let inboxUpdated = false;
+      let scheduledUpdated = false;
+      let archiveUpdated = false;
 
       const notesOut = notes.map((n) => (n.id === noteId ? (notesUpdated = true, updateItem(n)) : n));
       const inboxOut = inbox.map((n) => (n.id === noteId ? (inboxUpdated = true, updateItem(n)) : n));
+      const scheduledOut = scheduled.map((n) => (n.id === noteId ? (scheduledUpdated = true, updateItem(n)) : n));
+      const archiveOut = archive.map((n) => (n.id === noteId ? (archiveUpdated = true, updateItem(n)) : n));
 
       // If not present in notes, add it there as canonical storage
       const newNoteEntry = updateItem({ id: noteId });
@@ -161,7 +178,9 @@ export default function NoteEditor({ noteId }) {
 
       await Promise.all([
         saveAppState('triageHub_notes', finalNotes),
-        saveAppState('triageHub_inbox', inboxUpdated ? inboxOut : inbox)
+        saveAppState('triageHub_inbox', inboxUpdated ? inboxOut : inbox),
+        saveAppState('triageHub_scheduled', scheduledUpdated ? scheduledOut : scheduled),
+        saveAppState('triageHub_archive', archiveUpdated ? archiveOut : archive)
       ]);
 
       lastSavedContentRef.current = content;
