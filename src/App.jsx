@@ -499,7 +499,7 @@ function App() {
       
       // Map tab IDs to view names
       const tabToViewMap = {
-        'stashed': 'All Stashed',
+        'scheduled': 'All Scheduled',
         'inbox': 'Inbox',
         'trash': 'Trash'
       };
@@ -510,7 +510,7 @@ function App() {
     };
     
     switch (currentView) {
-      case 'All Stashed':
+      case 'All Scheduled':
         return (
           <StashManagerView
             initialFilter="scheduled"
