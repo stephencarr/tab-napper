@@ -18,6 +18,10 @@ function StashCard({
   isArchiveView = false,
   isScheduledView = false,
   isCurrentlyOpen = false,
+  // Bulk actions support
+  showCheckbox = false,
+  isSelected = false,
+  onToggleSelect,
   className
 }) {
   // Track whether we're showing reschedule controls for scheduled items
@@ -169,10 +173,29 @@ function StashCard({
     <div 
       className={cn(
         "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors relative",
+        isSelected && "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500",
         className
       )}
       onClick={handleNavigate}
     >
+      {/* Checkbox for bulk actions */}
+      {showCheckbox && (
+        <div 
+          className="flex-shrink-0 mr-3 mt-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.(item.id);
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => {}}
+            className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+          />
+        </div>
+      )}
+      
       {/* Celebration Animation Overlay */}
       {showCelebration && (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50/95 to-emerald-100/95 dark:from-green-900/70 dark:to-emerald-800/70 rounded-lg z-10 backdrop-blur-sm">

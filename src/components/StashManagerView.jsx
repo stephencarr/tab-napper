@@ -2,7 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Archive, Trash2, Inbox, Filter, X, Copy, ExternalLink, Pin, RefreshCw } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import StashCard from './StashCard.jsx';
+import BulkActionBar from './BulkActionBar.jsx';
 import { useOpenTabs } from '../hooks/useOpenTabs.js';
+import { useBulkActions } from '../hooks/useBulkActions.js';
 import { closeOpenTabs, findAndCloseDuplicateTabs } from '../utils/navigation.js';
 
 /**
@@ -38,6 +40,16 @@ function StashManagerView({
   
   // Track which items are currently open (polls every 10 seconds + real-time events)
   const { isOpen, openItemIds, uniqueTabCount, refreshOpenTabs, isChecking } = useOpenTabs(allItems, 10000, true);
+  
+  // Bulk actions hook
+  const {
+    selectedCount,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    isSelected,
+    getSelectedIds
+  } = useBulkActions();
   
   // Force initial check when view changes or when component mounts
   useEffect(() => {
@@ -230,6 +242,55 @@ function StashManagerView({
   const handleItemClick = (item) => {
     // TODO: Implement item interaction (navigate, edit, move between lists, etc.)
   };
+  
+  // Bulk action handlers
+  const handleBulkTrash = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    const confirmMsg = `Move ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Trash?`;
+    if (!window.confirm(confirmMsg)) return;
+    
+    for (const id of ids) {
+      const item = allItems.find(i => i.id === id);
+      if (item) {
+        await onItemAction?.(item, 'trash');
+      }
+    }
+    clearSelection();
+  };
+  
+  const handleBulkArchive = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    const confirmMsg = `Move ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Archive?`;
+    if (!window.confirm(confirmMsg)) return;
+    
+    for (const id of ids) {
+      const item = allItems.find(i => i.id === id);
+      if (item) {
+        await onItemAction?.(item, 'mark_done'); // mark_done moves to archive
+      }
+    }
+    clearSelection();
+  };
+  
+  const handleBulkSchedule = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    const confirmMsg = `Move ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Scheduled?`;
+    if (!window.confirm(confirmMsg)) return;
+    
+    for (const id of ids) {
+      const item = allItems.find(i => i.id === id);
+      if (item) {
+        await onItemAction?.(item, 'schedule', { when: 'later', scheduledWhen: 'Later' });
+      }
+    }
+    clearSelection();
+  };
 
   const tabs = [
     { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.scheduled },
@@ -414,6 +475,18 @@ function StashManagerView({
               </div>
             )}
             
+            {/* Bulk Action Bar */}
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalCount={filteredItems.length}
+              onSelectAll={() => selectAll(filteredItems)}
+              onClearSelection={clearSelection}
+              onTrash={handleBulkTrash}
+              onArchive={handleBulkArchive}
+              onSchedule={handleBulkSchedule}
+              currentView={currentData.title}
+            />
+            
             <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
               {filteredItems.map((item, index) => {
                 // Use a stable key based on id or url; deduplication is handled in storage
@@ -429,6 +502,9 @@ function StashManagerView({
                       isArchiveView={activeTab === 'archive'}
                       isScheduledView={activeTab === 'scheduled'}
                       isCurrentlyOpen={isOpen(item)}
+                      showCheckbox={true}
+                      isSelected={isSelected(item.id)}
+                      onToggleSelect={toggleSelection}
                     />
                   </li>
                 );
