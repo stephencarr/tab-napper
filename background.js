@@ -553,10 +553,10 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
     
     if (context.item.url) {
       // Open the URL in a new tab
-      chrome.tabs.create({ url: context.item.url, active: true });
+      chrome.tabs.create({ url: context.item.url, active: true, pinned: false });
     } else {
       // Open Tab Napper to show the note
-      chrome.tabs.create({ url: 'chrome://newtab' });
+      chrome.tabs.create({ url: 'chrome://newtab', pinned: false });
     }
     
     // Clean up notification context
@@ -627,7 +627,7 @@ chrome.notifications.onClicked.addListener((notificationId) => {
   
   // Open Tab Napper
   chrome.action.openPopup().catch(() => {
-    chrome.tabs.create({ url: 'chrome://newtab' });
+    chrome.tabs.create({ url: 'chrome://newtab', pinned: false });
   });
   
   // Clear the notification
