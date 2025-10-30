@@ -167,11 +167,18 @@ function StashCard({
   return (
     <div 
       className={cn(
-        "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors",
+        "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors relative",
         className
       )}
       onClick={handleNavigate}
     >
+      {/* Celebration Animation Overlay */}
+      {showCelebration && (
+        <div className="absolute inset-0 flex items-center justify-center bg-green-50/90 dark:bg-green-900/50 rounded-lg z-10 animate-pulse">
+          <div className="text-6xl animate-bounce">🎉</div>
+        </div>
+      )}
+      
       {/* Left side: Icon + Content */}
       <div className="flex items-start space-x-3 flex-1 min-w-0">
         {/* Icon */}
