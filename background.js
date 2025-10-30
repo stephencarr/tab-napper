@@ -589,9 +589,10 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
       // Move back to scheduled if it was retriaged
       scheduled.unshift(inbox[inboxIndex]);
       inbox.splice(inboxIndex, 1);
-    } else if (scheduledIndex !== -1) {
-      scheduled[scheduledIndex].scheduledFor = snoozeTime;
-      scheduled[scheduledIndex].scheduledWhen = 'In 15 minutes';
+    } else {
+      // This case should not normally be reached if the item is always moved to inbox by the alarm handler
+      // Logging a warning here to help debug unexpected states
+      console.warn(`[Tab Napper] ⚠️ Snoozed item with ID ${itemId} not found in inbox, which is unexpected.`);
     }
     
     await chrome.storage.local.set({
