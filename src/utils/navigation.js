@@ -145,6 +145,7 @@ async function closeOpenTabs(items) {
   // PERFORMANCE OPTIMIZATION: Query all tabs once instead of once per item
   try {
     const allTabs = await chrome.tabs.query({});
+    const closedTabIds = new Set(); // Track already-closed tabs to avoid duplicates
     
     // Create a map of normalized URLs to tabs for O(1) lookup
     const urlToTabMap = new Map();
@@ -172,6 +173,11 @@ async function closeOpenTabs(items) {
         if (matchingTabs && matchingTabs.length > 0) {
           // Process all matching tabs for this item
           for (const tab of matchingTabs) {
+            // Skip if already closed (handles duplicate items with same URL)
+            if (closedTabIds.has(tab.id)) {
+              continue;
+            }
+            
             // Skip pinned tabs
             if (tab.pinned) {
               results.skipped++;
@@ -182,6 +188,7 @@ async function closeOpenTabs(items) {
             const success = await closeTab(tab.id);
             if (success) {
               results.closed++;
+              closedTabIds.add(tab.id); // Mark as closed
               console.log(`[Tab Napper] ✅ Closed: ${item.title}`);
             } else {
               results.failed++;
