@@ -156,6 +156,7 @@ async function searchAllData(searchTerm) {
 /**
  * Search Chrome history directly using the built-in search API
  * This is much more efficient than pre-fetching everything
+ * Results are sorted by recency (most recent first)
  */
 async function searchChromeHistory(searchTerm, maxResults = 50) {
   if (typeof chrome === 'undefined' || !chrome.history) {
@@ -182,15 +183,17 @@ async function searchChromeHistory(searchTerm, maxResults = 50) {
       );
     });
     
-    // Filter out unwanted URLs and add status indicators
+    // Filter out unwanted URLs, sort by recency, and add status indicators
     const validResults = historyResults
       .filter(item => isValidHistoryItem(item))
+      .sort((a, b) => (b.lastVisitTime || 0) - (a.lastVisitTime || 0)) // Sort by most recent first
       .map(item => ({
         ...item,
         id: `history-${item.url}`,
         description: item.url,
-        isCurrentlyOpen: false, // We could check this if needed
-        isPreviouslyStashed: false // We could check this if needed
+        timestamp: item.lastVisitTime, // Use lastVisitTime as timestamp for consistency
+        isCurrentlyOpen: false,
+        isPreviouslyStashed: false
       }));
     
     return validResults;
@@ -278,11 +281,22 @@ function calculateRelevance(item, searchTerm) {
     score += 4;
   }
   
-  // Recent items get slight boost (but not too much to override source priority)
-  if (item.timestamp) {
-    const daysSinceCreated = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
-    if (daysSinceCreated < 1) score += 1;
-    else if (daysSinceCreated < 7) score += 0.5;
+  // RECENCY BOOST: Recent items get significant boost for better UX
+  const timestamp = item.timestamp || item.lastVisitTime || item.capturedAt;
+  if (timestamp) {
+    const daysSinceCreated = (Date.now() - timestamp) / (1000 * 60 * 60 * 24);
+    
+    // More aggressive recency scoring
+    if (daysSinceCreated < 1) {
+      score += 3; // Today: significant boost
+    } else if (daysSinceCreated < 7) {
+      score += 2; // This week: good boost
+    } else if (daysSinceCreated < 30) {
+      score += 1; // This month: moderate boost
+    } else if (daysSinceCreated < 90) {
+      score += 0.5; // Last 3 months: slight boost
+    }
+    // Older than 3 months gets no recency bonus
   }
   
   // Source priority is now handled in the main search function with explicit boosts

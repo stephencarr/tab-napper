@@ -490,6 +490,7 @@ function App() {
       const tabToViewMap = {
         'scheduled': 'All Scheduled',
         'inbox': 'Inbox',
+        'archive': 'Archive',
         'trash': 'Trash'
       };
       const newView = tabToViewMap[tabId];
