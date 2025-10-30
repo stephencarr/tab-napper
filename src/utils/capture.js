@@ -143,9 +143,9 @@ async function captureClosedTab(tabInfo) {
     
     // Load all collections
     const [triageInbox, scheduledData, trash] = await Promise.all([
-      loadAppState('triageHub_inbox'),
-      loadAppState('triageHub_scheduled'),
-      loadAppState('triageHub_trash')
+      loadAppState('triageHub_inbox').then(data => data || []),
+      loadAppState('triageHub_scheduled').then(data => data || []),
+      loadAppState('triageHub_trash').then(data => data || [])
     ]);
     
     let removedFrom = [];
