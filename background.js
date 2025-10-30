@@ -71,11 +71,12 @@ function deduplicateItems(items) {
  */
 async function cleanupDuplicates() {
   console.log('[Tab Napper] 🧹 Starting periodic duplicate cleanup...');
-  
+
   try {
     const collections = {
       triageHub_inbox: 'Inbox',
       triageHub_scheduled: 'Scheduled',
+      triageHub_archive: 'Archive',
       triageHub_trash: 'Trash'
     };
     const keys = Object.keys(collections);

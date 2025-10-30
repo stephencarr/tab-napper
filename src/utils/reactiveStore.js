@@ -27,6 +27,7 @@ let stateChangeListeners = new Set();
 const STORAGE_KEY_MAPPING = {
   'triageHub_inbox': 'inbox',
   'triageHub_scheduled': 'scheduled',
+  'triageHub_archive': 'archive',
   'triageHub_trash': 'trash',
   'triageHub_notes': 'notes',
   'triageHub_quickAccessCards': 'quickAccessCards',
@@ -118,6 +119,7 @@ async function handleStorageChanges(changes, namespace) {
       // Main data keys
       'triageHub_inbox',
       'triageHub_scheduled',
+      'triageHub_archive',
       'triageHub_trash',
       'triageHub_notes',
       'triageHub_suggestionMetadata',

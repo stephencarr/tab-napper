@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   // Core data collections
   INBOX: 'triageHub_inbox',
   SCHEDULED: 'triageHub_scheduled',
+  ARCHIVE: 'triageHub_archive',
   TRASH: 'triageHub_trash',
   COMPLETED: 'triageHub_completed',
   

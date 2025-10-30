@@ -15,6 +15,7 @@ function StashManagerView({
   initialFilter = 'scheduled',
   inboxData = [],
   scheduledData = [],
+  archiveData = [],
   trashData = [],
   onItemAction,
   onTabChange // New prop to notify parent of tab changes
@@ -31,8 +32,8 @@ function StashManagerView({
   
   // Combine all items for open tab detection
   const allItems = useMemo(
-    () => [...inboxData, ...scheduledData, ...trashData],
-    [inboxData, scheduledData, trashData]
+    () => [...inboxData, ...scheduledData, ...archiveData, ...trashData],
+    [inboxData, scheduledData, archiveData, trashData]
   );
   
   // Track which items are currently open (polls every 10 seconds + real-time events)
@@ -48,7 +49,7 @@ function StashManagerView({
   // Don't tie to openItemIds to avoid excessive checks
   useEffect(() => {
     const checkDuplicates = async () => {
-      if (activeTab === 'trash') {
+      if (activeTab === 'trash' || activeTab === 'archive') {
         setDuplicateCount(0);
         return;
       }
@@ -92,6 +93,14 @@ function StashManagerView({
           description: 'Closed tabs and new items for you to triage and organize',
           emptyMessage: 'Your inbox is empty',
           emptyDescription: 'Closed tabs and new items will appear here for you to triage and organize.'
+        };
+      case 'archive':
+        return {
+          items: sortByTimestamp(archiveData || []),
+          title: 'Archive',
+          description: 'Completed and archived items',
+          emptyMessage: 'Archive is empty',
+          emptyDescription: 'Completed items will appear here. Archived items remain searchable and can be unarchived at any time.'
         };
       case 'trash':
         return {
