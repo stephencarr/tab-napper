@@ -13,7 +13,7 @@ function SearchResults({
   isLoading = false 
 }) {
   // Define the priority order for result segments
-  const segmentOrder = ['inbox', 'stashedTabs', 'quickAccessCards', 'recentHistory', 'trash'];
+  const segmentOrder = ['inbox', 'scheduled', 'quickAccessCards', 'recentHistory', 'trash'];
   
   // Group results by type for better organization with priority ordering
   const groupedResults = results.reduce((groups, item) => {
@@ -34,7 +34,7 @@ function SearchResults({
   const getTypeIcon = (type) => {
     switch (type) {
       case 'inbox': return FileText;
-      case 'stashedTabs': return Globe;
+      case 'scheduled': return Globe;
       case 'quickAccessCards': return Clock;
       case 'recentHistory': return History;
       case 'trash': return FileText;
@@ -46,7 +46,7 @@ function SearchResults({
   const getTypeName = (type) => {
     switch (type) {
       case 'inbox': return 'Inbox';
-      case 'stashedTabs': return 'Stashed Tabs';
+      case 'scheduled': return 'Scheduled';
       case 'quickAccessCards': return 'Quick Access';
       case 'recentHistory': return 'Browser History';
       case 'trash': return 'Trash';
@@ -58,7 +58,7 @@ function SearchResults({
   const getTypeColor = (type) => {
     switch (type) {
       case 'inbox': return 'text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/40';
-      case 'stashedTabs': return 'text-green-600 bg-green-50 dark:text-green-300 dark:bg-green-900/40';
+      case 'scheduled': return 'text-green-600 bg-green-50 dark:text-green-300 dark:bg-green-900/40';
       case 'quickAccessCards': return 'text-purple-600 bg-purple-50 dark:text-purple-300 dark:bg-purple-900/40';
       case 'recentHistory': return 'text-gray-600 bg-gray-50 dark:text-gray-300 dark:bg-gray-800/40';
       case 'trash': return 'text-red-600 bg-red-50 dark:text-red-300 dark:bg-red-900/40';
@@ -157,7 +157,7 @@ function SearchResults({
                     High Priority
                   </span>
                 )}
-                {type === 'stashedTabs' && (
+                {type === 'scheduled' && (
                   <span className="text-xs bg-green-100 text-green-700 dark:bg-green-800 dark:text-white px-2 py-1 rounded-full">
                     Saved
                   </span>

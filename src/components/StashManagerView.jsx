@@ -6,15 +6,15 @@ import { useOpenTabs } from '../hooks/useOpenTabs.js';
 import { closeOpenTabs, findAndCloseDuplicateTabs } from '../utils/navigation.js';
 
 /**
- * Unified Stash Manager View
+ * Unified Scheduled Manager View
  * Full-screen management interface for all items with tab navigation
  * Phase 2: Enhanced with filter and bulk actions
- * Tab options: All Stashed, Inbox, Trash
+ * Tab options: All Scheduled, Inbox, Trash
  */
 function StashManagerView({ 
-  initialFilter = 'stashed',
+  initialFilter = 'scheduled',
   inboxData = [],
-  stashedTabs = [],
+  scheduledData = [],
   trashData = [],
   onItemAction,
   onTabChange // New prop to notify parent of tab changes
@@ -101,11 +101,11 @@ function StashManagerView({
           emptyMessage: 'Trash is empty',
           emptyDescription: 'Deleted items can be recovered from here for a limited time.'
         };
-      case 'stashed':
+      case 'scheduled':
       default:
         return {
           items: sortByTimestamp(stashedTabs || []),
-          title: 'All Stashed',
+          title: 'All Scheduled',
           description: 'All your saved and organized items',
           emptyMessage: 'No stashed items yet',
           emptyDescription: 'Items you stash from the triage inbox will appear here for organized management.'
@@ -142,7 +142,7 @@ function StashManagerView({
       openItemIds: Array.from(openItemIds),
       allItemsCount: allItems.length,
       inboxCount: inboxData.length,
-      stashedCount: stashedTabs.length
+      stashedCount: scheduledData.length
     });
     
     if (allOpenItems.length === 0) {
@@ -222,7 +222,7 @@ function StashManagerView({
   };
 
   const tabs = [
-    { id: 'stashed', name: 'All Stashed', icon: Archive, count: counts.stashed },
+    { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.stashed },
     { id: 'inbox', name: 'Inbox', icon: Inbox, count: counts.inbox },
     { id: 'trash', name: 'Trash', icon: Trash2, count: counts.trash },
   ];

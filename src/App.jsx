@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
-import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
+import { loadAllAppData, saveAppState, loadAppState, STORAGE_KEYS } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData, generateTestBrowsingHistory } from './utils/devUtils.js';
 import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
@@ -248,7 +248,7 @@ function App() {
           // Move item to trash
           
           const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
-          const currentStashed = await loadAppState('triageHub_stashedTabs', []);
+          const currentStashed = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
           const currentTrashForDelete = await loadAppState('triageHub_trash', []);
           
           
@@ -271,7 +271,7 @@ function App() {
           
           // Update storage
           await saveAppState('triageHub_inbox', updatedInboxForDelete);
-          await saveAppState('triageHub_stashedTabs', updatedStashed);
+          await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashed);
           await saveAppState('triageHub_trash', updatedTrashForDelete);
           
           break;
@@ -297,7 +297,7 @@ function App() {
           const updatedInboxForSchedule = currentInboxForSchedule.filter(i => i.id !== item.id);
           
           // Step 4: Update in stashed tabs with new scheduling metadata
-          const currentStashedForSchedule = await loadAppState('triageHub_stashedTabs', []);
+          const currentStashedForSchedule = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
           
           // Remove old version from stashed (if it was already there)
           const filteredStashed = currentStashedForSchedule.filter(i => i.id !== item.id);
@@ -313,12 +313,43 @@ function App() {
           
           // Step 5: Save to storage
           await saveAppState('triageHub_inbox', updatedInboxForSchedule);
-          await saveAppState('triageHub_stashedTabs', updatedStashedForSchedule);
+          await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashedForSchedule);
           
           // Step 6: Set new Chrome alarm
           await setScheduledAlarm(item, action, scheduledTime);
           
           console.log('[Tab Napper] ✓ Item scheduled and stashed:', item.title);
+          break;
+        
+        case 'mark_done':
+          // Mark item as completed (remove from all lists and add to completed archive)
+          console.log('[Tab Napper] Marking item as done:', item.title);
+          
+          const currentInboxForDone = await loadAppState('triageHub_inbox', []);
+          const currentStashedForDone = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
+          const currentCompleted = await loadAppState('triageHub_completed', []);
+          
+          // Remove from inbox and stashed
+          const updatedInboxForDone = currentInboxForDone.filter(i => i.id !== item.id);
+          const updatedStashedForDone = currentStashedForDone.filter(i => i.id !== item.id);
+          
+          // Clear any scheduled alarms
+          await clearAllAlarmsForItem(item);
+          
+          // Add to completed archive with completion timestamp
+          const completedItem = {
+            ...item,
+            completedAt: Date.now(),
+            originalLocation: currentInboxForDone.find(i => i.id === item.id) ? 'inbox' : 'scheduled'
+          };
+          const updatedCompleted = [completedItem, ...currentCompleted];
+          
+          // Save to storage
+          await saveAppState('triageHub_inbox', updatedInboxForDone);
+          await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashedForDone);
+          await saveAppState('triageHub_completed', updatedCompleted);
+          
+          console.log('[Tab Napper] ✓ Item marked as done and archived');
           break;
           
         default:
@@ -384,7 +415,7 @@ function App() {
         }
       ];
       
-      await saveAppState('triageHub_stashedTabs', testStashedItems);
+      await saveAppState(STORAGE_KEYS.SCHEDULED, testStashedItems);
       
       // Chrome storage listener will automatically update the reactive store
 
@@ -566,7 +597,7 @@ function ContextualCardWrapper() {
       try {
         // This is a simplified check - in a real implementation you'd want to
         // share state or use a context, but for now we'll just check if there's potential content
-        const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+        const stashedTabs = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
         setHasContent(stashedTabs.length > 0);
       } catch (error) {
         setHasContent(false);

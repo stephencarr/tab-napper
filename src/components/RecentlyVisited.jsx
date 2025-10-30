@@ -74,7 +74,7 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
   const mountedRef = useRef(true); // Start as true since we're in the component
   
   // Watch for changes in stashed tabs to update history status
-  const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
+  const { data: stashedTabs } = useReactiveStorage('triageHub_scheduled', []);
   const stashedTabsLength = stashedTabs?.length || 0;
 
   // Cleanup on unmount

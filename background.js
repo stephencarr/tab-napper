@@ -13,6 +13,17 @@ const tabTracker = new Map(); // Map<tabId, tabInfo>
 const noteTabTracker = new Map(); // Map<tabId, noteId>
 
 /**
+ * Get human-readable label for item type
+ */
+function getItemTypeLabel(item) {
+  if (item.type === 'note') return '📝 Note';
+  if (item.type === 'captured-tab') return '🔗 Captured Tab';
+  if (item.url && item.url.includes('bookmark')) return '🔖 Bookmark';
+  if (item.url) return '🌐 Tab';
+  return '📄 Item';
+}
+
+/**
  * Deduplicate items in a collection, keeping only the most recent
  */
 function deduplicateItems(items) {
@@ -64,7 +75,7 @@ async function cleanupDuplicates() {
   try {
     const collections = {
       triageHub_inbox: 'Inbox',
-      triageHub_stashedTabs: 'Stashed',
+      triageHub_scheduled: 'Scheduled',
       triageHub_trash: 'Trash'
     };
     const keys = Object.keys(collections);
@@ -125,7 +136,7 @@ async function captureClosedTab(tabInfo) {
     const normalizedUrl = normalizeUrl(tabInfo.url);
     
     // Load all collections
-    const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_stashedTabs', 'triageHub_trash']);
+    const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled', 'triageHub_trash']);
     const triageInbox = result.triageHub_inbox || [];
     const stashedTabs = result.triageHub_stashedTabs || [];
     const trash = result.triageHub_trash || [];
@@ -143,8 +154,8 @@ async function captureClosedTab(tabInfo) {
     // Remove duplicates from stashed tabs
     const stashedDuplicates = stashedTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
     if (stashedDuplicates.length > 0) {
-      const cleanedStashed = stashedTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await chrome.storage.local.set({ triageHub_stashedTabs: cleanedStashed });
+      const cleanedScheduled = stashedTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+      await chrome.storage.local.set({ triageHub_stashedTabs: cleanedScheduled });
       removedFrom.push(`stashed (${stashedDuplicates.length})`);
     }
     
@@ -431,7 +442,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.log('[Tab Napper] Processing scheduled reminder:', { action, itemId });
     
     // Load current data
-    const result = await chrome.storage.local.get(['triageHub_stashedTabs', 'triageHub_inbox']);
+    const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
     const stashedTabs = result.triageHub_stashedTabs || [];
     const inbox = result.triageHub_inbox || [];
     
@@ -457,38 +468,53 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const updatedInbox = [retriagedItem, ...inbox];
     
     // Remove from stashed tabs
-    const updatedStashed = stashedTabs.filter(i => i.id !== itemId);
+    const updatedScheduled = stashedTabs.filter(i => i.id !== itemId);
     
     // Save updated data
     await chrome.storage.local.set({
       triageHub_inbox: updatedInbox,
-      triageHub_stashedTabs: updatedStashed
+      triageHub_stashedTabs: updatedScheduled
     });
     
     console.log('[Tab Napper] ✓ Item re-triaged from scheduled reminder:', item.title);
     
-    // Create a sticky notification
+    // Create an enhanced notification with action buttons
     const actionLabel = action === 'remind_me' ? 'Reminder' : 
                        action === 'follow_up' ? 'Follow-up' : 'Review';
     
     // Simple 1x1 transparent PNG as data URI (minimal valid icon)
     const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
     
+    // Get item preview (first 80 chars)
+    const preview = item.content || item.description || item.title || '';
+    const truncatedPreview = preview.length > 80 ? preview.substring(0, 80) + '...' : preview;
+    
     const notificationOptions = {
       type: 'basic',
       iconUrl: iconDataUri,
-      title: `Tab Napper ${actionLabel}`,
-      message: item.title || 'Scheduled item ready for review',
+      title: `⏰ ${actionLabel}: ${item.title || 'Scheduled Item'}`,
+      message: truncatedPreview || 'Ready for review',
+      contextMessage: getItemTypeLabel(item), // Shows item type below message
       priority: 2, // High priority
       requireInteraction: true, // Make it sticky - user must dismiss
       buttons: [
-        { title: 'Open Tab Napper' },
-        { title: 'Dismiss' }
+        { title: 'Open Now' },
+        { title: 'Snooze 15m' }
       ]
     };
     
+    // Store notification context for button actions
+    await chrome.storage.local.set({
+      [`notification_context_${itemId}`]: {
+        itemId,
+        item,
+        action,
+        createdAt: Date.now()
+      }
+    });
+    
     // Create the notification
-    console.log('[Tab Napper] Creating notification for:', itemId);
+    console.log('[Tab Napper] Creating enhanced notification for:', itemId);
     chrome.notifications.create(`reminder-${itemId}`, notificationOptions, (notificationId) => {
       if (chrome.runtime.lastError) {
         console.error('[Tab Napper] ❌ Error creating notification:', chrome.runtime.lastError);
@@ -503,18 +529,94 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // Handle notification button clicks
-chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
   console.log('[Tab Napper] Notification button clicked:', notificationId, buttonIndex);
   
-  if (buttonIndex === 0) {
-    // "Open Tab Napper" button clicked
-    chrome.action.openPopup().catch(() => {
-      // If popup can't be opened, try opening the new tab page
-      chrome.tabs.create({ url: 'chrome://newtab' });
-    });
+  // Extract itemId from notificationId (format: "reminder-{itemId}")
+  const itemId = notificationId.replace('reminder-', '');
+  
+  // Get notification context
+  const contextKey = `notification_context_${itemId}`;
+  const result = await chrome.storage.local.get([contextKey]);
+  const context = result[contextKey];
+  
+  if (!context) {
+    console.warn('[Tab Napper] No context found for notification:', notificationId);
+    chrome.notifications.clear(notificationId);
+    return;
   }
   
-  // Clear the notification
+  if (buttonIndex === 0) {
+    // "Open Now" button clicked
+    console.log('[Tab Napper] Opening item:', itemId);
+    
+    if (context.item.url) {
+      // Open the URL in a new tab
+      chrome.tabs.create({ url: context.item.url, active: true });
+    } else {
+      // Open Tab Napper to show the note
+      chrome.tabs.create({ url: 'chrome://newtab' });
+    }
+    
+    // Clean up notification context
+    await chrome.storage.local.remove([contextKey]);
+    
+  } else if (buttonIndex === 1) {
+    // "Snooze 15m" button clicked
+    console.log('[Tab Napper] Snoozing item for 15 minutes:', itemId);
+    
+    // Re-schedule the alarm for 15 minutes from now
+    const snoozeTime = Date.now() + (15 * 60 * 1000); // 15 minutes
+    const alarmName = `tabNapper::${context.action}::${itemId}`;
+    
+    chrome.alarms.create(alarmName, {
+      when: snoozeTime
+    });
+    
+    // Update the scheduled time in storage
+    const storageResult = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled']);
+    const inbox = storageResult.triageHub_inbox || [];
+    const stashed = storageResult.triageHub_stashedTabs || [];
+    
+    // Find and update the item
+    const inboxIndex = inbox.findIndex(i => i.id === itemId);
+    const stashedIndex = stashed.findIndex(i => i.id === itemId);
+    
+    if (inboxIndex !== -1) {
+      inbox[inboxIndex].scheduledFor = snoozeTime;
+      inbox[inboxIndex].scheduledWhen = 'In 15 minutes';
+      // Move back to stashed if it was retriaged
+      stashed.unshift(inbox[inboxIndex]);
+      inbox.splice(inboxIndex, 1);
+    } else if (stashedIndex !== -1) {
+      stashed[stashedIndex].scheduledFor = snoozeTime;
+      stashed[stashedIndex].scheduledWhen = 'In 15 minutes';
+    }
+    
+    await chrome.storage.local.set({
+      triageHub_inbox: inbox,
+      triageHub_stashedTabs: stashed
+    });
+    
+    console.log('[Tab Napper] ✓ Item snoozed for 15 minutes');
+    
+    // Show a brief confirmation notification
+    chrome.notifications.create('snooze-confirmation', {
+      type: 'basic',
+      iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      title: '⏰ Snoozed for 15 minutes',
+      message: context.item.title || 'Item snoozed',
+      priority: 0,
+      requireInteraction: false
+    });
+    
+    // Auto-clear the confirmation after 3 seconds
+    setTimeout(() => {
+      chrome.notifications.clear('snooze-confirmation');
+    }, 3000);
+  }
+  
+  // Clear the original notification
   chrome.notifications.clear(notificationId);
 });
 

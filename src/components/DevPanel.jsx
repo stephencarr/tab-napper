@@ -317,11 +317,11 @@ function AlarmsTab({ addLog, showToast }) {
     }
 
     try {
-      addLog('🗑️ Starting flush of all stashed items...', 'info');
+      addLog('🗑️ Starting flush of all scheduled items...', 'info');
       showToast('⏳ Flushing...', 'info');
 
       // Get all data
-      const result = await chrome.storage.local.get(['triageHub_stashedTabs', 'triageHub_inbox']);
+      const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
       const stashedTabs = result.triageHub_stashedTabs || [];
       const inbox = result.triageHub_inbox || [];
 
@@ -426,7 +426,7 @@ function AlarmsTab({ addLog, showToast }) {
   const triggerAllScheduledAlarms = async () => {
     console.log('[DevPanel] triggerAllScheduledAlarms called');
     
-    if (!confirm('Trigger ALL scheduled alarms now? This will move all stashed items back to inbox and fire their notifications.')) {
+    if (!confirm('Trigger ALL scheduled alarms now? This will move all scheduled items back to inbox and fire their notifications.')) {
       console.log('[DevPanel] User canceled');
       return;
     }
@@ -489,7 +489,7 @@ function AlarmsTab({ addLog, showToast }) {
           addLog(`⏰ Triggering: ${alarm.name}`, 'info');
 
           // Get the stashed item
-          const result = await chrome.storage.local.get(['triageHub_stashedTabs', 'triageHub_inbox']);
+          const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
           const stashedTabs = result.triageHub_stashedTabs || [];
           const inbox = result.triageHub_inbox || [];
 
@@ -637,8 +637,8 @@ function AlarmsTab({ addLog, showToast }) {
                 };
                 
                 // Add to stashed tabs
-                const stashed = await loadAppState('triageHub_stashedTabs') || [];
-                await saveAppState('triageHub_stashedTabs', [testItem, ...stashed]);
+                const stashed = await loadAppState('triageHub_scheduled') || [];
+                await saveAppState('triageHub_scheduled', [testItem, ...stashed]);
                 
                 // Set the alarm
                 await setScheduledAlarm(testItem, 'remind_me', testItem.scheduledFor);

@@ -6,7 +6,7 @@ import { useReactiveStore } from '../hooks/useReactiveStore.js';
 
 const navigation = [
   { name: 'Dashboard', icon: Home },
-  { name: 'All Stashed', icon: Archive, countKey: 'stashedTabs' },
+  { name: 'All Scheduled', icon: Archive, countKey: 'stashedTabs' },
   { name: 'Inbox', icon: Inbox, countKey: 'inbox' },
   { name: 'Trash', icon: Trash2, countKey: 'trash' }
 ];

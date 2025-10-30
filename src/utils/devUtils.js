@@ -43,10 +43,10 @@ async function addSampleData() {
       }
     ];
 
-    // Sample stashed tabs
-    const sampleStashed = [
+    // Sample scheduled
+    const sampleScheduled = [
       {
-        id: 'stashed-1',
+        id: 'scheduled-1',
         title: 'React Hooks Best Practices',
         description: 'Comprehensive guide to using React hooks effectively',
         summary: 'React hooks enable functional components to use state and lifecycle methods. Best practices include using useState for simple state, useEffect for side effects, custom hooks for reusable logic, and proper dependency arrays.',
@@ -55,7 +55,7 @@ async function addSampleData() {
         type: 'learning'
       },
       {
-        id: 'stashed-2',
+        id: 'scheduled-2',
         title: 'Chrome Extension Storage API',
         description: 'Deep dive into chrome.storage.sync and chrome.storage.local',
         body: 'Chrome storage API provides persistent storage for extensions. chrome.storage.sync synchronizes across devices while chrome.storage.local stays on device. Both support encryption and quota limits.',
@@ -64,7 +64,7 @@ async function addSampleData() {
         type: 'documentation'
       },
       {
-        id: 'stashed-3',
+        id: 'scheduled-3',
         title: 'MDN JavaScript Reference',
         description: 'Complete JavaScript language reference',
         content: 'MDN provides comprehensive documentation for JavaScript including syntax, built-in objects, operators, statements, functions, and modern ES6+ features like arrow functions, destructuring, and modules.',
@@ -73,7 +73,7 @@ async function addSampleData() {
         type: 'reference'
       },
       {
-        id: 'stashed-4',
+        id: 'scheduled-4',
         title: 'VS Code Extension Development',
         description: 'Building extensions for Visual Studio Code',
         text: 'VS Code extensions use TypeScript and Node.js APIs. Key concepts include activation events, contribution points, commands, and the extension manifest. Extensions can add themes, languages, debuggers, and custom UI.',
@@ -134,7 +134,7 @@ async function addSampleData() {
 
     // Save sample data
     await saveAppState('triageHub_inbox', sampleInbox);
-    await saveAppState('triageHub_stashedTabs', sampleStashed);
+    await saveAppState('triageHub_scheduled', sampleScheduled);
     await saveAppState('triageHub_quickAccessCards', sampleQuickAccess);
 
     console.log('[Tab Napper] Sample data added successfully');
@@ -154,7 +154,7 @@ async function clearSampleData() {
     
     // Clear all storage buckets
     await saveAppState('triageHub_inbox', []);
-    await saveAppState('triageHub_stashedTabs', []);
+    await saveAppState('triageHub_scheduled', []);
     await saveAppState('triageHub_trash', []);
     await saveAppState('triageHub_quickAccessCards', []);
     

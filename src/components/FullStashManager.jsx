@@ -4,11 +4,11 @@ import { loadAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 
 /**
- * Full Stash Manager Button Component
- * Provides navigation to the full stash management interface
+ * full scheduled Manager Button Component
+ * Provides navigation to the full scheduled management interface
  */
 function FullStashManager({ className, onNavigate }) {
-  const [stashCount, setStashCount] = useState(0);
+  const [scheduledCount, setStashCount] = useState(0);
   const [categoryCount, setCategoryCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,7 +22,7 @@ function FullStashManager({ className, onNavigate }) {
       setIsLoading(true);
       
       // Load stashed tabs
-      const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+      const stashedTabs = await loadAppState('triageHub_scheduled') || [];
       setStashCount(stashedTabs.length);
       
       // Calculate unique categories
@@ -39,11 +39,11 @@ function FullStashManager({ className, onNavigate }) {
   };
   
   const handleClick = () => {
-    console.log('[Tab Napper] 📁 Full Stash Manager clicked');
+    console.log('[Tab Napper] 📁 full scheduled Manager clicked');
     
     // For now, we'll just log the action
     // In a future implementation, this could:
-    // - Open a modal with full stash management
+    // - Open a modal with full scheduled management
     // - Navigate to a separate stash management page
     // - Expand the current stash section
     
@@ -51,7 +51,7 @@ function FullStashManager({ className, onNavigate }) {
       onNavigate('stash-manager');
     } else {
       // Default behavior: log the intended action
-      console.log('[Tab Napper] Full Stash Manager would open here');
+      console.log('[Tab Napper] full scheduled Manager would open here');
       console.log('[Tab Napper] Future implementation: Modal or dedicated stash management view');
     }
   };
@@ -72,9 +72,9 @@ function FullStashManager({ className, onNavigate }) {
               <Archive className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <h3 className="font-medium text-sm">Full Stash Manager</h3>
+              <h3 className="font-medium text-sm">full scheduled Manager</h3>
               <p className="text-xs text-calm-200 group-hover:text-white transition-colors">
-                Organize & manage all stashed items
+                Organize & manage all scheduled items
               </p>
             </div>
           </div>
@@ -96,7 +96,7 @@ function FullStashManager({ className, onNavigate }) {
             <span className="text-xs font-medium text-calm-600 dark:text-calm-300">Stashed</span>
           </div>
           <div className="text-lg font-bold text-calm-900 dark:text-calm-100">
-            {isLoading ? '...' : stashCount}
+            {isLoading ? '...' : scheduledCount}
           </div>
           <div className="text-xs text-calm-500 dark:text-calm-400">items</div>
         </div>

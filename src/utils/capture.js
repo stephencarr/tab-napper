@@ -57,11 +57,11 @@ function normalizeUrl(url) {
 }
 
 /**
- * Check if a URL already exists in stashed tabs
+ * Check if a URL already exists in scheduled
  */
 async function findDuplicateInStashed(url) {
   try {
-    const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+    const stashedTabs = await loadAppState('triageHub_scheduled') || [];
     const normalizedUrl = normalizeUrl(url);
     
     return stashedTabs.find(tab => 
@@ -74,19 +74,19 @@ async function findDuplicateInStashed(url) {
 }
 
 /**
- * Remove duplicate tab from stashed tabs
+ * Remove duplicate tab from scheduled
  */
 async function removeDuplicateFromStashed(duplicateItem) {
   try {
-    const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
+    const stashedTabs = await loadAppState('triageHub_scheduled') || [];
     const originalCount = stashedTabs.length;
     
     const updatedStashed = stashedTabs.filter(tab => tab.id !== duplicateItem.id);
     const newCount = updatedStashed.length;
     
-    await saveAppState('triageHub_stashedTabs', updatedStashed);
+    await saveAppState('triageHub_scheduled', updatedStashed);
     
-    debugSuccess('Capture', `Removed duplicate from stashed tabs: "${duplicateItem.title}" (${originalCount} → ${newCount})`);
+    debugSuccess('Capture', `Removed duplicate from scheduled: "${duplicateItem.title}" (${originalCount} → ${newCount})`);
     
     return true;
   } catch (error) {
@@ -144,7 +144,7 @@ async function captureClosedTab(tabInfo) {
     // Load all collections
     const [triageInbox, stashedTabs, trash] = await Promise.all([
       loadAppState('triageHub_inbox', []),
-      loadAppState('triageHub_stashedTabs', []),
+      loadAppState('triageHub_scheduled', []),
       loadAppState('triageHub_trash', [])
     ]);
     
@@ -159,13 +159,13 @@ async function captureClosedTab(tabInfo) {
       debugLog('Capture', `�️ Removed ${inboxDuplicates.length} duplicates from inbox`);
     }
     
-    // Check and remove from stashed tabs
+    // Check and remove from scheduled
     const stashedDuplicates = stashedTabs.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
     if (stashedDuplicates.length > 0) {
       const cleanedStashed = stashedTabs.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await saveAppState('triageHub_stashedTabs', cleanedStashed);
+      await saveAppState('triageHub_scheduled', cleanedStashed);
       removedFrom.push(`stashed (${stashedDuplicates.length})`);
-      debugLog('Capture', `🗑️ Removed ${stashedDuplicates.length} duplicates from stashed tabs`);
+      debugLog('Capture', `🗑️ Removed ${stashedDuplicates.length} duplicates from scheduled`);
     }
     
     // Check and remove from trash (optional - might want to keep trash separate)
