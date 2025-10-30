@@ -26,7 +26,7 @@ let stateChangeListeners = new Set();
 // Storage key to state property mapping (constant to avoid recreation)
 const STORAGE_KEY_MAPPING = {
   'triageHub_inbox': 'inbox',
-  'triageHub_scheduled': 'stashedTabs',
+  'triageHub_scheduled': 'scheduled',
   'triageHub_trash': 'trash',
   'triageHub_notes': 'notes',
   'triageHub_quickAccessCards': 'quickAccessCards',
@@ -166,7 +166,7 @@ async function handleStorageChanges(changes, namespace) {
           // When storage key is deleted (newValue === undefined), we set defaults
           // instead of deleting the state property. This prevents component crashes
           // as React components expect these properties to always exist.
-          // - For arrays (inbox, stashed, etc.): defaults to []
+          // - For arrays (inbox, scheduled, etc.): defaults to []
           // - For userPreferences: defaults to DEFAULT_USER_PREFERENCES
           // This ensures a consistent state shape regardless of storage state.
           if (newValue === undefined) {

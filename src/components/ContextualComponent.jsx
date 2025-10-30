@@ -18,7 +18,7 @@ function ContextualComponent({ className }) {
   const [error, setError] = useState(null);
   
   // Watch for changes in stashed tabs to update contextual matches
-  const { data: stashedTabs } = useReactiveStorage('triageHub_scheduled', []);
+  const { data: scheduledTabs } = useReactiveStorage('triageHub_scheduled', []);
 
   // Load contextual data on component mount and when stashed tabs change
   useEffect(() => {
@@ -29,7 +29,7 @@ function ContextualComponent({ className }) {
     const interval = setInterval(loadContextualMatch, 300000); // Every 5 minutes (was 2 minutes)
     
     return () => clearInterval(interval);
-  }, [stashedTabs]); // Add stashedTabs as dependency
+  }, [scheduledTabs]); // Add scheduledTabs as dependency
 
   const loadContextualMatch = async () => {
     try {
@@ -39,20 +39,20 @@ function ContextualComponent({ className }) {
       // Get currently open tabs
       const openTabs = await getCurrentlyOpenTabs();
       
-      // Use reactive stashed tabs data
-      const currentStashedTabs = stashedTabs || [];
+      // Use reactive scheduled tabs data
+      const currentScheduledTabs = scheduledTabs || [];
       
-      debugLog('Contextual', `Matching - Open tabs: ${openTabs.length}, Stashed tabs: ${currentStashedTabs.length}`);
+      debugLog('Contextual', `Matching - Open tabs: ${openTabs.length}, Scheduled tabs: ${currentScheduledTabs.length}`);
       
-      if (openTabs.length === 0 || currentStashedTabs.length === 0) {
-        debugLog('Contextual', `No contextual matches possible - openTabs: ${openTabs.length}, stashedTabs: ${currentStashedTabs.length}`);
+      if (openTabs.length === 0 || currentScheduledTabs.length === 0) {
+        debugLog('Contextual', `No contextual matches possible - openTabs: ${openTabs.length}, scheduledTabs: ${currentScheduledTabs.length}`);
         setContextualItem(null);
         setIsLoading(false);
         return;
       }
       
       // Find contextual matches based on domain or keywords
-      const contextualMatch = findContextualMatch(openTabs, currentStashedTabs);
+      const contextualMatch = findContextualMatch(openTabs, currentScheduledTabs);
       
       if (contextualMatch) {
         debugLog('Contextual', `Found match: ${contextualMatch.title} (${contextualMatch.matchReason}, score: ${contextualMatch.contextScore})`);
@@ -71,7 +71,7 @@ function ContextualComponent({ className }) {
   };
 
   // Find a relevant stashed item based on currently open tabs
-  const findContextualMatch = (openTabs, stashedTabs) => {
+  const findContextualMatch = (openTabs, scheduledTabs) => {
     debugLog('Contextual', 'Starting contextual matching...');
     
     // Get domains and keywords from open tabs
@@ -106,7 +106,7 @@ function ContextualComponent({ className }) {
     debugLog('Contextual', `Open domains: ${openDomains.size}, Open keywords: ${openKeywords.size}`);
     
     // Score stashed items for relevance
-    const scoredItems = stashedTabs.map(item => {
+    const scoredItems = scheduledTabs.map(item => {
       let score = 0;
       let matchReason = '';
       

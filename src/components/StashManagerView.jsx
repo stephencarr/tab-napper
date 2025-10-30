@@ -31,8 +31,8 @@ function StashManagerView({
   
   // Combine all items for open tab detection
   const allItems = useMemo(
-    () => [...inboxData, ...stashedTabs, ...trashData],
-    [inboxData, stashedTabs, trashData]
+    () => [...inboxData, ...scheduledData, ...trashData],
+    [inboxData, scheduledData, trashData]
   );
   
   // Track which items are currently open (polls every 10 seconds + real-time events)
@@ -104,11 +104,11 @@ function StashManagerView({
       case 'scheduled':
       default:
         return {
-          items: sortByTimestamp(stashedTabs || []),
+          items: sortByTimestamp(scheduledData || []),
           title: 'All Scheduled',
           description: 'All your saved and organized items',
-          emptyMessage: 'No stashed items yet',
-          emptyDescription: 'Items you stash from the triage inbox will appear here for organized management.'
+          emptyMessage: 'No scheduled items yet',
+          emptyDescription: 'Items you schedule from the triage inbox will appear here for organized management.'
         };
     }
   };
@@ -124,7 +124,7 @@ function StashManagerView({
   }, [currentData.items, showOnlyOpen, isOpen]);
   
   const counts = {
-    stashed: (stashedTabs || []).length,
+    scheduled: (scheduledData || []).length,
     inbox: (inboxData || []).length,
     trash: (trashData || []).length
   };

@@ -21,15 +21,15 @@ function FullStashManager({ className, onNavigate }) {
     try {
       setIsLoading(true);
       
-      // Load stashed tabs
-      const stashedTabs = await loadAppState('triageHub_scheduled') || [];
-      setStashCount(stashedTabs.length);
+      // Load scheduled tabs
+      const scheduledTabs = await loadAppState('triageHub_scheduled') || [];
+      setStashCount(scheduledTabs.length);
       
       // Calculate unique categories
-      const categories = new Set(stashedTabs.map(item => item.type).filter(Boolean));
+      const categories = new Set(scheduledTabs.map(item => item.type).filter(Boolean));
       setCategoryCount(categories.size);
       
-      console.log(`[Tab Napper] Stash stats loaded: ${stashedTabs.length} items, ${categories.size} categories`);
+      console.log(`[Tab Napper] Scheduled stats loaded: ${scheduledTabs.length} items, ${categories.size} categories`);
       
     } catch (error) {
       console.error('[Tab Napper] Error loading stash stats:', error);

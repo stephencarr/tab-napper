@@ -513,9 +513,9 @@ function App() {
       case 'All Stashed':
         return (
           <StashManagerView
-            initialFilter="stashed"
+            initialFilter="scheduled"
             inboxData={appState?.inbox || []}
-            stashedTabs={appState?.stashedTabs || []}
+            scheduledData={appState?.scheduled || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -526,7 +526,7 @@ function App() {
           <StashManagerView
             initialFilter="inbox"
             inboxData={appState?.inbox || []}
-            stashedTabs={appState?.stashedTabs || []}
+            scheduledData={appState?.scheduled || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -537,7 +537,7 @@ function App() {
           <StashManagerView
             initialFilter="trash"
             inboxData={appState?.inbox || []}
-            stashedTabs={appState?.stashedTabs || []}
+            scheduledData={appState?.scheduled || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -597,8 +597,8 @@ function ContextualCardWrapper() {
       try {
         // This is a simplified check - in a real implementation you'd want to
         // share state or use a context, but for now we'll just check if there's potential content
-        const stashedTabs = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
-        setHasContent(stashedTabs.length > 0);
+        const scheduledTabs = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
+        setHasContent(scheduledTabs.length > 0);
       } catch (error) {
         setHasContent(false);
       }
