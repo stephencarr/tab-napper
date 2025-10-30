@@ -222,7 +222,7 @@ function StashManagerView({
   };
 
   const tabs = [
-    { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.stashed },
+    { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.scheduled },
     { id: 'inbox', name: 'Inbox', icon: Inbox, count: counts.inbox },
     { id: 'trash', name: 'Trash', icon: Trash2, count: counts.trash },
   ];
