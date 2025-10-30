@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FileText, RotateCcw, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import FidgetControl from './FidgetControl.jsx';
-import { navigateToUrl, openNoteEditor } from '../utils/navigation.js';
+import { navigateToUrl, openNoteEditor, findOpenTab } from '../utils/navigation.js';
 import { getDetailedScheduledTime } from '../utils/schedule.js';
 
 /**
@@ -108,9 +108,8 @@ function StashCard({
       if (isCurrentlyOpen) {
         console.log('[Tab Napper] 🔄 Tab already open, switching to it:', item.title);
         try {
-          const { findOpenTab } = await import('../utils/navigation.js');
           const openTab = await findOpenTab(item.url);
-          if (openTab && typeof chrome !== 'undefined' && chrome.tabs) {
+          if (openTab) {
             await chrome.tabs.update(openTab.id, { active: true });
             await chrome.windows.update(openTab.windowId, { focused: true });
             console.log('[Tab Napper] ✅ Switched to existing tab');

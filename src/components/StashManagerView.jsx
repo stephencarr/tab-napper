@@ -56,7 +56,11 @@ function StashManagerView({
       setIsCheckingDuplicates(true);
       try {
         const dryRun = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: true });
-        setDuplicateCount(dryRun.closed || 0);
+        setDuplicateCount(
+          Array.isArray(dryRun.duplicates)
+            ? dryRun.duplicates.reduce((sum, dup) => sum + (dup.closedTabs?.length || 0), 0)
+            : 0
+        );
       } catch (error) {
         console.error('[Tab Napper] Error checking duplicates:', error);
         setDuplicateCount(0);

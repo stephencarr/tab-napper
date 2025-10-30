@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Terminal, Database, Bell, Clock, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Terminal, Database, Bell, Clock, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, X, Copy } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import {
   addSampleData,
@@ -687,7 +687,7 @@ function AlarmsTab({ addLog, showToast }) {
             color="red"
           />
           <ActionButton
-            icon={X}
+            icon={Copy}
             label="🔍 Find & Close Duplicate Tabs"
             description="Scan for and close duplicate tabs (keeps newest)"
             onClick={findDuplicateTabs}

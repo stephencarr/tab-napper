@@ -346,7 +346,7 @@ await TriageHub_findDuplicates({ dryRun: false, keepNewest: true })
 - [ ] Test with multiple windows
 - [ ] Test duplicate cleanup with 10+ dupes
 - [ ] Screenshots for PR
-- [ ] Update CHANGELOG.md
+- [x] Update CHANGELOG.md
 - [ ] Performance testing with DevTools
 
 ---
