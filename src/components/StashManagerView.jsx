@@ -135,6 +135,7 @@ function StashManagerView({
   const counts = {
     scheduled: (scheduledData || []).length,
     inbox: (inboxData || []).length,
+    archive: (archiveData || []).length,
     trash: (trashData || []).length
   };
   
@@ -233,6 +234,7 @@ function StashManagerView({
   const tabs = [
     { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.scheduled },
     { id: 'inbox', name: 'Inbox', icon: Inbox, count: counts.inbox },
+    { id: 'archive', name: 'Archive', icon: Archive, count: counts.archive },
     { id: 'trash', name: 'Trash', icon: Trash2, count: counts.trash },
   ];
 

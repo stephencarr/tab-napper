@@ -29,10 +29,11 @@ async function navigateToUrl(url, title = null) {
       } else {
         console.log(`[Tab Napper] 🆕 Opening new tab`);
         
-        // Create a new tab
+        // Create a new tab (explicitly set pinned: false)
         const newTab = await chrome.tabs.create({
           url: url,
-          active: true
+          active: true,
+          pinned: false
         });
         
         return { action: 'created', tabId: newTab.id };
