@@ -516,6 +516,7 @@ function App() {
             initialFilter="scheduled"
             inboxData={appState?.inbox || []}
             scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -527,6 +528,19 @@ function App() {
             initialFilter="inbox"
             inboxData={appState?.inbox || []}
             scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
+            trashData={appState?.trash || []}
+            onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
+          />
+        );
+      case 'Archive':
+        return (
+          <StashManagerView
+            initialFilter="archive"
+            inboxData={appState?.inbox || []}
+            scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -538,6 +552,7 @@ function App() {
             initialFilter="trash"
             inboxData={appState?.inbox || []}
             scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
