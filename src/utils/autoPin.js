@@ -40,18 +40,18 @@ export async function autoPinCurrentTab() {
 
     console.log('[AutoPin] Tab Napper detected, checking pin status...');
 
-    // Check if ANY Tab Napper tab is already pinned (not just the flag)
-    const anyPinned = await isAnyTabNapperPinned();
-    
-    if (anyPinned) {
-      console.log('[AutoPin] Already have a pinned Tab Napper instance');
+    // Check if this tab is already pinned
+    if (currentTab.pinned) {
+      console.log('[AutoPin] This tab already pinned');
       await saveAppState('tabNapper_hasPinnedTab', true);
       return false;
     }
 
-    // Check if this tab is already pinned
-    if (currentTab.pinned) {
-      console.log('[AutoPin] This tab already pinned');
+    // Check if ANY other Tab Napper tab is already pinned
+    const anyPinned = await isAnyTabNapperPinned();
+    
+    if (anyPinned) {
+      console.log('[AutoPin] Already have another pinned Tab Napper instance');
       await saveAppState('tabNapper_hasPinnedTab', true);
       return false;
     }

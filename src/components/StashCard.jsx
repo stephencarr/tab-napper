@@ -254,6 +254,34 @@ function StashCard({
             Restore
           </button>
         </div>
+      ) : showingReschedule ? (
+        /* Rescheduling mode: Show fidget controls with cancel option */
+        <div 
+          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FidgetControl
+            item={item}
+            onAction={(action, item, actionData) => {
+              // After action is taken, hide reschedule controls
+              if (onItemAction) {
+                onItemAction(action, item, actionData);
+              }
+              setShowingReschedule(false);
+            }}
+            showMarkDone={isScheduledView && !isArchiveView && showingReschedule}
+            className="w-full"
+          />
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Canceling reschedule:', item.title);
+              setShowingReschedule(false);
+            }}
+            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
       ) : isArchiveView ? (
         /* Archive view: Show Reschedule button (items are already done) */
         <div 
@@ -305,34 +333,6 @@ function StashCard({
             )}
           >
             {isPastDue ? 'Reschedule Now' : 'Reschedule'}
-          </button>
-        </div>
-      ) : showingReschedule ? (
-        /* Rescheduling mode: Show fidget controls with cancel option */
-        <div 
-          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <FidgetControl
-            item={item}
-            onAction={(action, item, actionData) => {
-              // After action is taken, hide reschedule controls
-              if (onItemAction) {
-                onItemAction(action, item, actionData);
-              }
-              setShowingReschedule(false);
-            }}
-            showMarkDone={!isArchiveView && showingReschedule}
-            className="w-full"
-          />
-          <button
-            onClick={() => {
-              console.log('[Tab Napper] Canceling reschedule:', item.title);
-              setShowingReschedule(false);
-            }}
-            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
-          >
-            Cancel
           </button>
         </div>
       ) : showFidgetControls ? (
