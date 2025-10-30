@@ -129,6 +129,7 @@ async function closeTab(tabId) {
  * Close all open tabs that match the provided items
  * Phase 2: Bulk action for managing open tabs
  * Excludes pinned tabs for safety
+ * PERFORMANCE: Queries tabs once and creates a lookup map
  * @param {Array} items - Array of items with URLs to close
  * @returns {Promise<Object>} - { closed: number, failed: number, skipped: number, errors: Array }
  */
@@ -141,35 +142,62 @@ async function closeOpenTabs(items) {
   
   console.log(`[Tab Napper] 🗑️ Closing ${items.length} open tabs (excluding pinned)...`);
   
-  for (const item of items) {
-    if (!item.url) {
-      continue;
-    }
+  // PERFORMANCE OPTIMIZATION: Query all tabs once instead of once per item
+  try {
+    const allTabs = await chrome.tabs.query({});
     
-    try {
-      const tab = await findOpenTab(item.url);
-      if (tab) {
-        // Skip pinned tabs
-        if (tab.pinned) {
-          results.skipped++;
-          console.log(`[Tab Napper] ⏭️ Skipped pinned tab: ${item.title}`);
-          continue;
+    // Create a map of normalized URLs to tabs for O(1) lookup
+    const urlToTabMap = new Map();
+    allTabs.forEach(tab => {
+      if (tab.url) {
+        const normalized = normalizeUrl(tab.url);
+        // Store as array since multiple tabs can have same URL
+        if (!urlToTabMap.has(normalized)) {
+          urlToTabMap.set(normalized, []);
         }
-        
-        const success = await closeTab(tab.id);
-        if (success) {
-          results.closed++;
-          console.log(`[Tab Napper] ✅ Closed: ${item.title}`);
-        } else {
-          results.failed++;
-          results.errors.push({ item, error: 'Failed to close' });
-        }
+        urlToTabMap.get(normalized).push(tab);
       }
-    } catch (error) {
-      console.error('[Tab Napper] Error closing tab for item:', item.title, error);
-      results.failed++;
-      results.errors.push({ item, error: error.message });
+    });
+    
+    // Now process each item using the map
+    for (const item of items) {
+      if (!item.url) {
+        continue;
+      }
+      
+      try {
+        const normalized = normalizeUrl(item.url);
+        const matchingTabs = urlToTabMap.get(normalized);
+        
+        if (matchingTabs && matchingTabs.length > 0) {
+          // Process all matching tabs for this item
+          for (const tab of matchingTabs) {
+            // Skip pinned tabs
+            if (tab.pinned) {
+              results.skipped++;
+              console.log(`[Tab Napper] ⏭️ Skipped pinned tab: ${item.title}`);
+              continue;
+            }
+            
+            const success = await closeTab(tab.id);
+            if (success) {
+              results.closed++;
+              console.log(`[Tab Napper] ✅ Closed: ${item.title}`);
+            } else {
+              results.failed++;
+              results.errors.push({ item, error: 'Failed to close' });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[Tab Napper] Error closing tab for item:', item.title, error);
+        results.failed++;
+        results.errors.push({ item, error: error.message });
+      }
     }
+  } catch (error) {
+    console.error('[Tab Napper] Error querying tabs:', error);
+    results.errors.push({ error: 'Failed to query browser tabs' });
   }
   
   console.log(`[Tab Napper] 📊 Close results: ${results.closed} closed, ${results.skipped} pinned (skipped), ${results.failed} failed`);
@@ -241,11 +269,11 @@ async function findAndCloseDuplicateTabs(options = {}) {
         continue;
       }
       
-      // Sort unpinned tabs - newest first or oldest first based on option
+      // Sort unpinned tabs directly - newest first or oldest first based on option
       // NOTE: This assumes newer tabs have higher IDs. Chrome typically assigns IDs sequentially,
       // but may reuse IDs after browser restarts or when reaching maximum ID values.
       // For most use cases (same session), this ordering is reliable.
-      const sortedUnpinned = [...unpinnedTabs].sort((a, b) => {
+      unpinnedTabs.sort((a, b) => {
         if (keepNewest) {
           return b.id - a.id; // Newer tabs have higher IDs
         } else {
@@ -254,7 +282,7 @@ async function findAndCloseDuplicateTabs(options = {}) {
       });
       
       // Keep first unpinned tab, close the rest (never close pinned)
-      const [keepTab, ...closeTabs] = sortedUnpinned;
+      const [keepTab, ...closeTabs] = unpinnedTabs;
       
       results.push({
         url: group.url,

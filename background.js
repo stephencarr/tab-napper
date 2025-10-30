@@ -556,9 +556,13 @@ console.log('[Tab Napper] 🚀 Running initial duplicate cleanup...');
 cleanupDuplicates();
 
 // Set up periodic cleanup using chrome.alarms (every 5 minutes)
-chrome.alarms.create('cleanup-duplicates', {
-  periodInMinutes: 5
-});
-
-console.log('[Tab Napper] ⏰ Scheduled periodic duplicate cleanup (every 5 minutes)');
+// This frequency balances data hygiene with performance for large datasets
+try {
+  chrome.alarms.create('cleanup-duplicates', {
+    periodInMinutes: 5
+  });
+  console.log('[Tab Napper] ⏰ Scheduled periodic duplicate cleanup (every 5 minutes)');
+} catch (error) {
+  console.error('[Tab Napper] ❌ Failed to create cleanup alarm:', error);
+}
 // Note: The cleanup alarm is handled by the existing chrome.alarms.onAlarm listener above
