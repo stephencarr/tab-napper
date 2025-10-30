@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
-import { loadAllAppData, saveAppState, loadAppState, STORAGE_KEYS } from './utils/storage.js';
+import { loadAllAppData, saveAppState, loadAppState, moveToArchive, STORAGE_KEYS } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData, generateTestBrowsingHistory } from './utils/devUtils.js';
 import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
@@ -322,32 +322,21 @@ function App() {
           break;
         
         case 'mark_done':
-          // Mark item as completed (remove from all lists and add to completed archive)
+          // Mark item as completed (move to Archive)
           console.log('[Tab Napper] Marking item as done:', item.title);
-          
-          const currentInboxForDone = await loadAppState('triageHub_inbox', []);
-          const currentStashedForDone = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
-          const currentCompleted = await loadAppState('triageHub_completed', []);
-          
-          // Remove from inbox and stashed
-          const updatedInboxForDone = currentInboxForDone.filter(i => i.id !== item.id);
-          const updatedStashedForDone = currentStashedForDone.filter(i => i.id !== item.id);
           
           // Clear any scheduled alarms
           await clearAllAlarmsForItem(item);
           
-          // Add to completed archive with completion timestamp
-          const completedItem = {
-            ...item,
-            completedAt: Date.now(),
-            originalLocation: currentInboxForDone.find(i => i.id === item.id) ? 'inbox' : 'scheduled'
-          };
-          const updatedCompleted = [completedItem, ...currentCompleted];
+          // Determine source list - check which list contains this item
+          const currentInbox = await loadAppState(STORAGE_KEYS.INBOX, []);
+          const currentScheduled = await loadAppState(STORAGE_KEYS.SCHEDULED, []);
           
-          // Save to storage
-          await saveAppState('triageHub_inbox', updatedInboxForDone);
-          await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashedForDone);
-          await saveAppState('triageHub_completed', updatedCompleted);
+          const isInInbox = currentInbox.some(i => i.id === item.id);
+          const sourceList = isInInbox ? 'inbox' : 'scheduled';
+          
+          // Use the moveToArchive function which handles all the details
+          await moveToArchive(item, sourceList);
           
           console.log('[Tab Napper] ✓ Item marked as done and archived');
           break;
