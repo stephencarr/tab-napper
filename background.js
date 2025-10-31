@@ -591,8 +591,22 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
       inbox.splice(inboxIndex, 1);
     } else {
       // This case should not normally be reached if the item is always moved to inbox by the alarm handler
-      // Logging a warning here to help debug unexpected states
-      console.warn(`[Tab Napper] ⚠️ Snoozed item with ID ${itemId} not found in inbox, which is unexpected.`);
+      // Attempt recovery: check if item is in scheduled, update it; otherwise, add it back to scheduled
+      let recovered = false;
+      if (scheduledIndex !== -1) {
+        scheduled[scheduledIndex].scheduledFor = snoozeTime;
+        scheduled[scheduledIndex].scheduledWhen = 'In 15 minutes';
+        recovered = true;
+        console.warn(`[Tab Napper] ⚠️ Snoozed item with ID ${itemId} not found in inbox, but found in scheduled. Updated scheduled time.`);
+      } else if (context && context.item) {
+        // Add the item back to scheduled with updated time
+        const recoveredItem = { ...context.item, scheduledFor: snoozeTime, scheduledWhen: 'In 15 minutes' };
+        scheduled.unshift(recoveredItem);
+        recovered = true;
+        console.warn(`[Tab Napper] ⚠️ Snoozed item with ID ${itemId} not found in inbox or scheduled. Re-added to scheduled.`);
+      } else {
+        console.error(`[Tab Napper] ❌ Could not recover snoozed item with ID ${itemId}. Context missing.`);
+      }
     }
     
     await chrome.storage.local.set({
