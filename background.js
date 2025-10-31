@@ -136,36 +136,26 @@ async function captureClosedTab(tabInfo) {
     
     const normalizedUrl = normalizeUrl(tabInfo.url);
     
-    // Load all collections
+    // Load all collections at once to prevent race conditions
     const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled', 'triageHub_trash']);
-    const triageInbox = result.triageHub_inbox || [];
-    const scheduledData = result.triageHub_scheduled || [];
-    const trash = result.triageHub_trash || [];
+    let { triageHub_inbox: triageInbox = [], triageHub_scheduled: scheduledData = [], triageHub_trash: trash = [] } = result;
     
     let removedFrom = [];
     
-    // Remove duplicates from inbox
-    const inboxDuplicates = triageInbox.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
-    if (inboxDuplicates.length > 0) {
-      const cleanedInbox = triageInbox.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await chrome.storage.local.set({ triageHub_inbox: cleanedInbox });
-      removedFrom.push(`inbox (${inboxDuplicates.length})`);
+    // Create new versions of the arrays, filtering out duplicates
+    const cleanedInbox = triageInbox.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+    if (cleanedInbox.length < triageInbox.length) {
+      removedFrom.push(`inbox (${triageInbox.length - cleanedInbox.length})`);
     }
-    
-    // Remove duplicates from scheduled tabs
-    const scheduledDuplicates = scheduledData.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
-    if (scheduledDuplicates.length > 0) {
-      const cleanedScheduled = scheduledData.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await chrome.storage.local.set({ triageHub_scheduled: cleanedScheduled });
-      removedFrom.push(`scheduled (${scheduledDuplicates.length})`);
+
+    const cleanedScheduled = scheduledData.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+    if (cleanedScheduled.length < scheduledData.length) {
+      removedFrom.push(`scheduled (${scheduledData.length - cleanedScheduled.length})`);
     }
-    
-    // Remove duplicates from trash
-    const trashDuplicates = trash.filter(item => normalizeUrl(item.url || '') === normalizedUrl);
-    if (trashDuplicates.length > 0) {
-      const cleanedTrash = trash.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
-      await chrome.storage.local.set({ triageHub_trash: cleanedTrash });
-      removedFrom.push(`trash (${trashDuplicates.length})`);
+
+    const cleanedTrash = trash.filter(item => normalizeUrl(item.url || '') !== normalizedUrl);
+    if (cleanedTrash.length < trash.length) {
+      removedFrom.push(`trash (${trash.length - cleanedTrash.length})`);
     }
     
     if (removedFrom.length > 0) {
@@ -191,11 +181,14 @@ async function captureClosedTab(tabInfo) {
     };
     
     // Add to beginning of inbox
-    const updatedInbox = await chrome.storage.local.get(['triageHub_inbox']);
-    const currentInbox = updatedInbox.triageHub_inbox || [];
-    const newInbox = [inboxItem, ...currentInbox];
+    const newInbox = [inboxItem, ...cleanedInbox];
     
-    await chrome.storage.local.set({ triageHub_inbox: newInbox });
+    // Atomically update all collections in a single operation
+    await chrome.storage.local.set({
+      triageHub_inbox: newInbox,
+      triageHub_scheduled: cleanedScheduled,
+      triageHub_trash: cleanedTrash
+    });
     
     console.log('[Tab Napper] ✅ Tab captured to inbox:', inboxItem.title);
     
@@ -407,17 +400,24 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       return;
     }
     
+    // Handle periodic tab tracker cleanup
+    if (alarm.name === 'cleanup-tab-tracker') {
+      console.log('[Tab Napper] Running periodic tab tracker cleanup...');
+      await cleanupTabTracker();
+      return;
+    }
+
     // Handle test alarms
     if (alarm.name === 'test-alarm') {
       console.log('[Tab Napper] ✅ Test alarm fired successfully!');
       
-      // Simple 1x1 transparent PNG as data URI (minimal valid icon)
-      const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      // Use the extension's icon for a professional look
+      const iconUrl = 'icons/icon48.svg';
       
       // Create test notification
       chrome.notifications.create('test-alarm-notification', {
         type: 'basic',
-        iconUrl: iconDataUri,
+        iconUrl: iconUrl,
         title: 'Tab Napper Test Alarm',
         message: 'Test alarm fired successfully! The alarm system is working.',
         priority: 2,
@@ -483,8 +483,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const actionLabel = action === 'remind_me' ? 'Reminder' : 
                        action === 'follow_up' ? 'Follow-up' : 'Review';
     
-    // Simple 1x1 transparent PNG as data URI (minimal valid icon)
-    const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    // Use the extension's icon for a professional look
+    const iconUrl = 'icons/icon48.svg';
     
     // Get item preview (first 80 chars)
     const preview = item.content || item.description || item.title || '';
@@ -492,7 +492,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     
     const notificationOptions = {
       type: 'basic',
-      iconUrl: iconDataUri,
+      iconUrl: iconUrl,
       title: `⏰ ${actionLabel}: ${item.title || 'Scheduled Item'}`,
       message: truncatedPreview || 'Ready for review',
       contextMessage: getItemTypeLabel(item), // Shows item type below message
@@ -631,7 +631,7 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
     // Show a brief confirmation notification
     chrome.notifications.create('snooze-confirmation', {
       type: 'basic',
-      iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      iconUrl: 'icons/icon48.svg',
       title: '⏰ Snoozed for 15 minutes',
       message: context.item.title || 'Item snoozed',
       priority: 0,
@@ -678,21 +678,43 @@ chrome.alarms.getAll((alarms) => {
 // (Auto-pin reset logic consolidated into main tab removal listener above)
 
 // =============================================================================
-// PERIODIC DEDUPLICATION
+// PERIODIC DEDUPLICATION & TRACKER CLEANUP
 // =============================================================================
+
+/**
+ * Cleanup tab tracker to remove entries for closed tabs
+ */
+async function cleanupTabTracker() {
+  const openTabs = await chrome.tabs.query({});
+  const openTabIds = new Set(openTabs.map(t => t.id));
+
+  let cleanedCount = 0;
+  for (const tabId of tabTracker.keys()) {
+    if (!openTabIds.has(tabId)) {
+      tabTracker.delete(tabId);
+      cleanedCount++;
+    }
+  }
+
+  if (cleanedCount > 0) {
+    console.log(`[Tab Napper] 🧹 Cleaned up ${cleanedCount} stale entries from tab tracker`);
+  }
+}
 
 // Run cleanup immediately on startup
 console.log('[Tab Napper] 🚀 Running initial duplicate cleanup...');
 cleanupDuplicates();
 
-// Set up periodic cleanup using chrome.alarms (every 5 minutes)
-// This frequency balances data hygiene with performance for large datasets
+// Set up periodic cleanup using chrome.alarms
 try {
-  chrome.alarms.create('cleanup-duplicates', {
-    periodInMinutes: 5
-  });
+  // Deduplication alarm (every 5 minutes)
+  chrome.alarms.create('cleanup-duplicates', { periodInMinutes: 5 });
   console.log('[Tab Napper] ⏰ Scheduled periodic duplicate cleanup (every 5 minutes)');
+
+  // Tab tracker cleanup alarm (every 15 minutes)
+  chrome.alarms.create('cleanup-tab-tracker', { periodInMinutes: 15 });
+  console.log('[Tab Napper] ⏰ Scheduled periodic tab tracker cleanup (every 15 minutes)');
+
 } catch (error) {
-  console.error('[Tab Napper] ❌ Failed to create cleanup alarm:', error);
+  console.error('[Tab Napper] ❌ Failed to create cleanup alarms:', error);
 }
-// Note: The cleanup alarm is handled by the existing chrome.alarms.onAlarm listener above
