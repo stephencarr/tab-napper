@@ -13,6 +13,8 @@ import {
 } from '../utils/devUtils.js';
 import { findAndCloseDuplicateTabs } from '../utils/navigation.js';
 import { useToast } from '../contexts/ToastContext.jsx';
+import { useConfirm } from '../hooks/useConfirm.js';
+import ConfirmDialog from './ConfirmDialog.jsx';
 
 /**
  * Enhanced Dev Panel - Focused on debugging tab detection and close all issues
@@ -33,6 +35,7 @@ function DevPanel({ isOpen, onClose }) {
   });
   
   const { toast } = useToast();
+  const { confirm, confirmProps } = useConfirm();
 
   // Load debugging data
   const refreshDebugData = useCallback(async () => {
@@ -175,14 +178,24 @@ function DevPanel({ isOpen, onClose }) {
     const totalGroups = duplicateData?.summary?.totalGroups || 0;
     const wouldClose = duplicateData?.summary?.wouldClose || 0;
     
-    if (!window.confirm(`Found ${totalGroups} duplicate groups.\n\nThis will close ${wouldClose} tabs (keeping newest of each URL, preserving pinned tabs).\n\nContinue?`)) {
-      return;
-    }
-    
-    try {
-      const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
-      toast.success('Duplicates Closed', `Closed ${result.closed} tabs`);
-      addLog(`Closed ${result.closed} duplicate tabs`, 'info');
+    await confirm({
+      title: 'Close Duplicate Tabs',
+      message: `Found ${totalGroups} duplicate groups.\n\nThis will close ${wouldClose} tabs (keeping newest of each URL, preserving pinned tabs).\n\nContinue?`,
+      type: 'warning',
+      confirmText: 'Close Duplicates',
+      onConfirm: async () => {
+        try {
+          const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
+          toast.success('Duplicates Closed', `Closed ${result.closed} tabs`);
+          addLog(`Closed ${result.closed} duplicate tabs`, 'info');
+          await refreshDebugData();
+        } catch (error) {
+          toast.error('Close Failed', error.message);
+          addLog(`Error closing duplicates: ${error.message}`, 'error');
+        }
+      }
+    });
+  };
       await refreshDuplicateCandidates();
       await refreshDebugData();
     } catch (error) {
@@ -200,12 +213,13 @@ function DevPanel({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <>
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
         
         {/* Panel */}
         <div className="absolute right-0 top-0 bottom-0 w-full max-w-4xl bg-calm-50 dark:bg-calm-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
@@ -489,12 +503,17 @@ function DevPanel({ isOpen, onClose }) {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!window.confirm('This will delete ALL data from Tab Napper. Are you sure?')) {
-                        return;
-                      }
-                      await clearSampleData();
-                      toast.success('Data Cleared', 'All Tab Napper data deleted');
-                      addLog('Cleared all data', 'warn');
+                      await confirm({
+                        title: 'Clear All Data',
+                        message: 'This will delete ALL data from Tab Napper. Are you sure?',
+                        type: 'danger',
+                        confirmText: 'Delete All',
+                        onConfirm: async () => {
+                          await clearSampleData();
+                          toast.success('Data Cleared', 'All Tab Napper data deleted');
+                          addLog('Cleared all data', 'warn');
+                        }
+                      });
                     }}
                     className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                   >
@@ -507,6 +526,9 @@ function DevPanel({ isOpen, onClose }) {
           </div>
         </div>
       </div>
+      
+      <ConfirmDialog {...confirmProps} />
+    </>
   );
 }
 

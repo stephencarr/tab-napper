@@ -61,13 +61,6 @@ function createFavicon(color, count = 0) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(count.toString(), 16, 17);
-  } else if (count > 99 && count < 100) {
-    // Show 99+ for 99 < count < 100
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('99+', 16, 17);
   }
   // Note: 100+ will use the fire emoji instead
   
