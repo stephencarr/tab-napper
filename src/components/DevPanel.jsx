@@ -40,6 +40,7 @@ function DevPanel({ isOpen, onClose }) {
   // Add log entry
   const addLog = useCallback((message, type = 'info') => {
     setLogs(prev => [...prev, {
+      id: Date.now() + Math.random(),
       message,
       type,
       timestamp: new Date().toLocaleTimeString()

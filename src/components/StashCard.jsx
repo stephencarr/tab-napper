@@ -151,9 +151,6 @@ function StashCard({
   // Special handling for notes
   const isNote = item.type === 'note';
   
-  // Check if item is archived (has archivedAt timestamp)
-  const isArchived = useMemo(() => !!item.archivedAt, [item.archivedAt]);
-  
   // Get icon - use note icon for notes, favicon for tabs
   const getIcon = () => {
     if (isNote) {
@@ -231,7 +228,7 @@ function StashCard({
               <input
                 type="checkbox"
                 checked={isSelected}
-                onChange={() => {}}
+                onChange={() => {/* Handled by parent onClick */}}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 focus:ring-offset-0 cursor-pointer"
               />
             </div>

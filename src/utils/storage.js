@@ -267,6 +267,10 @@ async function moveToArchive(item, sourceList = 'scheduled') {
   if (!item || !item.id) {
     throw new Error('Invalid item: missing ID');
   }
+  
+  if (!['inbox', 'scheduled'].includes(sourceList)) {
+    throw new Error(`Invalid sourceList: ${sourceList}. Must be 'inbox' or 'scheduled'`);
+  }
 
   console.log(`[Storage] Moving item to archive: ${item.title || item.id} from ${sourceList}`);
 
