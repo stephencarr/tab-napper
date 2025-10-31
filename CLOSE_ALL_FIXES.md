@@ -42,7 +42,7 @@ const tabsToClose = [];
 // ... collect all candidate tabs
 
 // Phase 2: Bulk close
-await chrome.tabs.remove(tabIdsToClose);
+await chrome.tabs.remove(tabsToClose.map(t => t.id));
 // ... with fallback to individual closes if bulk fails
 ```
 

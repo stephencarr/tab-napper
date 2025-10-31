@@ -189,6 +189,7 @@ function DevPanel({ isOpen, onClose }) {
           const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
           toast.success('Duplicates Closed', `Closed ${result.closed} tabs`);
           addLog(`Closed ${result.closed} duplicate tabs`, 'info');
+          await refreshDuplicateCandidates();
           await refreshDebugData();
         } catch (error) {
           toast.error('Close Failed', error.message);
@@ -196,12 +197,6 @@ function DevPanel({ isOpen, onClose }) {
         }
       }
     });
-  };
-      await refreshDuplicateCandidates();
-      await refreshDebugData();
-    } catch (error) {
-      toast.error('Close Failed', error.message);
-    }
   };
 
   const toggleSection = (section) => {
