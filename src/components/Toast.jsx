@@ -25,17 +25,17 @@ function Toast({
   }, [duration, id, onClose]);
   
   const icons = {
-    success: <CheckCircle className="h-5 w-5 text-green-400" />,
-    error: <XCircle className="h-5 w-5 text-red-400" />,
-    warning: <AlertCircle className="h-5 w-5 text-yellow-400" />,
-    info: <Info className="h-5 w-5 text-blue-400" />
+    success: <CheckCircle className="h-5 w-5 text-calm-600 dark:text-calm-400" />,
+    error: <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />,
+    warning: <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />,
+    info: <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
   };
   
   const colors = {
-    success: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
-    error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-    warning: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
-    info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+    success: 'bg-white dark:bg-calm-800 border-calm-200 dark:border-calm-700',
+    error: 'bg-white dark:bg-calm-800 border-calm-200 dark:border-calm-700',
+    warning: 'bg-white dark:bg-calm-800 border-calm-200 dark:border-calm-700',
+    info: 'bg-white dark:bg-calm-800 border-calm-200 dark:border-calm-700'
   };
   
   return (
@@ -50,11 +50,11 @@ function Toast({
             {icons[type]}
           </div>
           <div className="ml-3 w-0 flex-1 pt-0.5">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <p className="text-sm font-medium text-calm-900 dark:text-calm-100">
               {title}
             </p>
             {message && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-calm-600 dark:text-calm-400">
                 {message}
               </p>
             )}
@@ -63,7 +63,7 @@ function Toast({
             <button
               type="button"
               onClick={() => onClose?.(id)}
-              className="inline-flex rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-flex rounded-md text-calm-400 dark:text-calm-500 hover:text-calm-500 dark:hover:text-calm-400 focus:outline-none focus:ring-2 focus:ring-calm-500 focus:ring-offset-2 dark:ring-offset-calm-800"
             >
               <span className="sr-only">Close</span>
               <X className="h-5 w-5" />

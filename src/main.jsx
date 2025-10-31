@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import NoteEditor from './components/NoteEditor.jsx';
+import { ToastProvider } from './contexts/ToastContext.jsx';
 import './styles.css';
 
 // Simple router between triage hub and note editor based on pathname
@@ -18,6 +19,8 @@ if (isNotePage()) {
 
 root.render(
   <React.StrictMode>
-    {isNotePage() ? <NoteEditor noteId={noteId}/> : <App />}
+    <ToastProvider>
+      {isNotePage() ? <NoteEditor noteId={noteId}/> : <App />}
+    </ToastProvider>
   </React.StrictMode>
 );
