@@ -2,19 +2,25 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Archive, Trash2, Inbox, Filter, X, Copy, ExternalLink, Pin, RefreshCw } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import StashCard from './StashCard.jsx';
+import BulkActionBar from './BulkActionBar.jsx';
+import ConfirmDialog from './ConfirmDialog.jsx';
 import { useOpenTabs } from '../hooks/useOpenTabs.js';
+import { useBulkActions } from '../hooks/useBulkActions.js';
+import { useConfirm } from '../hooks/useConfirm.js';
+import { useToast } from '../contexts/ToastContext.jsx';
 import { closeOpenTabs, findAndCloseDuplicateTabs } from '../utils/navigation.js';
 
 /**
- * Unified Stash Manager View
+ * Unified Scheduled Manager View
  * Full-screen management interface for all items with tab navigation
  * Phase 2: Enhanced with filter and bulk actions
- * Tab options: All Stashed, Inbox, Trash
+ * Tab options: All Scheduled, Inbox, Trash
  */
 function StashManagerView({ 
-  initialFilter = 'stashed',
+  initialFilter = 'scheduled',
   inboxData = [],
-  stashedTabs = [],
+  scheduledData = [],
+  archiveData = [],
   trashData = [],
   onItemAction,
   onTabChange // New prop to notify parent of tab changes
@@ -29,14 +35,28 @@ function StashManagerView({
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   
+  // Toast and confirmation hooks
+  const { toast } = useToast();
+  const { confirm, confirmProps } = useConfirm();
+  
   // Combine all items for open tab detection
   const allItems = useMemo(
-    () => [...inboxData, ...stashedTabs, ...trashData],
-    [inboxData, stashedTabs, trashData]
+    () => [...inboxData, ...scheduledData, ...archiveData, ...trashData],
+    [inboxData, scheduledData, archiveData, trashData]
   );
   
   // Track which items are currently open (polls every 10 seconds + real-time events)
   const { isOpen, openItemIds, uniqueTabCount, refreshOpenTabs, isChecking } = useOpenTabs(allItems, 10000, true);
+  
+  // Bulk actions hook
+  const {
+    selectedCount,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    isSelected,
+    getSelectedIds
+  } = useBulkActions();
   
   // Force initial check when view changes or when component mounts
   useEffect(() => {
@@ -44,11 +64,16 @@ function StashManagerView({
     refreshOpenTabs();
   }, [activeTab, refreshOpenTabs]); // Re-check when switching between inbox/stashed/trash or refreshOpenTabs changes
   
+  // Clear selections when tab changes (fixes context issue)
+  useEffect(() => {
+    clearSelection();
+  }, [activeTab, clearSelection]);
+  
   // Phase 2: Check for duplicate tabs - only run on manual trigger or view change
   // Don't tie to openItemIds to avoid excessive checks
   useEffect(() => {
     const checkDuplicates = async () => {
-      if (activeTab === 'trash') {
+      if (activeTab === 'trash' || activeTab === 'archive') {
         setDuplicateCount(0);
         return;
       }
@@ -93,6 +118,14 @@ function StashManagerView({
           emptyMessage: 'Your inbox is empty',
           emptyDescription: 'Closed tabs and new items will appear here for you to triage and organize.'
         };
+      case 'archive':
+        return {
+          items: sortByTimestamp(archiveData || []),
+          title: 'Archive',
+          description: 'Completed and archived items',
+          emptyMessage: 'Archive is empty',
+          emptyDescription: 'Completed items will appear here. Archived items remain searchable and can be unarchived at any time.'
+        };
       case 'trash':
         return {
           items: sortByTimestamp(trashData || []),
@@ -101,14 +134,14 @@ function StashManagerView({
           emptyMessage: 'Trash is empty',
           emptyDescription: 'Deleted items can be recovered from here for a limited time.'
         };
-      case 'stashed':
+      case 'scheduled':
       default:
         return {
-          items: sortByTimestamp(stashedTabs || []),
-          title: 'All Stashed',
+          items: sortByTimestamp(scheduledData || []),
+          title: 'All Scheduled',
           description: 'All your saved and organized items',
-          emptyMessage: 'No stashed items yet',
-          emptyDescription: 'Items you stash from the triage inbox will appear here for organized management.'
+          emptyMessage: 'No scheduled items yet',
+          emptyDescription: 'Items you schedule from the triage inbox will appear here for organized management.'
         };
     }
   };
@@ -124,8 +157,9 @@ function StashManagerView({
   }, [currentData.items, showOnlyOpen, isOpen]);
   
   const counts = {
-    stashed: (stashedTabs || []).length,
+    scheduled: (scheduledData || []).length,
     inbox: (inboxData || []).length,
+    archive: (archiveData || []).length,
     trash: (trashData || []).length
   };
   
@@ -142,93 +176,228 @@ function StashManagerView({
       openItemIds: Array.from(openItemIds),
       allItemsCount: allItems.length,
       inboxCount: inboxData.length,
-      stashedCount: stashedTabs.length
+      stashedCount: scheduledData.length
     });
     
     if (allOpenItems.length === 0) {
       console.log('[Tab Napper] No open items found to close');
-      alert('No open tabs found to close. The items may not be currently open in your browser.');
+      toast.warning('No Open Tabs', 'No tabs found to close. The items may not be currently open in your browser.');
       return;
     }
     
     // Use uniqueTabCount for the user-facing message
     const tabWord = uniqueTabCount === 1 ? 'tab' : 'tabs';
-    const confirmMsg = `Close ${uniqueTabCount} open ${tabWord}?\n\nThis will close all open tabs matching your saved items, regardless of which list they're in.\n\n(Pinned tabs will be preserved)`;
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
     
-    console.log('[Tab Napper] 🗑️ Closing all open tabs...');
-    const result = await closeOpenTabs(allOpenItems);
-    
-    console.log(`[Tab Napper] ✅ Closed ${result.closed} tabs`);
-    if (result.skipped > 0) {
-      console.log(`[Tab Napper] 📌 Preserved ${result.skipped} pinned tabs`);
-    }
-    if (result.failed > 0) {
-      console.warn(`[Tab Napper] ⚠️ Failed to close ${result.failed} tabs`);
-    }
+    await confirm({
+      title: `Close ${uniqueTabCount} Open ${tabWord.charAt(0).toUpperCase() + tabWord.slice(1)}?`,
+      message: `This will close all open tabs matching your saved items, regardless of which list they're in.\n\n(Pinned tabs will be preserved)`,
+      type: 'warning',
+      confirmText: 'Close All',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        console.log('[Tab Napper] 🗑️ Closing all open tabs...');
+        const result = await closeOpenTabs(allOpenItems);
+        
+        console.log(`[Tab Napper] ✅ Closed ${result.closed} tabs`);
+        if (result.skipped > 0) {
+          console.log(`[Tab Napper] 📌 Preserved ${result.skipped} pinned tabs`);
+        }
+        if (result.failed > 0) {
+          console.warn(`[Tab Napper] ⚠️ Failed to close ${result.failed} tabs`);
+        }
 
-    // Show result message
-    let message = `✅ Closed ${result.closed} tabs`;
-    if (result.skipped > 0) {
-      message += `\n📌 Preserved ${result.skipped} pinned tabs`;
-    }
-    alert(message);
+        // Show result toast
+        if (result.closed > 0) {
+          let message = `Closed ${result.closed} ${result.closed === 1 ? 'tab' : 'tabs'}`;
+          if (result.skipped > 0) {
+            message += ` • Preserved ${result.skipped} pinned`;
+          }
+          toast.success('Tabs Closed', message);
+        } else {
+          toast.warning('No Tabs Closed', 'All matching tabs were pinned and preserved.');
+        }
 
-    // Refresh the open tabs status
-    await refreshOpenTabs();
+        // Refresh the open tabs status
+        await refreshOpenTabs();
+      }
+    });
   };
   
   // Phase 2: Handle duplicate cleanup
   const handleFindDuplicates = async () => {
-    try {
-      console.log('[Tab Napper] 🔍 Closing duplicate tabs...');
-      
-      // We already know there are duplicates from the check
-      const confirmMsg = `Found duplicate tabs open.\n\nThis will close ${duplicateCount} duplicate tabs, keeping the newest of each.\n\n(Pinned tabs will always be preserved)`;
-      if (!window.confirm(confirmMsg)) {
-        console.log('[Tab Napper] Duplicate cleanup cancelled');
-        return;
-      }
-      
-      // Close the duplicates
-      console.log('[Tab Napper] Closing duplicate tabs...');
-      const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
-      
-      console.log(`[Tab Napper] ✅ Closed ${result.closed} duplicate tabs`);
-      if (result.skipped > 0) {
-        console.log(`[Tab Napper] 📌 Preserved ${result.skipped} pinned tabs`);
-      }
-      
-      // Show success message
-      let message = `✅ Closed ${result.closed} duplicate tabs!\n\nKept the newest tab for each URL.`;
-      if (result.skipped > 0) {
-        message += `\n\n📌 Preserved ${result.skipped} pinned tabs`;
-      }
-      alert(message);
-      
-      // Refresh open status and duplicate count
-      await refreshOpenTabs();
-      setDuplicateCount(0);
-    } catch (error) {
-      console.error('[Tab Napper] Error finding duplicates:', error);
-      alert(`Error finding duplicates: ${error.message}`);
+    if (duplicateCount === 0) {
+      toast.info('No Duplicates', 'No duplicate tabs found.');
+      return;
     }
+    
+    await confirm({
+      title: 'Close Duplicate Tabs',
+      message: `Found duplicate tabs open.\n\nThis will close ${duplicateCount} duplicate tabs, keeping the newest of each.\n\n(Pinned tabs will always be preserved)`,
+      type: 'warning',
+      confirmText: 'Close Duplicates',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          console.log('[Tab Napper] 🔍 Closing duplicate tabs...');
+          
+          const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
+          
+          console.log(`[Tab Napper] ✅ Closed ${result.closed} duplicate tabs`);
+          if (result.skipped > 0) {
+            console.log(`[Tab Napper] 📌 Preserved ${result.skipped} pinned tabs`);
+          }
+          
+          // Show result toast
+          if (result.closed > 0) {
+            let message = `Closed ${result.closed} duplicate ${result.closed === 1 ? 'tab' : 'tabs'}. Kept newest for each URL.`;
+            if (result.skipped > 0) {
+              message += ` Preserved ${result.skipped} pinned.`;
+            }
+            toast.success('Duplicates Removed', message);
+          } else {
+            toast.info('No Duplicates Closed', 'All duplicate tabs were pinned and preserved.');
+          }
+          
+          // Refresh open status and duplicate count
+          await refreshOpenTabs();
+          setDuplicateCount(0);
+        } catch (error) {
+          console.error('[Tab Napper] Error finding duplicates:', error);
+          toast.error('Error', `Failed to close duplicates: ${error.message}`);
+        }
+      }
+    });
   };
 
   const handleItemClick = (item) => {
     // TODO: Implement item interaction (navigate, edit, move between lists, etc.)
   };
+  
+  // Bulk action handlers
+  const handleBulkTrash = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    await confirm({
+      title: 'Move to Trash',
+      message: `Move ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Trash?`,
+      type: 'warning',
+      confirmText: 'Move to Trash',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          for (const id of ids) {
+            const item = allItems.find(i => i.id === id);
+            if (item) {
+              await onItemAction?.(item, 'delete');
+            }
+          }
+          toast.success('Moved to Trash', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} moved to trash`);
+          clearSelection();
+        } catch (error) {
+          console.error('[Tab Napper] Error in bulk trash:', error);
+          toast.error('Action Failed', 'Failed to move items to trash');
+        }
+      }
+    });
+  };
+  
+  const handleBulkArchive = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    await confirm({
+      title: 'Move to Archive',
+      message: `Move ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Archive?`,
+      type: 'info',
+      confirmText: 'Move to Archive',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          for (const id of ids) {
+            const item = allItems.find(i => i.id === id);
+            if (item) {
+              await onItemAction?.(item, 'mark_done'); // mark_done moves to archive
+            }
+          }
+          toast.success('Moved to Archive', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} archived`);
+          clearSelection();
+        } catch (error) {
+          console.error('[Tab Napper] Error in bulk archive:', error);
+          toast.error('Action Failed', 'Failed to move items to archive');
+        }
+      }
+    });
+  };
+  
+  const handleBulkSchedule = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    await confirm({
+      title: 'Move to Scheduled',
+      message: `Move ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Scheduled?`,
+      type: 'info',
+      confirmText: 'Schedule',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          for (const id of ids) {
+            const item = allItems.find(i => i.id === id);
+            if (item) {
+              await onItemAction?.(item, 'remind_me', { when: 'Later' });
+            }
+          }
+          toast.success('Moved to Scheduled', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} scheduled`);
+          clearSelection();
+        } catch (error) {
+          console.error('[Tab Napper] Error in bulk schedule:', error);
+          toast.error('Action Failed', 'Failed to schedule items');
+        }
+      }
+    });
+  };
+  
+  const handleBulkRestore = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    await confirm({
+      title: 'Restore to Inbox',
+      message: `Restore ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Inbox?`,
+      type: 'info',
+      confirmText: 'Restore',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          for (const id of ids) {
+            const item = allItems.find(i => i.id === id);
+            if (item) {
+              await onItemAction?.(item, 'restore');
+            }
+          }
+          toast.success('Restored to Inbox', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} restored`);
+          clearSelection();
+        } catch (error) {
+          console.error('[Tab Napper] Error in bulk restore:', error);
+          toast.error('Action Failed', 'Failed to restore items');
+        }
+      }
+    });
+  };
 
   const tabs = [
-    { id: 'stashed', name: 'All Stashed', icon: Archive, count: counts.stashed },
+    { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.scheduled },
     { id: 'inbox', name: 'Inbox', icon: Inbox, count: counts.inbox },
+    { id: 'archive', name: 'Archive', icon: Archive, count: counts.archive },
     { id: 'trash', name: 'Trash', icon: Trash2, count: counts.trash },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Confirmation Dialog */}
+      <ConfirmDialog {...confirmProps} />
+      
       {/* Page Heading */}
       <div className="border-b border-calm-200 dark:border-calm-700 pb-5">
         <div className="flex items-center justify-between">
@@ -403,6 +572,19 @@ function StashManagerView({
               </div>
             )}
             
+            {/* Bulk Action Bar */}
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalCount={filteredItems.length}
+              onSelectAll={() => selectAll(filteredItems)}
+              onClearSelection={clearSelection}
+              onTrash={handleBulkTrash}
+              onArchive={handleBulkArchive}
+              onSchedule={handleBulkSchedule}
+              onRestore={handleBulkRestore}
+              currentView={currentData.title}
+            />
+            
             <ul role="list" className="divide-y divide-calm-200 dark:divide-calm-700">
               {filteredItems.map((item, index) => {
                 // Use a stable key based on id or url; deduplication is handled in storage
@@ -415,7 +597,12 @@ function StashManagerView({
                       onItemAction={onItemAction}
                       showFidgetControls={activeTab !== 'trash'}
                       isTrashView={activeTab === 'trash'}
+                      isArchiveView={activeTab === 'archive'}
+                      isScheduledView={activeTab === 'scheduled'}
                       isCurrentlyOpen={isOpen(item)}
+                      showCheckbox={true}
+                      isSelected={isSelected(item.id)}
+                      onToggleSelect={toggleSelection}
                     />
                   </li>
                 );

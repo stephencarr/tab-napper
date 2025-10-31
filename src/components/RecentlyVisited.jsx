@@ -7,6 +7,7 @@ import StackList from './StackList.jsx';
 
 /**
  * Lightweight history fetch for RecentlyVisited component
+ * Returns items sorted by most recent first (Chrome API default behavior)
  */
 async function getLightweightRecentHistory(maxItems = 50) {
   if (typeof chrome === 'undefined' || !chrome.history) {
@@ -22,7 +23,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
         {
           text: '',
           maxResults: searchBudget,
-          // Removed startTime to get most recent items regardless of date
+          // No startTime specified - Chrome returns most recent items first by default
         },
         (results) => {
           if (chrome.runtime.lastError) {
@@ -35,7 +36,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
       );
     });
     
-    // Filter out unwanted URLs
+    // Filter out unwanted URLs (results are already sorted by Chrome - most recent first)
     const excludePatterns = [
       'chrome://', 'chrome-extension://', 'moz-extension://',
       'data:', 'blob:', 'javascript:'
@@ -52,7 +53,7 @@ async function getLightweightRecentHistory(maxItems = 50) {
         description: item.url
       }));
 
-    // Ensure we only return up to requested maxItems
+    // Ensure we only return up to requested maxItems (maintaining sort order)
     const sliced = filtered.slice(0, Math.max(0, maxItems));
     return sliced;
     
@@ -73,9 +74,9 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
   const debounceRef = useRef(null);
   const mountedRef = useRef(true); // Start as true since we're in the component
   
-  // Watch for changes in stashed tabs to update history status
-  const { data: stashedTabs } = useReactiveStorage('triageHub_stashedTabs', []);
-  const stashedTabsLength = stashedTabs?.length || 0;
+  // Watch for changes in scheduled tabs to update history status
+  const { data: scheduledData } = useReactiveStorage('triageHub_scheduled', []);
+  const scheduledDataLength = scheduledData?.length || 0;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -107,7 +108,7 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
     }
   }, [maxItems]);
 
-  // Load history on component mount and when stashed tabs change
+  // Load history on component mount and when scheduled tabs change
   useEffect(() => {
     // Debounce rapid triggers so we don't hammer chrome.history.search
     // Increased delay to reduce frequency of expensive history queries
@@ -117,7 +118,7 @@ function RecentlyVisited({ className, maxItems = 30 }) { // Reduced from 50 to 3
     debounceRef.current = setTimeout(() => {
       loadHistory();
     }, 2000); // Increased from 1500ms to 2000ms to reduce API calls
-  }, [maxItems, stashedTabsLength, loadHistory]);
+  }, [maxItems, scheduledDataLength, loadHistory]);
 
   // Handle clicking on a history item
   const handleHistoryItemClick = async (item) => {

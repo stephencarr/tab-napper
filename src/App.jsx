@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
-import { loadAllAppData, saveAppState, loadAppState } from './utils/storage.js';
+import { loadAllAppData, saveAppState, loadAppState, moveToArchive, STORAGE_KEYS } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData, generateTestBrowsingHistory } from './utils/devUtils.js';
-import { simulateTabCapture, setupTabCaptureListeners, addToTriageInbox, normalizeUrl } from './utils/capture.js';
+import { simulateTabCapture, addToTriageInbox } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
@@ -11,9 +11,11 @@ import { openNoteEditor, navigateToUrl } from './utils/navigation.js';
 import { calculateScheduledTime, setScheduledAlarm, clearScheduledAlarm, clearAllAlarmsForItem } from './utils/schedule.js';
 import { autoPinCurrentTab, isCurrentTabPinned } from './utils/autoPin.js';
 import { runAutoCleanup, getCleanupPreview } from './utils/autoCleanup.js';
+import { updateFavicon } from './utils/favicon.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
+import { useToast } from './contexts/ToastContext.jsx';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -23,13 +25,18 @@ import QuickAccessCards from './components/QuickAccessCards.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
-import DevPanel from './components/DevPanel.jsx';
 import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 import Layout from './components/Layout.jsx';
+
+// Lazy load DevPanel to avoid circular dependency issues
+const DevPanel = lazy(() => import('./components/DevPanel.jsx').then(module => ({ default: module.default })));
 
 function App() {
   // Initialize dark mode detection
   useDarkMode();
+  
+  // Toast notifications
+  const { toast } = useToast();
   
   // Dev mode state
   const { isDevMode, toggleDevMode } = useDevMode();
@@ -37,6 +44,12 @@ function App() {
   
   // Use the reactive store hook for guaranteed fresh data
   const appState = useReactiveStore();
+  
+  // Update favicon based on scheduled items count
+  useEffect(() => {
+    const scheduledCount = appState?.scheduled?.length || 0;
+    updateFavicon(scheduledCount);
+  }, [appState?.scheduled?.length]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -99,9 +112,6 @@ function App() {
         
         // Initialize reactive store and load data
         const data = await initializeReactiveStore();
-
-        // Set up tab capture listeners
-        setupTabCaptureListeners();
         
         // Auto-pin the tab to keep Tab Napper always visible
         autoPinCurrentTab();
@@ -228,7 +238,7 @@ function App() {
           // Restore item from trash back to inbox using the proper capture API
           
           // Step 1: Remove from trash
-          const currentTrash = await loadAppState('triageHub_trash', []);
+          const currentTrash = await loadAppState('triageHub_trash') || [];
           const updatedTrash = currentTrash.filter(i => i.id !== item.id);
           await saveAppState('triageHub_trash', updatedTrash);
           
@@ -241,15 +251,16 @@ function App() {
           
           await addToTriageInbox(restoredItem);
           
+          toast.success('Restored', `"${item.title}" restored to inbox`);
           // Chrome storage listener will automatically update the reactive store
           break;
           
         case 'delete':
           // Move item to trash
           
-          const currentInboxForDelete = await loadAppState('triageHub_inbox', []);
-          const currentStashed = await loadAppState('triageHub_stashedTabs', []);
-          const currentTrashForDelete = await loadAppState('triageHub_trash', []);
+          const currentInboxForDelete = await loadAppState('triageHub_inbox') || [];
+          const currentStashed = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
+          const currentTrashForDelete = await loadAppState('triageHub_trash') || [];
           
           
           // Remove from inbox or stashed
@@ -271,9 +282,10 @@ function App() {
           
           // Update storage
           await saveAppState('triageHub_inbox', updatedInboxForDelete);
-          await saveAppState('triageHub_stashedTabs', updatedStashed);
+          await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashed);
           await saveAppState('triageHub_trash', updatedTrashForDelete);
           
+          toast.success('Moved to Trash', `"${item.title}" moved to trash`);
           break;
           
         case 'remind_me':
@@ -293,11 +305,11 @@ function App() {
           }
           
           // Step 3: Remove from inbox (if present)
-          const currentInboxForSchedule = await loadAppState('triageHub_inbox', []);
+          const currentInboxForSchedule = await loadAppState('triageHub_inbox') || [];
           const updatedInboxForSchedule = currentInboxForSchedule.filter(i => i.id !== item.id);
           
           // Step 4: Update in stashed tabs with new scheduling metadata
-          const currentStashedForSchedule = await loadAppState('triageHub_stashedTabs', []);
+          const currentStashedForSchedule = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
           
           // Remove old version from stashed (if it was already there)
           const filteredStashed = currentStashedForSchedule.filter(i => i.id !== item.id);
@@ -313,12 +325,39 @@ function App() {
           
           // Step 5: Save to storage
           await saveAppState('triageHub_inbox', updatedInboxForSchedule);
-          await saveAppState('triageHub_stashedTabs', updatedStashedForSchedule);
+          await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashedForSchedule);
           
           // Step 6: Set new Chrome alarm
           await setScheduledAlarm(item, action, scheduledTime);
           
+          const actionLabels = {
+            'remind_me': 'Reminder',
+            'follow_up': 'Follow-up',
+            'review': 'Review'
+          };
+          toast.success('Scheduled', `${actionLabels[action]} set for ${actionData.when}`);
           console.log('[Tab Napper] ✓ Item scheduled and stashed:', item.title);
+          break;
+        
+        case 'mark_done':
+          // Mark item as completed (move to Archive)
+          console.log('[Tab Napper] Marking item as done:', item.title);
+          
+          // Clear any scheduled alarms
+          await clearAllAlarmsForItem(item);
+          
+          // Determine source list - check which list contains this item
+          const currentInbox = await loadAppState(STORAGE_KEYS.INBOX);
+          const currentScheduled = await loadAppState(STORAGE_KEYS.SCHEDULED);
+          
+          const isInInbox = currentInbox.some(i => i.id === item.id);
+          const sourceList = isInInbox ? 'inbox' : 'scheduled';
+          
+          // Use the moveToArchive function which handles all the details
+          await moveToArchive(item, sourceList);
+          
+          toast.success('Archived', `"${item.title}" marked as done and archived`);
+          console.log('[Tab Napper] ✓ Item marked as done and archived');
           break;
           
         default:
@@ -326,6 +365,7 @@ function App() {
       }
     } catch (error) {
       console.error(`[Tab Napper] Error handling action '${action}':`, error);
+      toast.error('Action Failed', error.message || 'An error occurred while performing this action');
     }
   };
 
@@ -384,7 +424,7 @@ function App() {
         }
       ];
       
-      await saveAppState('triageHub_stashedTabs', testStashedItems);
+      await saveAppState(STORAGE_KEYS.SCHEDULED, testStashedItems);
       
       // Chrome storage listener will automatically update the reactive store
 
@@ -468,8 +508,9 @@ function App() {
       
       // Map tab IDs to view names
       const tabToViewMap = {
-        'stashed': 'All Stashed',
+        'scheduled': 'All Scheduled',
         'inbox': 'Inbox',
+        'archive': 'Archive',
         'trash': 'Trash'
       };
       const newView = tabToViewMap[tabId];
@@ -479,12 +520,13 @@ function App() {
     };
     
     switch (currentView) {
-      case 'All Stashed':
+      case 'All Scheduled':
         return (
           <StashManagerView
-            initialFilter="stashed"
+            initialFilter="scheduled"
             inboxData={appState?.inbox || []}
-            stashedTabs={appState?.stashedTabs || []}
+            scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -495,7 +537,20 @@ function App() {
           <StashManagerView
             initialFilter="inbox"
             inboxData={appState?.inbox || []}
-            stashedTabs={appState?.stashedTabs || []}
+            scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
+            trashData={appState?.trash || []}
+            onItemAction={handleItemAction}
+            onTabChange={handleTabChange}
+          />
+        );
+      case 'Archive':
+        return (
+          <StashManagerView
+            initialFilter="archive"
+            inboxData={appState?.inbox || []}
+            scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -506,7 +561,8 @@ function App() {
           <StashManagerView
             initialFilter="trash"
             inboxData={appState?.inbox || []}
-            stashedTabs={appState?.stashedTabs || []}
+            scheduledData={appState?.scheduled || []}
+            archiveData={appState?.archive || []}
             trashData={appState?.trash || []}
             onItemAction={handleItemAction}
             onTabChange={handleTabChange}
@@ -534,10 +590,12 @@ function App() {
       {/* Dev Panel - Only show when dev mode is enabled */}
       {isDevMode && (
         <>
-          <DevPanel 
-            isOpen={showDevPanel}
-            onClose={() => setShowDevPanel(false)}
-          />
+          <Suspense fallback={<div />}>
+            <DevPanel 
+              isOpen={showDevPanel}
+              onClose={() => setShowDevPanel(false)}
+            />
+          </Suspense>
           
           {/* Floating Dev Mode Toggle */}
           <button
@@ -566,8 +624,8 @@ function ContextualCardWrapper() {
       try {
         // This is a simplified check - in a real implementation you'd want to
         // share state or use a context, but for now we'll just check if there's potential content
-        const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
-        setHasContent(stashedTabs.length > 0);
+        const scheduledData = await loadAppState(STORAGE_KEYS.SCHEDULED) || [];
+        setHasContent(scheduledData.length > 0);
       } catch (error) {
         setHasContent(false);
       }

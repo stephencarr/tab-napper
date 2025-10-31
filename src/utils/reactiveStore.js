@@ -3,7 +3,7 @@
  * Handles automatic state updates when ANY app-related storage changes externally
  * 
  * This includes:
- * - Main data: inbox, stashed tabs, trash, notes
+ * - Main data: inbox, scheduled, trash, notes
  * - UI data: quick access cards, user preferences  
  * - Meta data: smart suggestions metadata, encryption keys
  * - Dev data: mock history, test data
@@ -26,7 +26,8 @@ let stateChangeListeners = new Set();
 // Storage key to state property mapping (constant to avoid recreation)
 const STORAGE_KEY_MAPPING = {
   'triageHub_inbox': 'inbox',
-  'triageHub_stashedTabs': 'stashedTabs',
+  'triageHub_scheduled': 'scheduled',
+  'triageHub_archive': 'archive',
   'triageHub_trash': 'trash',
   'triageHub_notes': 'notes',
   'triageHub_quickAccessCards': 'quickAccessCards',
@@ -117,7 +118,8 @@ async function handleStorageChanges(changes, namespace) {
     const appDataKeys = [
       // Main data keys
       'triageHub_inbox',
-      'triageHub_stashedTabs',
+      'triageHub_scheduled',
+      'triageHub_archive',
       'triageHub_trash',
       'triageHub_notes',
       'triageHub_suggestionMetadata',
@@ -166,7 +168,7 @@ async function handleStorageChanges(changes, namespace) {
           // When storage key is deleted (newValue === undefined), we set defaults
           // instead of deleting the state property. This prevents component crashes
           // as React components expect these properties to always exist.
-          // - For arrays (inbox, stashed, etc.): defaults to []
+          // - For arrays (inbox, scheduled, etc.): defaults to []
           // - For userPreferences: defaults to DEFAULT_USER_PREFERENCES
           // This ensures a consistent state shape regardless of storage state.
           if (newValue === undefined) {

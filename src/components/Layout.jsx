@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Home, Archive, Inbox, Trash2, Menu, X } from 'lucide-react';
+import { Home, Calendar, Inbox, Archive, Trash2, Menu, X } from 'lucide-react';
 import UniversalSearch from './UniversalSearch.jsx';
 import { toggleDarkMode } from '../hooks/useDarkMode.js';
 import { useReactiveStore } from '../hooks/useReactiveStore.js';
 
 const navigation = [
   { name: 'Dashboard', icon: Home },
-  { name: 'All Stashed', icon: Archive, countKey: 'stashedTabs' },
   { name: 'Inbox', icon: Inbox, countKey: 'inbox' },
+  { name: 'All Scheduled', icon: Calendar, countKey: 'scheduled' },
+  { name: 'Archive', icon: Archive, countKey: 'archive' },
   { name: 'Trash', icon: Trash2, countKey: 'trash' }
 ];
 

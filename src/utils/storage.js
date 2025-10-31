@@ -14,22 +14,26 @@
 
 import { encryptString, decryptString } from './encryption.js';
 import { notifyStorageChange } from './reactiveStorage.js';
+import { STORAGE_KEYS } from './storageKeys.js';
 
 // Storage key mapping - determines which keys go to sync vs local storage
 const SYNC_STORAGE_KEYS = new Set([
   'triageHub_encryptionKey',     // E2EE key
-  'triageHub_quickAccessCards',  // Quick Access Cards (small, critical)
+  STORAGE_KEYS.QUICK_ACCESS_CARDS,  // Quick Access Cards (small, critical)
   'triageHub_userPreferences',   // User settings
 ]);
 
 const LOCAL_STORAGE_KEYS = new Set([
-  'triageHub_inbox',           // _Triage_Inbox (bulk data)
-  'triageHub_stashedTabs',     // StashedTabs (bulk data)
-  'triageHub_trash',           // Trash (bulk data)
-  'triageHub_notes',           // Notes (bulk data)
-  'tabNapper_lastCleanup',     // Last auto-cleanup timestamp (performance optimization)
-  'tabNapper_hasPinnedTab',    // Auto-pin flag (prevents duplicate pinning)
-  'tabNapper_pinnedTabId',     // ID of pinned Tab Napper tab
+  STORAGE_KEYS.INBOX,              // Inbox (bulk data)
+  STORAGE_KEYS.SCHEDULED,          // Scheduled items (bulk data)
+  STORAGE_KEYS.ARCHIVE,            // Archive (bulk data)
+  STORAGE_KEYS.LEGACY_STASHED,     // Legacy key (for migration)
+  STORAGE_KEYS.TRASH,              // Trash (bulk data)
+  STORAGE_KEYS.COMPLETED,          // Completed items (bulk data)
+  'triageHub_notes',               // Notes (bulk data)
+  'tabNapper_lastCleanup',         // Last auto-cleanup timestamp (performance optimization)
+  'tabNapper_hasPinnedTab',        // Auto-pin flag (prevents duplicate pinning)
+  'tabNapper_pinnedTabId',         // ID of pinned Tab Napper tab
 ]);
 
 /**
@@ -134,9 +138,11 @@ async function saveAppState(key, data) {
  */
 async function initializeBulkData() {
   const bulkDataKeys = [
-    'triageHub_inbox',
-    'triageHub_stashedTabs', 
-    'triageHub_trash',
+    STORAGE_KEYS.INBOX,
+    STORAGE_KEYS.SCHEDULED,
+    STORAGE_KEYS.ARCHIVE,
+    STORAGE_KEYS.TRASH,
+    STORAGE_KEYS.COMPLETED,
     'triageHub_notes'
   ];
   
@@ -180,44 +186,58 @@ function deduplicateById(items) {
  * Load all application data into a single state object
  */
 async function loadAllAppData() {
+  // Run migrations first
+  const { runStorageMigrations } = await import('./storageKeys.js');
+  await runStorageMigrations();
+  
   // Initialize bulk data if needed
   await initializeBulkData();
   
-  // Load all data
+  // Load all data using centralized keys
   const [
     quickAccessCards,
     userPreferences,
     inbox,
-    stashedTabs,
-    trash
+    scheduled,
+    archive,
+    trash,
+    completed
   ] = await Promise.all([
-    loadAppState('triageHub_quickAccessCards'),
+    loadAppState(STORAGE_KEYS.QUICK_ACCESS_CARDS),
     loadAppState('triageHub_userPreferences'),
-    loadAppState('triageHub_inbox'),
-    loadAppState('triageHub_stashedTabs'),
-    loadAppState('triageHub_trash')
+    loadAppState(STORAGE_KEYS.INBOX),
+    loadAppState(STORAGE_KEYS.SCHEDULED),
+    loadAppState(STORAGE_KEYS.ARCHIVE),
+    loadAppState(STORAGE_KEYS.TRASH),
+    loadAppState(STORAGE_KEYS.COMPLETED)
   ]);
   
-  // Deduplicate arrays (especially trash which can accumulate duplicates)
+  // Deduplicate arrays
   const originalInboxLength = Array.isArray(inbox) ? inbox.length : undefined;
-  const originalStashedLength = Array.isArray(stashedTabs) ? stashedTabs.length : undefined;
+  const originalScheduledLength = Array.isArray(scheduled) ? scheduled.length : undefined;
+  const originalArchiveLength = Array.isArray(archive) ? archive.length : undefined;
   const originalTrashLength = Array.isArray(trash) ? trash.length : undefined;
   const deduplicatedInbox = deduplicateById(inbox || []);
-  const deduplicatedStashed = deduplicateById(stashedTabs || []);
+  const deduplicatedScheduled = deduplicateById(scheduled || []);
+  const deduplicatedArchive = deduplicateById(archive || []);
   const deduplicatedTrash = deduplicateById(trash || []);
   
   // If we removed duplicates, save the cleaned data back to storage
   if (deduplicatedInbox.length !== originalInboxLength) {
     console.log('[Storage] Deduplicating inbox:', originalInboxLength, '→', deduplicatedInbox.length);
-    await saveAppState('triageHub_inbox', deduplicatedInbox);
+    await saveAppState(STORAGE_KEYS.INBOX, deduplicatedInbox);
   }
-  if (deduplicatedStashed.length !== originalStashedLength) {
-    console.log('[Storage] Deduplicating stashed:', originalStashedLength, '→', deduplicatedStashed.length);
-    await saveAppState('triageHub_stashedTabs', deduplicatedStashed);
+  if (deduplicatedScheduled.length !== originalScheduledLength) {
+    console.log('[Storage] Deduplicating scheduled:', originalScheduledLength, '→', deduplicatedScheduled.length);
+    await saveAppState(STORAGE_KEYS.SCHEDULED, deduplicatedScheduled);
+  }
+  if (deduplicatedArchive.length !== originalArchiveLength) {
+    console.log('[Storage] Deduplicating archive:', originalArchiveLength, '→', deduplicatedArchive.length);
+    await saveAppState(STORAGE_KEYS.ARCHIVE, deduplicatedArchive);
   }
   if (deduplicatedTrash.length !== originalTrashLength) {
     console.log('[Storage] Deduplicating trash:', originalTrashLength, '→', deduplicatedTrash.length);
-    await saveAppState('triageHub_trash', deduplicatedTrash);
+    await saveAppState(STORAGE_KEYS.TRASH, deduplicatedTrash);
   }
   
   return {
@@ -230,9 +250,109 @@ async function loadAllAppData() {
     
     // Local storage data (bulk, now deduplicated)
     inbox: deduplicatedInbox,
-    stashedTabs: deduplicatedStashed,
-    trash: deduplicatedTrash
+    scheduled: deduplicatedScheduled,
+    archive: deduplicatedArchive,
+    trash: deduplicatedTrash,
+    completed: completed || []
   };
+}
+
+/**
+ * Move an item to Archive (mark as done/completed)
+ * @param {Object} item - The item to archive
+ * @param {string} sourceList - Where the item came from ('inbox' or 'scheduled')
+ * @returns {Promise<Object>} The archived item with metadata
+ */
+async function moveToArchive(item, sourceList = 'scheduled') {
+  if (!item || !item.id) {
+    throw new Error('Invalid item: missing ID');
+  }
+  
+  if (!['inbox', 'scheduled'].includes(sourceList)) {
+    throw new Error(`Invalid sourceList: ${sourceList}. Must be 'inbox' or 'scheduled'`);
+  }
+
+  console.log(`[Storage] Moving item to archive: ${item.title || item.id} from ${sourceList}`);
+
+  // Create archived item with metadata
+  const archivedItem = {
+    ...item,
+    archivedAt: Date.now(),
+    archivedFrom: sourceList,
+    completedAt: Date.now(),
+    originalTimestamp: item.timestamp || item.capturedAt || Date.now()
+  };
+
+  // Get current data
+  const sourceKey = sourceList === 'inbox' ? STORAGE_KEYS.INBOX : STORAGE_KEYS.SCHEDULED;
+  const [sourceData, archiveData] = await Promise.all([
+    loadAppState(sourceKey),
+    loadAppState(STORAGE_KEYS.ARCHIVE)
+  ]);
+
+  // Remove from source list
+  const updatedSource = (sourceData || []).filter(i => i.id !== item.id);
+  
+  // Add to archive
+  const updatedArchive = [archivedItem, ...(archiveData || [])];
+
+  // Save both lists
+  await Promise.all([
+    saveAppState(sourceKey, updatedSource),
+    saveAppState(STORAGE_KEYS.ARCHIVE, updatedArchive)
+  ]);
+
+  console.log(`[Storage] ✓ Item archived successfully`);
+  
+  // Notify reactive store
+  notifyStorageChange(sourceKey);
+  notifyStorageChange(STORAGE_KEYS.ARCHIVE);
+
+  return archivedItem;
+}
+
+/**
+ * Unarchive an item back to Inbox or Scheduled
+ * @param {Object} item - The archived item to restore
+ * @param {string} destination - Where to restore ('inbox' or 'scheduled')
+ * @returns {Promise<Object>} The restored item with metadata removed
+ */
+async function unarchiveItem(item, destination = 'inbox') {
+  if (!item || !item.id) {
+    throw new Error('Invalid item: missing ID');
+  }
+
+  console.log(`[Storage] Unarchiving item: ${item.title || item.id} to ${destination}`);
+
+  // Create restored item (remove archive metadata)
+  const { archivedAt, archivedFrom, completedAt, ...restoredItem } = item;
+
+  // Get current data
+  const destKey = destination === 'inbox' ? STORAGE_KEYS.INBOX : STORAGE_KEYS.SCHEDULED;
+  const [archiveData, destData] = await Promise.all([
+    loadAppState(STORAGE_KEYS.ARCHIVE),
+    loadAppState(destKey)
+  ]);
+
+  // Remove from archive
+  const updatedArchive = (archiveData || []).filter(i => i.id !== item.id);
+  
+  // Add to destination
+  const updatedDest = [restoredItem, ...(destData || [])];
+
+  // Save both lists
+  await Promise.all([
+    saveAppState(STORAGE_KEYS.ARCHIVE, updatedArchive),
+    saveAppState(destKey, updatedDest)
+  ]);
+
+  console.log(`[Storage] ✓ Item unarchived successfully`);
+  
+  // Notify reactive store
+  notifyStorageChange(STORAGE_KEYS.ARCHIVE);
+  notifyStorageChange(destKey);
+
+  return restoredItem;
 }
 
 export {
@@ -240,5 +360,7 @@ export {
   saveAppState,
   initializeBulkData,
   loadAllAppData,
-  getStorageType
+  moveToArchive,
+  unarchiveItem,
+  STORAGE_KEYS
 };

@@ -74,11 +74,14 @@ function QuickNoteCapture({ className, onNoteSaved }) {
       const noteItem = {
         id: `note-${crypto.randomUUID()}`,
         title: noteTitle,
+        description: noteContent, // For compatibility with NoteEditor
         content: noteContent,
         timestamp: timestamp,
         type: 'note',
         wordCount
-      };      // Add to beginning of inbox (most recent first)
+      };
+      
+      // Add to beginning of inbox (most recent first)
       const updatedInbox = [noteItem, ...currentInbox];
       
       // Save to storage

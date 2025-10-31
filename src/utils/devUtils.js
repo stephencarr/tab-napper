@@ -43,10 +43,10 @@ async function addSampleData() {
       }
     ];
 
-    // Sample stashed tabs
-    const sampleStashed = [
+    // Sample scheduled
+    const sampleScheduled = [
       {
-        id: 'stashed-1',
+        id: 'scheduled-1',
         title: 'React Hooks Best Practices',
         description: 'Comprehensive guide to using React hooks effectively',
         summary: 'React hooks enable functional components to use state and lifecycle methods. Best practices include using useState for simple state, useEffect for side effects, custom hooks for reusable logic, and proper dependency arrays.',
@@ -55,7 +55,7 @@ async function addSampleData() {
         type: 'learning'
       },
       {
-        id: 'stashed-2',
+        id: 'scheduled-2',
         title: 'Chrome Extension Storage API',
         description: 'Deep dive into chrome.storage.sync and chrome.storage.local',
         body: 'Chrome storage API provides persistent storage for extensions. chrome.storage.sync synchronizes across devices while chrome.storage.local stays on device. Both support encryption and quota limits.',
@@ -64,7 +64,7 @@ async function addSampleData() {
         type: 'documentation'
       },
       {
-        id: 'stashed-3',
+        id: 'scheduled-3',
         title: 'MDN JavaScript Reference',
         description: 'Complete JavaScript language reference',
         content: 'MDN provides comprehensive documentation for JavaScript including syntax, built-in objects, operators, statements, functions, and modern ES6+ features like arrow functions, destructuring, and modules.',
@@ -73,7 +73,7 @@ async function addSampleData() {
         type: 'reference'
       },
       {
-        id: 'stashed-4',
+        id: 'scheduled-4',
         title: 'VS Code Extension Development',
         description: 'Building extensions for Visual Studio Code',
         text: 'VS Code extensions use TypeScript and Node.js APIs. Key concepts include activation events, contribution points, commands, and the extension manifest. Extensions can add themes, languages, debuggers, and custom UI.',
@@ -134,7 +134,7 @@ async function addSampleData() {
 
     // Save sample data
     await saveAppState('triageHub_inbox', sampleInbox);
-    await saveAppState('triageHub_stashedTabs', sampleStashed);
+    await saveAppState('triageHub_scheduled', sampleScheduled);
     await saveAppState('triageHub_quickAccessCards', sampleQuickAccess);
 
     console.log('[Tab Napper] Sample data added successfully');
@@ -154,7 +154,7 @@ async function clearSampleData() {
     
     // Clear all storage buckets
     await saveAppState('triageHub_inbox', []);
-    await saveAppState('triageHub_stashedTabs', []);
+    await saveAppState('triageHub_scheduled', []);
     await saveAppState('triageHub_trash', []);
     await saveAppState('triageHub_quickAccessCards', []);
     
@@ -466,6 +466,190 @@ async function testAlarm() {
   });
 }
 
+/**
+ * Get all tabs that would be closed by "Close All"
+ * Useful for debugging why tabs aren't being closed
+ */
+async function getCloseTabCandidates(items) {
+  if (typeof chrome === 'undefined' || !chrome.tabs) {
+    return { candidates: [], summary: 'Chrome tabs API not available' };
+  }
+  
+  try {
+    const allTabs = await chrome.tabs.query({});
+    const candidates = [];
+    const urlToTabMap = new Map();
+    
+    // Build URL map
+    allTabs.forEach(tab => {
+      if (tab.url) {
+        const normalized = normalizeUrl(tab.url);
+        if (!urlToTabMap.has(normalized)) {
+          urlToTabMap.set(normalized, []);
+        }
+        urlToTabMap.get(normalized).push(tab);
+      }
+    });
+    
+    // Find matching tabs
+    for (const item of items) {
+      if (!item.url) continue;
+      
+      const normalized = normalizeUrl(item.url);
+      const matchingTabs = urlToTabMap.get(normalized);
+      
+      if (matchingTabs) {
+        matchingTabs.forEach(tab => {
+          candidates.push({
+            itemTitle: item.title,
+            itemUrl: item.url,
+            tabId: tab.id,
+            tabTitle: tab.title,
+            tabUrl: tab.url,
+            windowId: tab.windowId,
+            pinned: tab.pinned,
+            active: tab.active,
+            wouldClose: !tab.pinned
+          });
+        });
+      }
+    }
+    
+    const wouldClose = candidates.filter(c => c.wouldClose).length;
+    const wouldSkip = candidates.filter(c => !c.wouldClose).length;
+    
+    return {
+      candidates,
+      summary: {
+        total: candidates.length,
+        wouldClose,
+        wouldSkip,
+        unpinnedTabs: allTabs.filter(t => !t.pinned).length,
+        pinnedTabs: allTabs.filter(t => t.pinned).length
+      }
+    };
+  } catch (error) {
+    console.error('[DevUtils] Error getting close candidates:', error);
+    return { candidates: [], summary: { error: error.message } };
+  }
+}
+
+/**
+ * Get all duplicate tabs in the browser
+ */
+async function getDuplicateTabCandidates() {
+  if (typeof chrome === 'undefined' || !chrome.tabs) {
+    return { duplicates: [], summary: 'Chrome tabs API not available' };
+  }
+  
+  try {
+    const allTabs = await chrome.tabs.query({});
+    const urlGroups = new Map();
+    
+    // Group by normalized URL
+    allTabs.forEach(tab => {
+      if (tab.url && tab.url.startsWith('http')) {
+        const normalized = normalizeUrl(tab.url);
+        if (!urlGroups.has(normalized)) {
+          urlGroups.set(normalized, []);
+        }
+        urlGroups.get(normalized).push(tab);
+      }
+    });
+    
+    // Find groups with duplicates
+    const duplicates = [];
+    urlGroups.forEach((tabs, url) => {
+      if (tabs.length > 1) {
+        const pinned = tabs.filter(t => t.pinned).length;
+        const unpinned = tabs.filter(t => !t.pinned).length;
+        duplicates.push({
+          url,
+          count: tabs.length,
+          pinned,
+          unpinned,
+          wouldClose: Math.max(0, unpinned - 1), // Keep newest unpinned
+          tabs: tabs.map(t => ({
+            id: t.id,
+            title: t.title,
+            windowId: t.windowId,
+            pinned: t.pinned,
+            active: t.active
+          }))
+        });
+      }
+    });
+    
+    const totalWouldClose = duplicates.reduce((sum, d) => sum + d.wouldClose, 0);
+    
+    return {
+      duplicates,
+      summary: {
+        totalGroups: duplicates.length,
+        totalTabs: duplicates.reduce((sum, d) => sum + d.count, 0),
+        wouldClose: totalWouldClose,
+        wouldKeep: duplicates.reduce((sum, d) => sum + Math.min(1, d.unpinned), 0)
+      }
+    };
+  } catch (error) {
+    console.error('[DevUtils] Error getting duplicate candidates:', error);
+    return { duplicates: [], summary: { error: error.message } };
+  }
+}
+
+/**
+ * Get detailed browser tab information for debugging
+ */
+async function getAllBrowserTabs() {
+  if (typeof chrome === 'undefined' || !chrome.tabs) {
+    return { tabs: [], summary: 'Chrome tabs API not available' };
+  }
+  
+  try {
+    const allTabs = await chrome.tabs.query({});
+    
+    const tabs = allTabs.map(tab => ({
+      id: tab.id,
+      title: tab.title || 'Untitled',
+      url: tab.url || '',
+      windowId: tab.windowId,
+      pinned: tab.pinned,
+      active: tab.active,
+      audible: tab.audible,
+      discarded: tab.discarded,
+      groupId: tab.groupId || null
+    }));
+    
+    return {
+      tabs,
+      summary: {
+        total: tabs.length,
+        pinned: tabs.filter(t => t.pinned).length,
+        unpinned: tabs.filter(t => !t.pinned).length,
+        active: tabs.filter(t => t.active).length,
+        audible: tabs.filter(t => t.audible).length,
+        discarded: tabs.filter(t => t.discarded).length
+      }
+    };
+  } catch (error) {
+    console.error('[DevUtils] Error getting browser tabs:', error);
+    return { tabs: [], summary: { error: error.message } };
+  }
+}
+
+/**
+ * Normalize URL for comparison
+ */
+function normalizeUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    urlObj.hash = '';
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
+}
+
 // Expose functions globally for easy testing in console
 if (typeof window !== 'undefined') {
   window.TriageHub_addSampleData = addSampleData;
@@ -474,6 +658,9 @@ if (typeof window !== 'undefined') {
   window.TriageHub_listAlarms = listActiveAlarms;
   window.TriageHub_testNotification = testNotification;
   window.TriageHub_testAlarm = testAlarm;
+  window.TriageHub_getCloseTabCandidates = getCloseTabCandidates;
+  window.TriageHub_getDuplicateCandidates = getDuplicateTabCandidates;
+  window.TriageHub_getAllBrowserTabs = getAllBrowserTabs;
 }
 
 export {
@@ -482,5 +669,8 @@ export {
   generateTestBrowsingHistory,
   listActiveAlarms,
   testNotification,
-  testAlarm
+  testAlarm,
+  getCloseTabCandidates,
+  getDuplicateTabCandidates,
+  getAllBrowserTabs
 };

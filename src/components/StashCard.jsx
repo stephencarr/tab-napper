@@ -15,15 +15,33 @@ function StashCard({
   onItemAction,
   showFidgetControls = true,
   isTrashView = false,
+  isArchiveView = false,
+  isScheduledView = false,
   isCurrentlyOpen = false,
+  // Bulk actions support
+  showCheckbox = false,
+  isSelected = false,
+  onToggleSelect,
   className
 }) {
   // Track whether we're showing reschedule controls for scheduled items
   const [showingReschedule, setShowingReschedule] = useState(false);
+  // Track celebration animation for marking done
+  const [showCelebration, setShowCelebration] = useState(false);
+  // Track timeouts for cleanup
+  const timeoutsRef = React.useRef([]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
   
   // Reset reschedule state when item changes
   useEffect(() => {
     setShowingReschedule(false);
+    setShowCelebration(false);
   }, [item.id]);
   
   // Check if item is scheduled (memoized for performance)
@@ -160,16 +178,61 @@ function StashCard({
   return (
     <div 
       className={cn(
-        "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors",
+        "flex items-start justify-between w-full group cursor-pointer hover:bg-calm-50 dark:hover:bg-calm-800/50 -mx-4 px-4 py-3 rounded-lg transition-colors relative",
+        isSelected && "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500",
         className
       )}
       onClick={handleNavigate}
     >
+      {/* Celebration Animation Overlay */}
+      {showCelebration && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50/95 to-emerald-100/95 dark:from-green-900/70 dark:to-emerald-800/70 rounded-lg z-10 backdrop-blur-sm">
+          <div className="relative">
+            <div className="text-6xl animate-celebrate">🎉</div>
+            {/* Confetti particles */}
+            <div className="absolute top-0 left-0 text-2xl animate-confetti" style={{ animationDelay: '0ms' }}>✨</div>
+            <div className="absolute top-0 right-0 text-2xl animate-confetti" style={{ animationDelay: '100ms' }}>⭐</div>
+            <div className="absolute bottom-0 left-0 text-2xl animate-confetti" style={{ animationDelay: '200ms' }}>💫</div>
+            <div className="absolute bottom-0 right-0 text-2xl animate-confetti" style={{ animationDelay: '150ms' }}>✨</div>
+          </div>
+        </div>
+      )}
+      
       {/* Left side: Icon + Content */}
       <div className="flex items-start space-x-3 flex-1 min-w-0">
-        {/* Icon */}
-        <div className="flex-shrink-0 mt-1">
-          {getIcon()}
+        {/* Icon or Checkbox (on hover/selection) */}
+        <div 
+          className="flex-shrink-0 mt-1 relative w-5 h-5"
+          onClick={(e) => {
+            if (showCheckbox) {
+              e.stopPropagation();
+              onToggleSelect?.(item.id);
+            }
+          }}
+        >
+          {/* Favicon - hidden on group hover when checkbox enabled */}
+          <div className={cn(
+            "absolute inset-0 transition-opacity",
+            showCheckbox && "group-hover:opacity-0",
+            showCheckbox && isSelected && "opacity-0"
+          )}>
+            {getIcon()}
+          </div>
+          
+          {/* Checkbox - shown on group hover or when selected */}
+          {showCheckbox && (
+            <div className={cn(
+              "absolute inset-0 flex items-center justify-center transition-opacity",
+              isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}>
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => {/* Handled by parent onClick */}}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 focus:ring-offset-0 cursor-pointer"
+              />
+            </div>
+          )}
         </div>
         
         {/* Content */}
@@ -239,6 +302,93 @@ function StashCard({
             Restore
           </button>
         </div>
+      ) : isArchiveView && showingReschedule ? (
+        /* Archive view rescheduling: Show fidget controls without Mark Done (already done!) */
+        <div 
+          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FidgetControl
+            item={item}
+            onAction={(action, item, actionData) => {
+              // Archive items can only be rescheduled, not marked done again
+              if (onItemAction) {
+                onItemAction(action, item, actionData);
+              }
+              setShowingReschedule(false);
+            }}
+            showMarkDone={false}
+            className="w-full"
+          />
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Canceling reschedule:', item.title);
+              setShowingReschedule(false);
+            }}
+            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : isArchiveView ? (
+        /* Archive view: Show Reschedule button (items are already done, don't show Mark Done) */
+        <div 
+          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Rescheduling archived item:', item.title);
+              setShowingReschedule(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-700 dark:text-calm-300 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            Reschedule
+          </button>
+        </div>
+      ) : showingReschedule ? (
+        /* Scheduled view rescheduling: Show fidget controls with Mark Done and cancel option */
+        <div 
+          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FidgetControl
+            item={item}
+            onAction={(action, item, actionData) => {
+              // Show celebration when marking done
+              if (action === 'mark_done') {
+                setShowCelebration(true);
+                const timeout1 = setTimeout(() => {
+                  if (onItemAction) {
+                    onItemAction(action, item, actionData);
+                  }
+                  // Hide celebration after action completes
+                  const timeout2 = setTimeout(() => setShowCelebration(false), 500);
+                  timeoutsRef.current.push(timeout2);
+                }, 800);
+                timeoutsRef.current.push(timeout1);
+              } else {
+                // After action is taken, hide reschedule controls
+                if (onItemAction) {
+                  onItemAction(action, item, actionData);
+                }
+              }
+              setShowingReschedule(false);
+            }}
+            showMarkDone={true}
+            className="w-full"
+          />
+          <button
+            onClick={() => {
+              console.log('[Tab Napper] Canceling reschedule:', item.title);
+              setShowingReschedule(false);
+            }}
+            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
       ) : isScheduled ? (
         /* Scheduled item: Show scheduled time and reschedule button */
         <div 
@@ -275,42 +425,21 @@ function StashCard({
             {isPastDue ? 'Reschedule Now' : 'Reschedule'}
           </button>
         </div>
-      ) : showingReschedule ? (
-        /* Rescheduling mode: Show fidget controls with cancel option */
-        <div 
-          className="flex-shrink-0 ml-4 flex flex-col items-end gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <FidgetControl
-            item={item}
-            onAction={(action, item, actionData) => {
-              // After action is taken, hide reschedule controls
-              if (onItemAction) {
-                onItemAction(action, item, actionData);
-              }
-              setShowingReschedule(false);
-            }}
-            className="w-full"
-          />
-          <button
-            onClick={() => {
-              console.log('[Tab Napper] Canceling reschedule:', item.title);
-              setShowingReschedule(false);
-            }}
-            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-calm-300 dark:border-calm-600 bg-white dark:bg-calm-800 text-calm-600 dark:text-calm-400 hover:bg-calm-50 dark:hover:bg-calm-750 transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
       ) : showFidgetControls ? (
-        /* Normal view: Show fidget controls */
+        /* Normal view (Inbox): Show fidget controls to schedule items - NO Mark Done */
         <div 
           className="flex-shrink-0 ml-4"
           onClick={(e) => e.stopPropagation()}
         >
           <FidgetControl
             item={item}
-            onAction={onItemAction}
+            onAction={(action, item, actionData) => {
+              // Inbox items can only be scheduled, not marked done
+              if (onItemAction) {
+                onItemAction(action, item, actionData);
+              }
+            }}
+            showMarkDone={false}
             className="w-full"
           />
         </div>

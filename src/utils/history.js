@@ -232,12 +232,12 @@ async function getCurrentlyOpenTabs() {
 }
 
 /**
- * Check if URL exists in stashed tabs
+ * Check if URL exists in scheduled
  */
 async function getStashedUrls() {
   try {
-    const stashedTabs = await loadAppState('triageHub_stashedTabs') || [];
-    return stashedTabs.map(tab => normalizeUrl(tab.url || ''));
+    const scheduledData = await loadAppState('triageHub_scheduled') || [];
+    return scheduledData.map(tab => normalizeUrl(tab.url || ''));
   } catch (error) {
     console.error('[Tab Napper] Error fetching stashed URLs:', error);
     return [];
