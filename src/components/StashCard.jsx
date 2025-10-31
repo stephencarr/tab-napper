@@ -28,6 +28,15 @@ function StashCard({
   const [showingReschedule, setShowingReschedule] = useState(false);
   // Track celebration animation for marking done
   const [showCelebration, setShowCelebration] = useState(false);
+  // Track timeouts for cleanup
+  const timeoutsRef = React.useRef([]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
   
   // Reset reschedule state when item changes
   useEffect(() => {
@@ -353,13 +362,15 @@ function StashCard({
               // Show celebration when marking done
               if (action === 'mark_done') {
                 setShowCelebration(true);
-                setTimeout(() => {
+                const timeout1 = setTimeout(() => {
                   if (onItemAction) {
                     onItemAction(action, item, actionData);
                   }
                   // Hide celebration after action completes
-                  setTimeout(() => setShowCelebration(false), 500);
+                  const timeout2 = setTimeout(() => setShowCelebration(false), 500);
+                  timeoutsRef.current.push(timeout2);
                 }, 800);
+                timeoutsRef.current.push(timeout1);
               } else {
                 // After action is taken, hide reschedule controls
                 if (onItemAction) {

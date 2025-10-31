@@ -37,6 +37,15 @@ function DevPanel({ isOpen, onClose }) {
   const { toast } = useToast();
   const { confirm, confirmProps } = useConfirm();
 
+  // Add log entry
+  const addLog = useCallback((message, type = 'info') => {
+    setLogs(prev => [...prev, {
+      message,
+      type,
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+  }, []);
+
   // Load debugging data
   const refreshDebugData = useCallback(async () => {
     setIsLoading(true);
@@ -100,15 +109,6 @@ function DevPanel({ isOpen, onClose }) {
       refreshDebugData();
     }
   }, [isOpen, refreshDebugData]);
-
-  const addLog = useCallback((message, type = 'info') => {
-    setLogs(prev => [...prev, {
-      id: Date.now() + Math.random(),
-      message,
-      type,
-      timestamp: new Date().toLocaleTimeString()
-    }].slice(-100)); // Keep last 100 logs
-  }, []);
 
   const clearLogs = () => setLogs([]);
 

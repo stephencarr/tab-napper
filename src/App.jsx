@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } f
 import { loadAllAppData, saveAppState, loadAppState, moveToArchive, STORAGE_KEYS } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
 import { addSampleData, clearSampleData, generateTestBrowsingHistory } from './utils/devUtils.js';
-import { simulateTabCapture, addToTriageInbox, normalizeUrl } from './utils/capture.js';
+import { simulateTabCapture, addToTriageInbox } from './utils/capture.js';
 import { searchAllData, createDebouncedSearch } from './utils/search.js';
 import { getFormattedVersion } from './utils/version.js';
 import { initializeReactiveStore } from './utils/reactiveStore.js';
