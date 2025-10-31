@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Archive, Calendar, X, CheckSquare } from 'lucide-react';
+import { Trash2, Archive, Calendar, X, CheckSquare, RotateCcw } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -14,6 +14,7 @@ function BulkActionBar({
   onTrash,
   onArchive,
   onSchedule,
+  onRestore,
   currentView,
   className 
 }) {
@@ -49,6 +50,18 @@ function BulkActionBar({
       
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
+        {/* Restore (only in Trash) */}
+        {currentView === 'Trash' && (
+          <button
+            onClick={onRestore}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-md transition-colors"
+            title="Restore to Inbox"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span className="text-sm font-medium">Restore</span>
+          </button>
+        )}
+        
         {/* Trash */}
         {currentView !== 'Trash' && (
           <button
@@ -62,7 +75,7 @@ function BulkActionBar({
         )}
         
         {/* Archive */}
-        {currentView !== 'Archive' && (
+        {currentView !== 'Archive' && currentView !== 'Trash' && (
           <button
             onClick={onArchive}
             className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-md transition-colors"
