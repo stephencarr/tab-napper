@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Corrected and completed the changelog to accurately reflect project history.
 
-## [0.8.0] - 2025-10-30
+## [0.8.0] - 2025-10-29
 
 ### Added
 - **Real-time open tab detection** with "Active" badges and real-time event listeners.
