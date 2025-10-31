@@ -53,8 +53,11 @@ async function navigateToUrl(url, title = null) {
 
 /**
  * Find if a URL is currently open in any tab
+ * @param {string} targetUrl - URL to search for
+ * @param {boolean} excludePinned - If true, exclude pinned tabs from results (default: false)
+ * @returns {Promise<Tab|null>} - Matching tab or null
  */
-async function findOpenTab(targetUrl) {
+async function findOpenTab(targetUrl, excludePinned = false) {
   try {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       const tabs = await new Promise((resolve, reject) => {
@@ -69,7 +72,12 @@ async function findOpenTab(targetUrl) {
       
       const normalizedTarget = normalizeUrl(targetUrl);
       
-      return tabs.find(tab => normalizeUrl(tab.url) === normalizedTarget);
+      return tabs.find(tab => {
+        const urlMatches = normalizeUrl(tab.url) === normalizedTarget;
+        if (!urlMatches) return false;
+        if (excludePinned && tab.pinned) return false;
+        return true;
+      });
     }
     return null;
   } catch (error) {
@@ -141,12 +149,13 @@ async function closeOpenTabs(items) {
     return results;
   }
   
-  console.log(`[Tab Napper] 🗑️ Closing ${items.length} open tabs (excluding pinned)...`);
+  console.log(`[Tab Napper] 🗑️ Closing tabs for ${items.length} items (excluding pinned)...`);
   
   // PERFORMANCE OPTIMIZATION: Query all tabs once instead of once per item
   try {
     const allTabs = await chrome.tabs.query({});
     const closedTabIds = new Set(); // Track already-closed tabs to avoid duplicates
+    const tabsToClose = []; // Collect tabs to close first
     
     // Create a map of normalized URLs to tabs for O(1) lookup
     const urlToTabMap = new Map();
@@ -161,54 +170,75 @@ async function closeOpenTabs(items) {
       }
     });
     
-    // Now process each item using the map
+    // First pass: identify all tabs to close
     for (const item of items) {
       if (!item.url) {
         continue;
       }
       
+      const normalized = normalizeUrl(item.url);
+      const matchingTabs = urlToTabMap.get(normalized);
+      
+      if (matchingTabs && matchingTabs.length > 0) {
+        // Process all matching tabs for this item
+        for (const tab of matchingTabs) {
+          // Skip if already in close list (handles duplicate items with same URL)
+          if (closedTabIds.has(tab.id)) {
+            continue;
+          }
+          
+          // Skip pinned tabs
+          if (tab.pinned) {
+            results.skipped++;
+            console.log(`[Tab Napper] 📌 Skipped pinned tab: ${item.title} (tab ID: ${tab.id})`);
+            continue;
+          }
+          
+          tabsToClose.push({ tab, item });
+          closedTabIds.add(tab.id); // Mark for closing
+        }
+      }
+    }
+    
+    console.log(`[Tab Napper] 📋 Identified ${tabsToClose.length} tabs to close`);
+    
+    // Second pass: close all tabs in bulk
+    if (tabsToClose.length > 0) {
+      const tabIdsToClose = tabsToClose.map(({ tab }) => tab.id);
+      
       try {
-        const normalized = normalizeUrl(item.url);
-        const matchingTabs = urlToTabMap.get(normalized);
+        // Use bulk removal for better reliability
+        await chrome.tabs.remove(tabIdsToClose);
+        results.closed = tabIdsToClose.length;
+        console.log(`[Tab Napper] ✅ Successfully closed ${results.closed} tabs`);
         
-        if (matchingTabs && matchingTabs.length > 0) {
-          // Process all matching tabs for this item
-          for (const tab of matchingTabs) {
-            // Skip if already closed (handles duplicate items with same URL)
-            if (closedTabIds.has(tab.id)) {
-              continue;
-            }
-            
-            // Skip pinned tabs
-            if (tab.pinned) {
-              results.skipped++;
-              console.log(`[Tab Napper] ⏭️ Skipped pinned tab: ${item.title}`);
-              continue;
-            }
-            
-            const success = await closeTab(tab.id);
-            if (success) {
-              results.closed++;
-              closedTabIds.add(tab.id); // Mark as closed
-              console.log(`[Tab Napper] ✅ Closed: ${item.title}`);
-            } else {
-              results.failed++;
-              results.errors.push({ item, error: 'Failed to close' });
-            }
+        // Log each closed tab
+        tabsToClose.forEach(({ tab, item }) => {
+          console.log(`[Tab Napper] 🗑️ Closed: ${item.title} (tab ID: ${tab.id})`);
+        });
+      } catch (error) {
+        // Bulk removal failed, try one by one
+        console.warn(`[Tab Napper] ⚠️ Bulk removal failed, trying individually...`, error);
+        
+        for (const { tab, item } of tabsToClose) {
+          try {
+            await chrome.tabs.remove(tab.id);
+            results.closed++;
+            console.log(`[Tab Napper] ✅ Closed: ${item.title} (tab ID: ${tab.id})`);
+          } catch (err) {
+            results.failed++;
+            console.error(`[Tab Napper] ❌ Failed to close: ${item.title} (tab ID: ${tab.id})`, err);
+            results.errors.push({ item, tabId: tab.id, error: err.message });
           }
         }
-      } catch (error) {
-        console.error('[Tab Napper] Error closing tab for item:', item.title, error);
-        results.failed++;
-        results.errors.push({ item, error: error.message });
       }
     }
   } catch (error) {
-    console.error('[Tab Napper] Error querying tabs:', error);
-    results.errors.push({ error: 'Failed to query browser tabs' });
+    console.error('[Tab Napper] ❌ Error querying tabs:', error);
+    results.errors.push({ error: 'Failed to query browser tabs: ' + error.message });
   }
   
-  console.log(`[Tab Napper] 📊 Close results: ${results.closed} closed, ${results.skipped} pinned (skipped), ${results.failed} failed`);
+  console.log(`[Tab Napper] 📊 Close results: ${results.closed} closed, ${results.skipped} pinned (preserved), ${results.failed} failed`);
   return results;
 }
 

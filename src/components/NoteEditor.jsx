@@ -3,6 +3,7 @@ import { Save, FileText, Edit, Eye, Bold as BoldIcon, Italic as ItalicIcon, Code
 import { loadAppState, saveAppState } from '../utils/storage.js';
 import { cn } from '../utils/cn.js';
 import { useDarkMode } from '../hooks/useDarkMode.js';
+import { useToast } from '../contexts/ToastContext.jsx';
 import { renderMarkdown as renderMarkdownLib } from '../utils/markdown.js';
 import { calculateWordCount } from '../utils/wordCount.js';
 
@@ -14,6 +15,8 @@ import { calculateWordCount } from '../utils/wordCount.js';
 export default function NoteEditor({ noteId }) {
   // Apply system dark mode
   useDarkMode();
+  const { toast } = useToast();
+  
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('Untitled Note');
   const [loading, setLoading] = useState(true);
@@ -447,7 +450,7 @@ export default function NoteEditor({ noteId }) {
                   await doSave('manual');
                   window.close();
                 } catch (err) {
-                  window.alert('Failed to save note. Please try again.');
+                  toast.error('Save Failed', 'Failed to save note. Please try again.');
                 }
               }}
               className="calm-button-primary px-3 py-1 text-xs flex items-center space-x-1"

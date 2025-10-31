@@ -35,6 +35,7 @@ export function useOpenTabs(items = [], pollInterval = 10000, useRealTimeEvents 
 
   /**
    * Check all items and update which ones are currently open
+   * Excludes pinned tabs from the count
    */
   const checkOpenTabs = useCallback(async () => {
     if (!items || items.length === 0) {
@@ -45,21 +46,22 @@ export function useOpenTabs(items = [], pollInterval = 10000, useRealTimeEvents 
 
     setIsChecking(true);
     const newOpenIds = new Set();
-    const newTabIds = new Set(); // Track unique browser tab IDs
+    const newTabIds = new Set(); // Track unique browser tab IDs (excluding pinned)
 
     try {
-      console.log(`[useOpenTabs] Checking ${items.length} items for open tabs...`);
+      console.log(`[useOpenTabs] Checking ${items.length} items for open tabs (excluding pinned)...`);
       
       // Check each item in parallel for performance
       await Promise.all(
         items.map(async (item) => {
           if (item.url && item.id) {
             try {
-              const openTab = await findOpenTab(item.url);
+              // Use excludePinned=true to not count pinned tabs
+              const openTab = await findOpenTab(item.url, true);
               if (openTab) {
                 newOpenIds.add(item.id);
                 newTabIds.add(openTab.id); // Track the actual tab ID
-                console.log(`[useOpenTabs] ✓ Found open: ${item.title || item.url} (window ${openTab.windowId}, tab ${openTab.id}, pinned: ${openTab.pinned})`);
+                console.log(`[useOpenTabs] ✓ Found open (non-pinned): ${item.title || item.url} (window ${openTab.windowId}, tab ${openTab.id})`);
               }
             } catch (error) {
               console.error('[useOpenTabs] Error checking item:', item.id, error);
@@ -68,7 +70,7 @@ export function useOpenTabs(items = [], pollInterval = 10000, useRealTimeEvents 
         })
       );
 
-      console.log(`[useOpenTabs] Detection complete: ${newTabIds.size} unique tabs open (${newOpenIds.size} items matched)`);
+      console.log(`[useOpenTabs] Detection complete: ${newTabIds.size} unique non-pinned tabs open (${newOpenIds.size} items matched)`);
       setOpenItemIds(newOpenIds);
       setUniqueTabIds(newTabIds);
       setLastCheckTime(Date.now());

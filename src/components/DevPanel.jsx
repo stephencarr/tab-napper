@@ -1,33 +1,102 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Terminal, Database, Bell, Clock, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, X, Copy } from 'lucide-react';
+import { Terminal, X, RefreshCw, Bug, Clock, Bell, Copy, Trash2, Database, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 import {
-  addSampleData,
-  clearSampleData,
-  generateTestBrowsingHistory,
   listActiveAlarms,
   testNotification,
-  testAlarm
+  testAlarm,
+  getCloseTabCandidates,
+  getDuplicateTabCandidates,
+  getAllBrowserTabs,
+  addSampleData,
+  clearSampleData
 } from '../utils/devUtils.js';
-import { setScheduledAlarm } from '../utils/schedule.js';
-import { saveAppState, loadAppState } from '../utils/storage.js';
+import { findAndCloseDuplicateTabs } from '../utils/navigation.js';
+import { useToast } from '../contexts/ToastContext.jsx';
 
 /**
- * Modern Dev Panel with categorized tools
+ * Enhanced Dev Panel - Focused on debugging tab detection and close all issues
  */
-function DevPanel({ isOpen, onClose, className }) {
-  const [activeTab, setActiveTab] = useState('data');
-  const [expandedSections, setExpandedSections] = useState(['quick-actions']);
+function DevPanel({ isOpen, onClose }) {
+  const [activeTab, setActiveTab] = useState('debugging');
   const [logs, setLogs] = useState([]);
-  const [toast, setToast] = useState(null);
+  const [alarms, setAlarms] = useState([]);
+  const [browserTabs, setBrowserTabs] = useState({ tabs: [], summary: {} });
+  const [closeTabData, setCloseTabData] = useState({ candidates: [], summary: {} });
+  const [duplicateData, setDuplicateData] = useState({ duplicates: [], summary: {} });
+  const [isLoading, setIsLoading] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    alarms: true,
+    browserTabs: true,
+    closeCandidates: false,
+    duplicates: false
+  });
+  
+  const { toast } = useToast();
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev =>
-      prev.includes(section)
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
-    );
-  };
+  // Load debugging data
+  const refreshDebugData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [alarmsResult, tabsResult] = await Promise.all([
+        listActiveAlarms(),
+        getAllBrowserTabs()
+      ]);
+      
+      setAlarms(alarmsResult || []);
+      setBrowserTabs(tabsResult || { tabs: [], summary: {} });
+      
+      addLog('Debug data refreshed', 'info');
+    } catch (error) {
+      console.error('[DevPanel] Error refreshing data:', error);
+      toast.error('Refresh Failed', error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast, addLog]);
+
+  // Load close tab candidates
+  const refreshCloseCandidates = useCallback(async () => {
+    try {
+      // Get all items from storage
+      const result = await chrome.storage.local.get(['triageHub_inbox', 'triageHub_scheduled', 'triageHub_archive']);
+      const allItems = [
+        ...(result.triageHub_inbox || []),
+        ...(result.triageHub_scheduled || []),
+        ...(result.triageHub_archive || [])
+      ];
+      
+      const data = await getCloseTabCandidates(allItems);
+      setCloseTabData(data || { candidates: [], summary: {} });
+      
+      const summary = data?.summary || {};
+      addLog(`Found ${summary.total || 0} matching tabs (${summary.wouldClose || 0} would close, ${summary.wouldSkip || 0} pinned)`, 'info');
+    } catch (error) {
+      console.error('[DevPanel] Error getting close candidates:', error);
+      toast.error('Analysis Failed', error.message);
+    }
+  }, [toast, addLog]);
+
+  // Load duplicate tab candidates
+  const refreshDuplicateCandidates = useCallback(async () => {
+    try {
+      const data = await getDuplicateTabCandidates();
+      setDuplicateData(data || { duplicates: [], summary: {} });
+      
+      const summary = data?.summary || {};
+      addLog(`Found ${summary.totalGroups || 0} duplicate groups (${summary.wouldClose || 0} would close)`, 'info');
+    } catch (error) {
+      console.error('[DevPanel] Error getting duplicates:', error);
+      toast.error('Analysis Failed', error.message);
+    }
+  }, [toast, addLog]);
+
+  // Initial load
+  useEffect(() => {
+    if (isOpen) {
+      refreshDebugData();
+    }
+  }, [isOpen, refreshDebugData]);
 
   const addLog = useCallback((message, type = 'info') => {
     setLogs(prev => [...prev, {
@@ -35,20 +104,14 @@ function DevPanel({ isOpen, onClose, className }) {
       message,
       type,
       timestamp: new Date().toLocaleTimeString()
-    }].slice(-50)); // Keep last 50 logs
+    }].slice(-100)); // Keep last 100 logs
   }, []);
 
   const clearLogs = () => setLogs([]);
 
-  // Show toast notification
-  const showToast = useCallback((message, type = 'info') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
-  // Intercept console.log to capture logs (only when panel is open)
+  // Intercept console.log for Tab Napper messages
   useEffect(() => {
-    if (!isOpen) return; // Don't intercept if panel is closed
+    if (!isOpen) return;
     
     const originalLog = console.log;
     const originalError = console.error;
@@ -59,8 +122,7 @@ function DevPanel({ isOpen, onClose, className }) {
       const message = args.map(arg => 
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' ');
-      // Capture Tab Napper logs and DevPanel logs
-      if (message.includes('[Tab Napper]') || message.includes('[DevPanel]')) {
+      if (message.includes('[Tab Napper]') || message.includes('[useOpenTabs]') || message.includes('[DevPanel]')) {
         addLog(message, 'info');
       }
     };
@@ -88,795 +150,408 @@ function DevPanel({ isOpen, onClose, className }) {
     };
   }, [isOpen, addLog]);
 
-  // Quick action buttons
-  const quickActions = [
-    {
-      label: 'Test Alarm',
-      icon: Clock,
-      action: () => testAlarm(),
-      color: 'blue'
-    },
-    {
-      label: 'Test Notification',
-      icon: Bell,
-      action: () => testNotification(),
-      color: 'purple'
-    },
-    {
-      label: 'List Alarms',
-      icon: Eye,
-      action: () => listActiveAlarms(),
-      color: 'green'
+  // Quick action handlers
+  const handleTestAlarm = async () => {
+    try {
+      await testAlarm();
+      toast.success('Test Alarm Created', 'Will fire in 10 seconds');
+      addLog('Test alarm created (10 seconds)', 'info');
+    } catch (error) {
+      toast.error('Alarm Failed', error.message);
     }
-  ];
+  };
 
-  const tabs = [
-    { id: 'data', label: 'Data', icon: Database },
-    { id: 'alarms', label: 'Alarms & Notifications', icon: Bell },
-    { id: 'console', label: 'Console', icon: Terminal }
-  ];
+  const handleTestNotification = async () => {
+    try {
+      await testNotification();
+      toast.success('Notification Sent', 'Check your system tray');
+      addLog('Test notification sent', 'info');
+    } catch (error) {
+      toast.error('Notification Failed', error.message);
+    }
+  };
+
+  const handleCloseDuplicates = async () => {
+    const totalGroups = duplicateData?.summary?.totalGroups || 0;
+    const wouldClose = duplicateData?.summary?.wouldClose || 0;
+    
+    if (!window.confirm(`Found ${totalGroups} duplicate groups.\n\nThis will close ${wouldClose} tabs (keeping newest of each URL, preserving pinned tabs).\n\nContinue?`)) {
+      return;
+    }
+    
+    try {
+      const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
+      toast.success('Duplicates Closed', `Closed ${result.closed} tabs`);
+      addLog(`Closed ${result.closed} duplicate tabs`, 'info');
+      await refreshDuplicateCandidates();
+      await refreshDebugData();
+    } catch (error) {
+      toast.error('Close Failed', error.message);
+    }
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className={cn(
-      'fixed bottom-4 right-4 w-[600px] max-h-[600px] bg-white dark:bg-gray-900 rounded-lg shadow-2xl border-2 border-purple-500 dark:border-purple-400 flex flex-col z-50',
-      className
-    )}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-t-lg">
-        <div className="flex items-center space-x-2">
-          <Terminal className="h-5 w-5" />
-          <h3 className="font-bold text-lg">Developer Panel</h3>
-          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">BETA</span>
-        </div>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-white/20 rounded transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-colors',
-              activeTab === tab.id
-                ? 'border-b-2 border-purple-500 text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            )}
-          >
-            <tab.icon className="h-4 w-4" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'data' && <DataTab addLog={addLog} showToast={showToast} />}
-        {activeTab === 'alarms' && <AlarmsTab addLog={addLog} showToast={showToast} />}
-        {activeTab === 'console' && (
-          <ConsoleTab logs={logs} onClear={clearLogs} />
-        )}
-      </div>
-
-      {/* Toast Notification */}
-      {toast && (
-        <div className={cn(
-          'absolute top-16 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg text-white text-sm font-medium z-50 animate-in fade-in slide-in-from-top-2',
-          toast.type === 'success' && 'bg-green-600',
-          toast.type === 'error' && 'bg-red-600',
-          toast.type === 'info' && 'bg-blue-600'
-        )}>
-          {toast.message}
-        </div>
-      )}
-
-      {/* Quick Actions Bar */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800">
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Quick Actions:</span>
-          {quickActions.map((action, index) => (
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+        
+        {/* Panel */}
+        <div className="absolute right-0 top-0 bottom-0 w-full max-w-4xl bg-calm-50 dark:bg-calm-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-calm-200 dark:border-calm-700 bg-gradient-to-r from-purple-600 to-blue-600">
+            <div className="flex items-center gap-2">
+              <Bug className="h-5 w-5 text-white" />
+              <h2 className="text-lg font-semibold text-white">Developer Panel</h2>
+            </div>
             <button
-              key={index}
-              onClick={action.action}
-              className={cn(
-                'flex items-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                action.color === 'blue' && 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300',
-                action.color === 'purple' && 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300',
-                action.color === 'green' && 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300'
-              )}
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors"
             >
-              <action.icon className="h-3 w-3" />
-              <span>{action.label}</span>
+              <X className="h-5 w-5" />
             </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Data Tab Component
-function DataTab({ addLog, showToast }) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleAddSampleData = async () => {
-    setIsLoading(true);
-    addLog('Adding sample data...', 'info');
-    try {
-      await addSampleData();
-      addLog('✅ Sample data added successfully', 'success');
-      showToast('✅ Sample data added!', 'success');
-    } catch (error) {
-      addLog(`❌ Error: ${error.message}`, 'error');
-      showToast('❌ Failed to add data', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleClearData = async () => {
-    if (!confirm('Clear all sample data? This cannot be undone.')) return;
-    setIsLoading(true);
-    addLog('Clearing sample data...', 'info');
-    try {
-      await clearSampleData();
-      addLog('✅ Sample data cleared', 'success');
-      showToast('✅ Sample data cleared!', 'success');
-    } catch (error) {
-      addLog(`❌ Error: ${error.message}`, 'error');
-      showToast('❌ Failed to clear data', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateHistory = async () => {
-    setIsLoading(true);
-    addLog('Generating test history...', 'info');
-    try {
-      await generateTestBrowsingHistory();
-      addLog('✅ Test history generated', 'success');
-      showToast('✅ Test history generated!', 'success');
-    } catch (error) {
-      addLog(`❌ Error: ${error.message}`, 'error');
-      showToast('❌ Failed to generate history', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Section title="Sample Data">
-        <div className="space-y-2">
-          <ActionButton
-            icon={Database}
-            label="Add Sample Data"
-            description="Populate inbox, stashed tabs, and trash with test data"
-            onClick={handleAddSampleData}
-            disabled={isLoading}
-            color="blue"
-          />
-          <ActionButton
-            icon={Trash2}
-            label="Clear Sample Data"
-            description="Remove all test data from storage"
-            onClick={handleClearData}
-            disabled={isLoading}
-            color="red"
-          />
-        </div>
-      </Section>
-
-      <Section title="Browser History">
-        <ActionButton
-          icon={Clock}
-          label="Generate Test History"
-          description="Create mock browsing history for smart suggestions"
-          onClick={handleGenerateHistory}
-          disabled={isLoading}
-          color="purple"
-        />
-      </Section>
-
-      <Section title="State Inspector">
-        <StateInspector addLog={addLog} showToast={showToast} />
-      </Section>
-    </div>
-  );
-}
-
-// Alarms Tab Component
-function AlarmsTab({ addLog, showToast }) {
-  const [alarms, setAlarms] = useState([]);
-
-  const loadAlarms = useCallback(async () => {
-    if (typeof chrome === 'undefined' || !chrome.alarms) return;
-    
-    chrome.alarms.getAll((alarmList) => {
-      setAlarms(alarmList || []);
-      addLog(`Found ${alarmList?.length || 0} active alarms`, 'info');
-    });
-  }, [addLog]);
-
-  useEffect(() => {
-    loadAlarms();
-  }, [loadAlarms]);
-
-  const flushAllStashed = async () => {
-    if (!confirm('⚠️ FLUSH ALL STASHED ITEMS?\n\nThis will:\n- Clear ALL alarms\n- Move ALL stashed items to inbox\n- Cannot be undone!\n\nContinue?')) {
-      return;
-    }
-
-    try {
-      addLog('🗑️ Starting flush of all scheduled items...', 'info');
-      showToast('⏳ Flushing...', 'info');
-
-      // Get all data
-      const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
-      const scheduledData = result.triageHub_scheduled || [];
-      const inbox = result.triageHub_inbox || [];
-
-      console.log('[DevPanel] Flushing', scheduledData.length, 'scheduled items');
-      addLog(`📋 Found ${scheduledData.length} scheduled items`, 'info');
-
-      if (scheduledData.length === 0) {
-        showToast('Nothing to flush', 'info');
-        addLog('No scheduled items found', 'info');
-        return;
-      }
-
-      // Clear all alarms
-      const allAlarms = await new Promise((resolve) => {
-        chrome.alarms.getAll((alarms) => resolve(alarms || []));
-      });
-      
-      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper::'));
-      console.log('[DevPanel] Clearing', tabNapperAlarms.length, 'alarms');
-      addLog(`🔕 Clearing ${tabNapperAlarms.length} alarms`, 'info');
-
-      for (const alarm of tabNapperAlarms) {
-        await new Promise((resolve) => {
-          chrome.alarms.clear(alarm.name, () => resolve());
-        });
-      }
-
-      // Remove scheduled metadata from all items
-      const cleanedItems = scheduledData.map(item => {
-        const cleaned = { ...item };
-        delete cleaned.scheduledFor;
-        delete cleaned.scheduledAction;
-        delete cleaned.scheduledWhen;
-        return cleaned;
-      });
-
-      // Move everything to inbox
-      const updatedInbox = [...cleanedItems, ...inbox];
-
-      await chrome.storage.local.set({
-        triageHub_inbox: updatedInbox,
-        triageHub_scheduled: []
-      });
-
-      console.log('[DevPanel] Flush complete');
-      showToast(`✅ Flushed ${scheduledData.length} items!`, 'success');
-      addLog(`✅ Flushed ${scheduledData.length} items to inbox`, 'success');
-
-      // Trigger UI refresh
-      window.dispatchEvent(new CustomEvent('storage-updated'));
-      setTimeout(() => loadAlarms(), 500);
-
-    } catch (error) {
-      console.error('[DevPanel] Error flushing:', error);
-      addLog(`❌ Error: ${error.message}`, 'error');
-      showToast('❌ Failed to flush', 'error');
-    }
-  };
-
-  // Phase 2: Find and close duplicate tabs
-  const findDuplicateTabs = async () => {
-    try {
-      addLog('🔍 Scanning for duplicate tabs...', 'info');
-      const { findAndCloseDuplicateTabs } = await import('../utils/navigation.js');
-      
-      // Dry run first to show what would be closed
-      const dryRun = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: true });
-      
-      if (dryRun.duplicates.length === 0) {
-        addLog('✅ No duplicate tabs found', 'success');
-        showToast('No duplicates found', 'success');
-        return;
-      }
-      
-      addLog(`📊 Found ${dryRun.duplicates.length} URLs with duplicates`, 'info');
-      addLog(`Would close ${dryRun.closed} tabs, keeping ${dryRun.kept}`, 'info');
-      
-      const confirmMsg = `Found ${dryRun.duplicates.length} duplicate URLs.\nWill close ${dryRun.closed} tabs, keeping the newest of each.\n\nProceed?`;
-      if (!window.confirm(confirmMsg)) {
-        addLog('❌ Duplicate cleanup cancelled', 'info');
-        return;
-      }
-      
-      // Actually close the duplicates
-      addLog('🗑️ Closing duplicate tabs...', 'info');
-      showToast('⏳ Closing duplicates...', 'info');
-      
-      const result = await findAndCloseDuplicateTabs({ keepNewest: true, dryRun: false });
-      addLog(`✅ Closed ${result.closed} duplicate tabs`, 'success');
-      showToast(`Closed ${result.closed} duplicates`, 'success');
-      
-      // Log details
-      result.duplicates.forEach(dup => {
-        addLog(`  - ${dup.url.substring(0, 50)}...: kept 1, closed ${dup.closedTabs.length}`, 'info');
-      });
-    } catch (error) {
-      addLog(`❌ Error finding duplicates: ${error.message}`, 'error');
-      showToast('Error finding duplicates', 'error');
-    }
-  };
-
-  const triggerAllScheduledAlarms = async () => {
-    console.log('[DevPanel] triggerAllScheduledAlarms called');
-    
-    if (!confirm('Trigger ALL scheduled alarms now? This will move all scheduled items back to inbox and fire their notifications.')) {
-      console.log('[DevPanel] User canceled');
-      return;
-    }
-
-    try {
-      addLog('🚀 Starting to trigger all scheduled alarms...', 'info');
-      showToast('⏳ Triggering alarms...', 'info');
-      
-      // Wrap chrome.alarms.getAll in a promise
-      const allAlarms = await new Promise((resolve, reject) => {
-        chrome.alarms.getAll((alarms) => {
-          if (chrome.runtime && chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(alarms || []);
-          }
-        });
-      });
-      
-      console.log('[DevPanel] All alarms:', allAlarms);
-      
-      const tabNapperAlarms = allAlarms.filter(a => a.name.startsWith('tabNapper::'));
-      console.log('[DevPanel] Tab Napper alarms:', tabNapperAlarms);
-      
-      if (tabNapperAlarms.length === 0) {
-        showToast('No scheduled alarms found', 'info');
-        addLog('❌ No Tab Napper alarms to trigger', 'info');
-        return;
-      }
-
-      addLog(`📋 Found ${tabNapperAlarms.length} scheduled alarms`, 'info');
-
-      let successCount = 0;
-      let errorCount = 0;
-
-      // Process each alarm
-      for (const alarm of tabNapperAlarms) {
-        try {
-          // Parse the alarm name: tabNapper::{action}::{itemId}
-          // Example: tabNapper::remind_me::inbox-1761419209071-ep2vhqiz5
-          // Using :: separator avoids conflicts with underscores in action names
-          
-          if (!alarm.name.startsWith('tabNapper::')) {
-            continue; // Not our alarm
-          }
-          
-          const parts = alarm.name.split('::');
-          if (parts.length < 3) {
-            console.error('[DevPanel] Invalid alarm name format:', alarm.name);
-            addLog(`⚠️ Invalid alarm name format: ${alarm.name}`, 'warn');
-            errorCount++;
-            continue;
-          }
-          
-          const action = parts[1]; // remind_me, follow_up, or review
-          const itemId = parts.slice(2).join('::'); // In case itemId contains ::
-
-          console.log('[DevPanel] Processing alarm:', alarm.name);
-          console.log('[DevPanel] Parsed - action:', action, 'itemId:', itemId);
-          addLog(`⏰ Triggering: ${alarm.name}`, 'info');
-
-          // Get the scheduled item
-          const result = await chrome.storage.local.get(['triageHub_scheduled', 'triageHub_inbox']);
-          const scheduledData = result.triageHub_scheduled || [];
-          const inbox = result.triageHub_inbox || [];
-
-          console.log('[DevPanel] Scheduled tabs:', scheduledData.length);
-          const item = scheduledData.find(i => i.id === itemId);
-          console.log('[DevPanel] Found item:', item ? item.title : 'NOT FOUND');
-
-          if (!item) {
-            addLog(`⚠️ Item not found: ${itemId}`, 'warn');
-            errorCount++;
-            continue;
-          }
-
-          // Remove scheduled data
-          const retriagedItem = { ...item };
-          delete retriagedItem.scheduledFor;
-          delete retriagedItem.scheduledAction;
-          delete retriagedItem.scheduledWhen;
-
-          // Move to inbox
-          const updatedInbox = [retriagedItem, ...inbox];
-          const updatedScheduled = scheduledData.filter(i => i.id !== itemId);
-
-          await chrome.storage.local.set({
-            triageHub_inbox: updatedInbox,
-            triageHub_scheduled: updatedScheduled
-          });
-
-          console.log('[DevPanel] Storage updated for:', itemId);
-
-          // Create notification
-          const actionLabel = action === 'remind_me' ? 'Reminder' : 
-                             action === 'follow_up' ? 'Follow-up' : 'Review';
-          const iconDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-
-          chrome.notifications.create(`dev-trigger-${itemId}`, {
-            type: 'basic',
-            iconUrl: iconDataUri,
-            title: `Tab Napper ${actionLabel} (Dev Trigger)`,
-            message: item.title || 'Scheduled item ready for review',
-            priority: 2,
-            requireInteraction: true,
-            buttons: [
-              { title: 'Open Tab Napper' },
-              { title: 'Dismiss' }
-            ]
-          });
-
-          // Clear the alarm
-          await new Promise((resolve) => {
-            chrome.alarms.clear(alarm.name, () => resolve());
-          });
-
-          console.log('[DevPanel] Alarm cleared:', alarm.name);
-          addLog(`✅ Triggered: ${item.title}`, 'success');
-          successCount++;
-
-        } catch (itemError) {
-          console.error('[DevPanel] Error processing alarm:', alarm.name, itemError);
-          addLog(`❌ Error processing ${alarm.name}: ${itemError.message}`, 'error');
-          errorCount++;
-        }
-      }
-
-      showToast(`✅ Triggered ${successCount} alarms!`, 'success');
-      addLog(`✅ Successfully triggered ${successCount} alarms (${errorCount} errors)`, 'success');
-      
-      // Reload alarms list and force UI refresh
-      setTimeout(() => {
-        loadAlarms();
-        // Trigger reactive store update
-        window.dispatchEvent(new CustomEvent('storage-updated'));
-      }, 500);
-
-    } catch (error) {
-      console.error('[DevPanel] Error in triggerAllScheduledAlarms:', error);
-      addLog(`❌ Error: ${error.message}`, 'error');
-      showToast('❌ Failed to trigger alarms', 'error');
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Section title="Active Alarms">
-        <div className="space-y-2">
-          <button
-            onClick={loadAlarms}
-            className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
-          >
-            🔄 Refresh
-          </button>
-          
-          {alarms.length === 0 ? (
-            <div className="text-sm text-gray-500 dark:text-gray-400 p-4 bg-gray-50 dark:bg-gray-800 rounded">
-              No active alarms found. Schedule some items to see them here.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {alarms.map((alarm) => (
-                <AlarmCard key={alarm.name} alarm={alarm} />
-              ))}
-            </div>
-          )}
-        </div>
-      </Section>
-
-      <Section title="Testing">
-        <div className="space-y-2">
-          <ActionButton
-            icon={Clock}
-            label="Test Alarm (10 seconds)"
-            description="Create a test alarm that fires in 10 seconds"
-            onClick={async () => {
-              try {
-                addLog('Creating test alarm...', 'info');
-                await testAlarm();
-                addLog('✅ Test alarm created - check console in 10s', 'success');
-                showToast('✅ Test alarm created!', 'success');
-                setTimeout(() => loadAlarms(), 200);
-              } catch (error) {
-                addLog(`❌ Error: ${error.message}`, 'error');
-                showToast('❌ Failed to create alarm', 'error');
-              }
-            }}
-            color="blue"
-          />
-          <ActionButton
-            icon={Bell}
-            label="Test Workflow Reminder (30s)"
-            description="Schedule a test item with 30-second reminder (tests full workflow)"
-            onClick={async () => {
-              try {
-                addLog('Creating test workflow reminder...', 'info');
-                
-                // Create a test item
-                const testItem = {
-                  id: `test-reminder-${Date.now()}`,
-                  title: 'Test Workflow Reminder',
-                  url: 'https://example.com/test-reminder',
-                  type: 'test',
-                  stashedAt: Date.now(),
-                  scheduledFor: Date.now() + 30000, // 30 seconds from now
-                  scheduledAction: 'remind_me',
-                  scheduledWhen: 'In 30 seconds'
-                };
-                
-                // Add to stashed tabs
-                const stashed = await loadAppState('triageHub_scheduled') || [];
-                await saveAppState('triageHub_scheduled', [testItem, ...stashed]);
-                
-                // Set the alarm
-                await setScheduledAlarm(testItem, 'remind_me', testItem.scheduledFor);
-                
-                addLog('✅ Test reminder scheduled for 30 seconds!', 'success');
-                addLog(`Item: ${testItem.title}`, 'info');
-                addLog(`Will fire at: ${new Date(testItem.scheduledFor).toLocaleTimeString()}`, 'info');
-                showToast('✅ Test reminder scheduled!', 'success');
-                setTimeout(() => loadAlarms(), 200);
-              } catch (error) {
-                addLog(`❌ Error: ${error.message}`, 'error');
-                showToast('❌ Failed to schedule reminder', 'error');
-              }
-            }}
-            color="purple"
-          />
-          <ActionButton
-            icon={Bell}
-            label="Test Notification"
-            description="Show a test system notification"
-            onClick={async () => {
-              try {
-                addLog('Sending test notification...', 'info');
-                await testNotification();
-                addLog('✅ Notification sent', 'success');
-                showToast('✅ Notification sent!', 'success');
-              } catch (error) {
-                addLog(`❌ Error: ${error.message}`, 'error');
-                showToast('❌ Failed to send notification', 'error');
-              }
-            }}
-            color="purple"
-          />
-          <ActionButton
-            icon={Clock}
-            label="🚀 Trigger All Scheduled Alarms NOW"
-            description="Force all scheduled items to trigger immediately (for testing)"
-            onClick={triggerAllScheduledAlarms}
-            color="red"
-          />
-          <ActionButton
-            icon={Trash2}
-            label="🗑️ FLUSH ALL Stashed Items"
-            description="Clear all alarms and move ALL stashed items to inbox"
-            onClick={flushAllStashed}
-            color="red"
-          />
-          <ActionButton
-            icon={Copy}
-            label="🔍 Find & Close Duplicate Tabs"
-            description="Scan for and close duplicate tabs (keeps newest)"
-            onClick={findDuplicateTabs}
-            color="orange"
-          />
-        </div>
-      </Section>
-    </div>
-  );
-}
-
-// Console Tab Component
-function ConsoleTab({ logs, onClear }) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  
-  const logColors = {
-    info: 'text-blue-600 dark:text-blue-400',
-    success: 'text-green-600 dark:text-green-400',
-    error: 'text-red-600 dark:text-red-400',
-    warn: 'text-yellow-600 dark:text-yellow-400'
-  };
-  
-  // Count logs by type
-  const logCounts = logs.reduce((acc, log) => {
-    acc[log.type] = (acc[log.type] || 0) + 1;
-    return acc;
-  }, {});
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-          aria-label={isExpanded ? 'Collapse console' : 'Expand console'}
-          aria-expanded={isExpanded}
-        >
-          <span>{isExpanded ? '▼' : '▶'}</span>
-          <span>Console Output ({logs.length})</span>
-          <div className="flex items-center space-x-2 ml-2">
-            {logCounts.error > 0 && (
-              <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
-                {logCounts.error} errors
-              </span>
-            )}
-            {logCounts.warn > 0 && (
-              <span className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full">
-                {logCounts.warn} warnings
-              </span>
-            )}
-            {(logCounts.info || 0) + (logCounts.success || 0) > 0 && (
-              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
-                {(logCounts.info || 0) + (logCounts.success || 0)} logs
-              </span>
-            )}
           </div>
-        </button>
-        <button
-          onClick={onClear}
-          className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          Clear
-        </button>
-      </div>
-      
-      {isExpanded && (
-        <div className="bg-gray-900 rounded p-3 h-[400px] overflow-y-auto font-mono text-xs">
-          {logs.length === 0 ? (
-            <div className="text-gray-500">Console is empty. Actions will log here.</div>
-          ) : (
-            logs.map(log => (
-              <div key={log.id} className="mb-1">
-                <span className="text-gray-500">[{log.timestamp}]</span>{' '}
-                <span className={logColors[log.type] || 'text-gray-300'}>
-                  {log.message}
-                </span>
+
+          {/* Tabs */}
+          <div className="flex border-b border-calm-200 dark:border-calm-700 bg-white dark:bg-calm-800">
+            {['debugging', 'console', 'data'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
+                  activeTab === tab
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-calm-600 dark:text-calm-400 hover:text-calm-900 dark:hover:text-calm-200'
+                )}
+              >
+                {tab === 'debugging' && <Bug className="inline h-4 w-4 mr-2" />}
+                {tab === 'console' && <Terminal className="inline h-4 w-4 mr-2" />}
+                {tab === 'data' && <Database className="inline h-4 w-4 mr-2" />}
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {/* Debugging Tab */}
+            {activeTab === 'debugging' && (
+              <div className="space-y-6">
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={refreshDebugData}
+                    disabled={isLoading}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                    Refresh All Data
+                  </button>
+                  <button
+                    onClick={refreshCloseCandidates}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Analyze Close All
+                  </button>
+                  <button
+                    onClick={refreshDuplicateCandidates}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Find Duplicates
+                  </button>
+                  {duplicateData?.summary?.totalGroups > 0 && (
+                    <button
+                      onClick={handleCloseDuplicates}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Close Duplicates ({duplicateData.summary.wouldClose})
+                    </button>
+                  )}
+                  <button
+                    onClick={handleTestAlarm}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Test Alarm
+                  </button>
+                  <button
+                    onClick={handleTestNotification}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+                  >
+                    <Bell className="h-4 w-4" />
+                    Test Notification
+                  </button>
+                </div>
+
+                {/* Active Alarms */}
+                <CollapsibleSection
+                  title="Active Alarms"
+                  count={alarms?.length || 0}
+                  isExpanded={expandedSections.alarms}
+                  onToggle={() => toggleSection('alarms')}
+                  icon={Clock}
+                >
+                  {!alarms || alarms.length === 0 ? (
+                    <p className="text-calm-500 dark:text-calm-400 text-sm">No active alarms</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {alarms.map((alarm, idx) => (
+                        <div key={idx} className="p-3 bg-calm-100 dark:bg-calm-800 rounded-lg text-sm">
+                          <div className="font-medium text-calm-900 dark:text-calm-100">{alarm.name}</div>
+                          <div className="text-calm-600 dark:text-calm-400 text-xs mt-1">
+                            Fires at: {new Date(alarm.scheduledTime).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CollapsibleSection>
+
+                {/* Browser Tabs Summary */}
+                <CollapsibleSection
+                  title="Browser Tabs"
+                  count={browserTabs?.summary?.total || 0}
+                  isExpanded={expandedSections.browserTabs}
+                  onToggle={() => toggleSection('browserTabs')}
+                  icon={Eye}
+                >
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <StatCard label="Total Tabs" value={browserTabs?.summary?.total || 0} color="blue" />
+                    <StatCard label="Unpinned" value={browserTabs?.summary?.unpinned || 0} color="green" />
+                    <StatCard label="Pinned" value={browserTabs?.summary?.pinned || 0} color="purple" />
+                    <StatCard label="Active" value={browserTabs?.summary?.active || 0} color="orange" />
+                  </div>
+                  {browserTabs?.tabs && browserTabs.tabs.length > 0 && (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {browserTabs.tabs.map((tab) => (
+                        <div key={tab.id} className="p-3 bg-calm-100 dark:bg-calm-800 rounded-lg text-sm">
+                          <div className="flex items-center gap-2">
+                            {tab.pinned && <span className="text-purple-600 dark:text-purple-400">📌</span>}
+                            {tab.active && <span className="text-green-600 dark:text-green-400">●</span>}
+                            <span className="font-medium text-calm-900 dark:text-calm-100 flex-1 truncate">
+                              {tab.title}
+                            </span>
+                          </div>
+                          <div className="text-calm-600 dark:text-calm-400 text-xs mt-1 truncate">
+                            {tab.url}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CollapsibleSection>
+
+                {/* Close Tab Candidates */}
+                {closeTabData?.summary?.total > 0 && (
+                  <CollapsibleSection
+                    title="Close All Analysis"
+                    count={closeTabData.summary.total}
+                    isExpanded={expandedSections.closeCandidates}
+                    onToggle={() => toggleSection('closeCandidates')}
+                    icon={Trash2}
+                  >
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <StatCard label="Would Close" value={closeTabData?.summary?.wouldClose || 0} color="red" />
+                      <StatCard label="Would Skip (Pinned)" value={closeTabData?.summary?.wouldSkip || 0} color="purple" />
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {(closeTabData?.candidates || []).map((candidate, idx) => (
+                        <div key={idx} className={cn(
+                          "p-3 rounded-lg text-sm",
+                          candidate.wouldClose 
+                            ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                            : "bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"
+                        )}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-calm-900 dark:text-calm-100 flex-1 truncate">
+                              {candidate.itemTitle}
+                            </span>
+                            <span className={cn(
+                              "px-2 py-1 rounded text-xs font-medium",
+                              candidate.wouldClose 
+                                ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                                : "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                            )}>
+                              {candidate.wouldClose ? 'Would Close' : 'Pinned - Skip'}
+                            </span>
+                          </div>
+                          <div className="text-calm-600 dark:text-calm-400 text-xs mt-1">
+                            Tab ID: {candidate.tabId} | Window: {candidate.windowId}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
+
+                {/* Duplicate Candidates */}
+                {duplicateData?.summary?.totalGroups > 0 && (
+                  <CollapsibleSection
+                    title="Duplicate Tabs"
+                    count={duplicateData.summary.totalGroups}
+                    isExpanded={expandedSections.duplicates}
+                    onToggle={() => toggleSection('duplicates')}
+                    icon={Copy}
+                  >
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <StatCard label="Duplicate Groups" value={duplicateData?.summary?.totalGroups || 0} color="orange" />
+                      <StatCard label="Would Close" value={duplicateData?.summary?.wouldClose || 0} color="red" />
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {(duplicateData?.duplicates || []).map((dup, idx) => (
+                        <div key={idx} className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg text-sm">
+                          <div className="font-medium text-calm-900 dark:text-calm-100 truncate mb-2">
+                            {dup.count} tabs with same URL
+                          </div>
+                          <div className="text-calm-600 dark:text-calm-400 text-xs mb-2 truncate">
+                            {dup.url}
+                          </div>
+                          <div className="flex gap-2 text-xs">
+                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
+                              {dup.pinned} pinned
+                            </span>
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                              {dup.unpinned} unpinned
+                            </span>
+                            <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+                              {dup.wouldClose} would close
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
               </div>
-            ))
+            )}
+
+            {/* Console Tab */}
+            {activeTab === 'console' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-calm-900 dark:text-calm-100">Console Logs</h3>
+                  <button
+                    onClick={clearLogs}
+                    className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="bg-calm-900 dark:bg-black rounded-lg p-4 font-mono text-xs h-[600px] overflow-y-auto">
+                  {logs.length === 0 ? (
+                    <div className="text-calm-500">No logs yet. Tab Napper messages will appear here.</div>
+                  ) : (
+                    logs.map((log) => (
+                      <div key={log.id} className={cn(
+                        "py-1",
+                        log.type === 'error' && "text-red-400",
+                        log.type === 'warn' && "text-yellow-400",
+                        log.type === 'info' && "text-green-400"
+                      )}>
+                        <span className="text-calm-500">[{log.timestamp}]</span> {log.message}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Data Tab */}
+            {activeTab === 'data' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-calm-900 dark:text-calm-100">Test Data</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={async () => {
+                      await addSampleData();
+                      toast.success('Sample Data Added', 'Check your inbox');
+                      addLog('Added sample data', 'info');
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  >
+                    <Database className="h-4 w-4" />
+                    Add Sample Data
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('This will delete ALL data from Tab Napper. Are you sure?')) {
+                        return;
+                      }
+                      await clearSampleData();
+                      toast.success('Data Cleared', 'All Tab Napper data deleted');
+                      addLog('Cleared all data', 'warn');
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Clear All Data
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+  );
+}
+
+// Collapsible Section Component
+function CollapsibleSection({ title, count, isExpanded, onToggle, icon: Icon, children }) {
+  return (
+    <div className="border border-calm-200 dark:border-calm-700 rounded-lg">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-4 hover:bg-calm-100 dark:hover:bg-calm-800 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400" />}
+          <span className="font-semibold text-calm-900 dark:text-calm-100">{title}</span>
+          {count !== undefined && (
+            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium">
+              {count}
+            </span>
           )}
         </div>
-      )}
-    </div>
-  );
-}
-
-// Helper Components
-function Section({ title, children }) {
-  return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-1">
-        {title}
-      </h4>
-      {children}
-    </div>
-  );
-}
-
-function ActionButton({ icon: Icon, label, description, onClick, disabled, color = 'gray' }) {
-  const colors = {
-    blue: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-    purple: 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-    red: 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
-    green: 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'w-full flex items-start space-x-3 p-3 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.98]',
-        colors[color]
-      )}
-    >
-      <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
-      <div className="flex-1 text-left">
-        <div className="font-medium text-sm">{label}</div>
-        {description && (
-          <div className="text-xs opacity-75 mt-0.5">{description}</div>
-        )}
-      </div>
-    </button>
-  );
-}
-
-function AlarmCard({ alarm }) {
-  const now = Date.now();
-  const timeUntil = alarm.scheduledTime - now;
-  const minutesUntil = Math.floor(timeUntil / 60000);
-  
-  return (
-    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="font-mono text-xs text-gray-600 dark:text-gray-400">
-            {alarm.name}
-          </div>
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">
-            {new Date(alarm.scheduledTime).toLocaleString()}
-          </div>
-        </div>
-        <div className={cn(
-          'text-xs font-medium px-2 py-1 rounded',
-          timeUntil < 0 
-            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-            : minutesUntil < 60
-            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
-            : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-        )}>
-          {timeUntil < 0 ? 'OVERDUE' : `${minutesUntil}m`}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StateInspector({ addLog, showToast }) {
-  const [stateData, setStateData] = useState(null);
-
-  const inspectState = async () => {
-    if (typeof chrome === 'undefined') return;
-    
-    try {
-      const data = await chrome.storage.local.get(null);
-      setStateData(data);
-      addLog('State loaded successfully', 'success');
-      showToast('✅ State loaded!', 'success');
-    } catch (error) {
-      addLog(`Error loading state: ${error.message}`, 'error');
-      showToast('❌ Failed to load state', 'error');
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <button
-        onClick={inspectState}
-        className="text-sm px-3 py-1.5 bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors"
-      >
-        🔍 Inspect Current State
+        {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
       </button>
-      
-      {stateData && (
-        <div className="bg-gray-900 rounded p-3 max-h-[300px] overflow-y-auto">
-          <pre className="text-xs text-green-400 font-mono">
-            {JSON.stringify(stateData, null, 2)}
-          </pre>
+      {isExpanded && (
+        <div className="p-4 border-t border-calm-200 dark:border-calm-700">
+          {children}
         </div>
       )}
+    </div>
+  );
+}
+
+// Stat Card Component
+function StatCard({ label, value, color }) {
+  const colors = {
+    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200',
+    green: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200',
+    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200',
+    orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200',
+    red: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+  };
+
+  return (
+    <div className={cn('p-4 rounded-lg', colors[color])}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-sm font-medium">{label}</div>
     </div>
   );
 }

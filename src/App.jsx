@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Inbox, Archive, Trash2, TestTube } from 'lucide-react';
 import { loadAllAppData, saveAppState, loadAppState, moveToArchive, STORAGE_KEYS } from './utils/storage.js';
 import { getOrCreateEncryptionKey } from './utils/encryption.js';
@@ -15,6 +15,7 @@ import { updateFavicon } from './utils/favicon.js';
 import { useDarkMode, toggleDarkMode } from './hooks/useDarkMode.js';
 import { useReactiveStore } from './hooks/useReactiveStore.js';
 import { useDevMode, setupDevModeEasterEgg } from './hooks/useDevMode.js';
+import { useToast } from './contexts/ToastContext.jsx';
 import ListContainer from './components/ListContainer.jsx';
 import ListItem from './components/ListItem.jsx';
 import UniversalSearch from './components/UniversalSearch.jsx';
@@ -24,13 +25,18 @@ import QuickAccessCards from './components/QuickAccessCards.jsx';
 import ContextualComponent from './components/ContextualComponent.jsx';
 import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
-import DevPanel from './components/DevPanel.jsx';
 import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 import Layout from './components/Layout.jsx';
+
+// Lazy load DevPanel to avoid circular dependency issues
+const DevPanel = lazy(() => import('./components/DevPanel.jsx').then(module => ({ default: module.default })));
 
 function App() {
   // Initialize dark mode detection
   useDarkMode();
+  
+  // Toast notifications
+  const { toast } = useToast();
   
   // Dev mode state
   const { isDevMode, toggleDevMode } = useDevMode();
@@ -248,6 +254,7 @@ function App() {
           
           await addToTriageInbox(restoredItem);
           
+          toast.success('Restored', `"${item.title}" restored to inbox`);
           // Chrome storage listener will automatically update the reactive store
           break;
           
@@ -281,6 +288,7 @@ function App() {
           await saveAppState(STORAGE_KEYS.SCHEDULED, updatedStashed);
           await saveAppState('triageHub_trash', updatedTrashForDelete);
           
+          toast.success('Moved to Trash', `"${item.title}" moved to trash`);
           break;
           
         case 'remind_me':
@@ -325,6 +333,12 @@ function App() {
           // Step 6: Set new Chrome alarm
           await setScheduledAlarm(item, action, scheduledTime);
           
+          const actionLabels = {
+            'remind_me': 'Reminder',
+            'follow_up': 'Follow-up',
+            'review': 'Review'
+          };
+          toast.success('Scheduled', `${actionLabels[action]} set for ${actionData.when}`);
           console.log('[Tab Napper] ✓ Item scheduled and stashed:', item.title);
           break;
         
@@ -345,6 +359,7 @@ function App() {
           // Use the moveToArchive function which handles all the details
           await moveToArchive(item, sourceList);
           
+          toast.success('Archived', `"${item.title}" marked as done and archived`);
           console.log('[Tab Napper] ✓ Item marked as done and archived');
           break;
           
@@ -353,6 +368,7 @@ function App() {
       }
     } catch (error) {
       console.error(`[Tab Napper] Error handling action '${action}':`, error);
+      toast.error('Action Failed', error.message || 'An error occurred while performing this action');
     }
   };
 
@@ -577,10 +593,12 @@ function App() {
       {/* Dev Panel - Only show when dev mode is enabled */}
       {isDevMode && (
         <>
-          <DevPanel 
-            isOpen={showDevPanel}
-            onClose={() => setShowDevPanel(false)}
-          />
+          <Suspense fallback={<div />}>
+            <DevPanel 
+              isOpen={showDevPanel}
+              onClose={() => setShowDevPanel(false)}
+            />
+          </Suspense>
           
           {/* Floating Dev Mode Toggle */}
           <button
