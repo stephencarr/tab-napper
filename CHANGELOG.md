@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Corrected and completed the changelog to accurately reflect project history.
 
-## [0.8.0] - 2024-10-30
+## [0.8.0] - 2025-10-30
 
 ### Added
 - **Real-time open tab detection** with "Active" badges and real-time event listeners.
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tab detection now works reliably across all Chrome windows.
 - Duplicate items no longer accumulate in storage.
 
-## [0.7.1] - 2024-10-28
+## [0.7.1] - 2025-10-28
 
 ### Changed
 - Improved performance by staggering component loading and reducing concurrent API calls.
