@@ -291,6 +291,22 @@ function StashManagerView({
     }
     clearSelection();
   };
+  
+  const handleBulkRestore = async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    const confirmMsg = `Restore ${ids.length} ${ids.length === 1 ? 'item' : 'items'} to Inbox?`;
+    if (!window.confirm(confirmMsg)) return;
+    
+    for (const id of ids) {
+      const item = allItems.find(i => i.id === id);
+      if (item) {
+        await onItemAction?.(item, 'restore');
+      }
+    }
+    clearSelection();
+  };
 
   const tabs = [
     { id: 'scheduled', name: 'All Scheduled', icon: Archive, count: counts.scheduled },
@@ -484,6 +500,7 @@ function StashManagerView({
               onTrash={handleBulkTrash}
               onArchive={handleBulkArchive}
               onSchedule={handleBulkSchedule}
+              onRestore={handleBulkRestore}
               currentView={currentData.title}
             />
             

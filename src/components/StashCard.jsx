@@ -178,24 +178,6 @@ function StashCard({
       )}
       onClick={handleNavigate}
     >
-      {/* Checkbox for bulk actions */}
-      {showCheckbox && (
-        <div 
-          className="flex-shrink-0 mr-3 mt-1"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSelect?.(item.id);
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => {}}
-            className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-          />
-        </div>
-      )}
-      
       {/* Celebration Animation Overlay */}
       {showCelebration && (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50/95 to-emerald-100/95 dark:from-green-900/70 dark:to-emerald-800/70 rounded-lg z-10 backdrop-blur-sm">
@@ -212,9 +194,39 @@ function StashCard({
       
       {/* Left side: Icon + Content */}
       <div className="flex items-start space-x-3 flex-1 min-w-0">
-        {/* Icon */}
-        <div className="flex-shrink-0 mt-1">
-          {getIcon()}
+        {/* Icon or Checkbox (on hover/selection) */}
+        <div 
+          className="flex-shrink-0 mt-1 relative w-5 h-5"
+          onClick={(e) => {
+            if (showCheckbox) {
+              e.stopPropagation();
+              onToggleSelect?.(item.id);
+            }
+          }}
+        >
+          {/* Favicon - hidden on group hover when checkbox enabled */}
+          <div className={cn(
+            "absolute inset-0 transition-opacity",
+            showCheckbox && "group-hover:opacity-0",
+            showCheckbox && isSelected && "opacity-0"
+          )}>
+            {getIcon()}
+          </div>
+          
+          {/* Checkbox - shown on group hover or when selected */}
+          {showCheckbox && (
+            <div className={cn(
+              "absolute inset-0 flex items-center justify-center transition-opacity",
+              isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}>
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => {}}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 focus:ring-offset-0 cursor-pointer"
+              />
+            </div>
+          )}
         </div>
         
         {/* Content */}
