@@ -7,7 +7,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay
+  DragOverlay,
+  useDroppable
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -24,6 +25,33 @@ import {
   getPanelCategories,
   getPanelsByCategory 
 } from '../utils/dashboardPanels.js';
+
+/**
+ * Droppable Column Component
+ */
+function DroppableColumn({ column, children, colIndex }) {
+  const { setNodeRef } = useDroppable({
+    id: column.id,
+  });
+  
+  return (
+    <div className="space-y-3">
+      <h3 className="font-medium text-calm-800 dark:text-calm-200">
+        Column {colIndex + 1}
+      </h3>
+      
+      <div 
+        ref={setNodeRef}
+        className={cn(
+          'min-h-[200px] rounded-lg p-3 transition-colors',
+          column.panels.length === 0 && 'border-2 border-dashed border-calm-300 dark:border-calm-600 flex items-center justify-center'
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Sortable Panel Item
@@ -173,11 +201,20 @@ export default function DashboardSettings({
     
     // Find source column
     let sourceColumnId = null;
+    let targetColumnId = null;
+    
     for (const column of config.columns) {
       if (column.panels.includes(active.id)) {
         sourceColumnId = column.id;
-        break;
       }
+      if (column.panels.includes(over.id)) {
+        targetColumnId = over.id;
+      }
+    }
+    
+    // If over.id is a column ID (dropped on empty column), use it
+    if (config.columns.some(col => col.id === over.id)) {
+      targetColumnId = over.id;
     }
     
     if (!sourceColumnId) return;
@@ -189,11 +226,25 @@ export default function DashboardSettings({
       }));
       
       const sourceColumn = newColumns.find(c => c.id === sourceColumnId);
-      const oldIndex = sourceColumn.panels.indexOf(active.id);
-      const newIndex = sourceColumn.panels.indexOf(over.id);
+      const itemIndex = sourceColumn.panels.indexOf(active.id);
+      const [movedItem] = sourceColumn.panels.splice(itemIndex, 1);
       
-      if (oldIndex !== -1 && newIndex !== -1) {
-        sourceColumn.panels = arrayMove(sourceColumn.panels, oldIndex, newIndex);
+      // If moving within same column
+      if (!targetColumnId || sourceColumnId === targetColumnId) {
+        const targetIndex = sourceColumn.panels.indexOf(over.id);
+        sourceColumn.panels.splice(targetIndex, 0, movedItem);
+      } else {
+        // Moving to different column
+        const targetColumn = newColumns.find(c => c.id === targetColumnId);
+        if (targetColumn) {
+          const targetIndex = targetColumn.panels.indexOf(over.id);
+          if (targetIndex !== -1) {
+            targetColumn.panels.splice(targetIndex, 0, movedItem);
+          } else {
+            // Dropped on empty column
+            targetColumn.panels.push(movedItem);
+          }
+        }
       }
       
       return { ...prev, columns: newColumns };
@@ -261,30 +312,25 @@ export default function DashboardSettings({
               </p>
               
               {/* Columns */}
-              <div className="grid grid-cols-2 gap-6">
-                {config.columns.map((column, colIndex) => (
-                  <div key={column.id} className="space-y-3">
-                    <h3 className="font-medium text-calm-800 dark:text-calm-200">
-                      Column {colIndex + 1}
-                    </h3>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="grid grid-cols-2 gap-6">
+                  {config.columns.map((column, colIndex) => {
+                    const allPanelIds = config.columns.flatMap(col => col.panels);
                     
-                    <div className={cn(
-                      'min-h-[200px] rounded-lg p-3 transition-colors',
-                      column.panels.length === 0 && 'border-2 border-dashed border-calm-300 dark:border-calm-600 flex items-center justify-center'
-                    )}>
-                      {column.panels.length === 0 ? (
-                        <div className="text-center text-calm-500 dark:text-calm-400 text-sm">
-                          Add panels from the "Add Panels" tab
-                        </div>
-                      ) : (
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragStart={handleDragStart}
-                          onDragEnd={handleDragEnd}
-                        >
+                    return (
+                      <DroppableColumn key={column.id} column={column} colIndex={colIndex}>
+                        {column.panels.length === 0 ? (
+                          <div className="text-center text-calm-500 dark:text-calm-400 text-sm">
+                            Drag panels here or add from "Add Panels" tab
+                          </div>
+                        ) : (
                           <SortableContext
-                            items={column.panels}
+                            items={allPanelIds}
                             strategy={verticalListSortingStrategy}
                           >
                             <div className="space-y-2">
@@ -297,12 +343,12 @@ export default function DashboardSettings({
                               ))}
                             </div>
                           </SortableContext>
-                        </DndContext>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        )}
+                      </DroppableColumn>
+                    );
+                  })}
+                </div>
+              </DndContext>
             </div>
           )}
           
