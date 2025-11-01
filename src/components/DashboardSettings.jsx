@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, X, Save } from 'lucide-react';
+import { Settings, X, Save } from 'lucide-react';
 import { 
   DndContext, 
   closestCenter,
@@ -8,9 +8,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-  useDroppable,
-  pointerWithin,
-  rectIntersection
+  useDroppable
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -129,7 +127,6 @@ export default function DashboardSettings({
   const [config, setConfig] = useState(currentConfig);
   const [activeTab, setActiveTab] = useState('panels');
   const [activeId, setActiveId] = useState(null);
-  const [activeColumnId, setActiveColumnId] = useState(null);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -183,13 +180,6 @@ export default function DashboardSettings({
   
   const handleDragStart = (event) => {
     setActiveId(event.active.id);
-    // Find which column this panel is in
-    for (const column of config.columns) {
-      if (column.panels.includes(event.active.id)) {
-        setActiveColumnId(column.id);
-        break;
-      }
-    }
   };
   
   const handleDragOver = (event) => {
@@ -238,7 +228,6 @@ export default function DashboardSettings({
     const { active, over } = event;
     
     setActiveId(null);
-    setActiveColumnId(null);
     
     if (!over) return;
     

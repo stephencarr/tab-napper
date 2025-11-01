@@ -56,6 +56,7 @@ export const PANEL_REGISTRY = {
       maxItems: 5
     },
     category: 'triage',
+    hasOwnHeader: false,
     navigationTarget: 'Inbox'
   },
   scheduledPreview: {
@@ -69,6 +70,7 @@ export const PANEL_REGISTRY = {
       showTimeUntil: true
     },
     category: 'triage',
+    hasOwnHeader: false,
     navigationTarget: 'All Scheduled'
   },
   archivePreview: {
@@ -81,6 +83,7 @@ export const PANEL_REGISTRY = {
       maxItems: 5
     },
     category: 'triage',
+    hasOwnHeader: false,
     navigationTarget: 'Archive'
   }
 };

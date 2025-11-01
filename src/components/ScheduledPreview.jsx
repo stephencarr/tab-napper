@@ -101,6 +101,7 @@ export default function ScheduledPreview({ maxItems = 5, showTimeUntil = true, c
                   )}
                   {item.scheduledFor && (
                     <span className="text-xs text-calm-400 dark:text-calm-500">
+                      {/* Shows both date and time for scheduled items (e.g., 'Jan 5, 3:30 PM') */}
                       {new Date(item.scheduledFor).toLocaleDateString(undefined, { 
                         month: 'short', 
                         day: 'numeric',

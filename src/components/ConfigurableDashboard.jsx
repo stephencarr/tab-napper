@@ -14,7 +14,6 @@ import {
   validateDashboardConfig,
   migrateDashboardConfig
 } from '../utils/dashboardPanels.js';
-import { cn } from '../utils/cn.js';
 
 const STORAGE_KEY = 'tabnapper_dashboard_config';
 
