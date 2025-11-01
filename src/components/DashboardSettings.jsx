@@ -20,6 +20,7 @@ export default function DashboardSettings({
 }) {
   const [config, setConfig] = useState(currentConfig);
   const [activeTab, setActiveTab] = useState('panels');
+  const [draggedItem, setDraggedItem] = useState(null);
   
   useEffect(() => {
     if (isOpen) {
@@ -60,28 +61,54 @@ export default function DashboardSettings({
     }));
   };
   
-  const handleMovePanel = (panelId, fromColumnId, toColumnId, position) => {
+  const handleDragStart = (e, panelId, columnId) => {
+    setDraggedItem({ panelId, columnId });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', panelId);
+  };
+  
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  
+  const handleDrop = (e, targetColumnId, targetIndex) => {
+    e.preventDefault();
+    
+    if (!draggedItem) return;
+    
+    const { panelId, columnId: sourceColumnId } = draggedItem;
+    
     setConfig(prev => {
-      // Remove from source column
-      const columns = prev.columns.map(col => 
-        col.id === fromColumnId 
-          ? { ...col, panels: col.panels.filter(id => id !== panelId) }
-          : col
-      );
+      const newColumns = prev.columns.map(col => ({
+        ...col,
+        panels: [...col.panels]
+      }));
       
-      // Add to destination column at position
-      return {
-        ...prev,
-        columns: columns.map(col => {
-          if (col.id === toColumnId) {
-            const panels = [...col.panels];
-            panels.splice(position, 0, panelId);
-            return { ...col, panels };
-          }
-          return col;
-        })
-      };
+      // Remove from source column
+      const sourceCol = newColumns.find(col => col.id === sourceColumnId);
+      const sourceIndex = sourceCol.panels.indexOf(panelId);
+      sourceCol.panels.splice(sourceIndex, 1);
+      
+      // Add to target column at target index
+      const targetCol = newColumns.find(col => col.id === targetColumnId);
+      
+      // Adjust target index if dropping in same column
+      let adjustedIndex = targetIndex;
+      if (sourceColumnId === targetColumnId && sourceIndex < targetIndex) {
+        adjustedIndex--;
+      }
+      
+      targetCol.panels.splice(adjustedIndex, 0, panelId);
+      
+      return { ...prev, columns: newColumns };
     });
+    
+    setDraggedItem(null);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedItem(null);
   };
   
   const handleSave = () => {
@@ -152,44 +179,74 @@ export default function DashboardSettings({
                       Column {colIndex + 1}
                     </h3>
                     
-                    {column.panels.length === 0 ? (
-                      <div className="border-2 border-dashed border-calm-300 dark:border-calm-600 rounded-lg p-8 text-center text-calm-500 dark:text-calm-400">
-                        No panels in this column
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {column.panels.map((panelId) => {
-                          const panel = PANEL_REGISTRY[panelId];
-                          if (!panel) return null;
-                          
-                          const Icon = panel.icon;
-                          
-                          return (
-                            <div
-                              key={panelId}
-                              className="flex items-center gap-3 p-3 rounded-lg bg-calm-100 dark:bg-calm-800 border border-calm-200 dark:border-calm-700"
-                            >
-                              <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-calm-800 dark:text-calm-200 truncate">
-                                  {panel.name}
-                                </div>
-                                <div className="text-xs text-calm-500 dark:text-calm-400 truncate">
-                                  {panel.description}
+                    <div 
+                      className={cn(
+                        'min-h-[200px] rounded-lg p-2 transition-colors',
+                        column.panels.length === 0 && 'border-2 border-dashed border-calm-300 dark:border-calm-600'
+                      )}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, column.id, column.panels.length)}
+                    >
+                      {column.panels.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-center text-calm-500 dark:text-calm-400 py-12">
+                          Drag panels here
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {column.panels.map((panelId, index) => {
+                            const panel = PANEL_REGISTRY[panelId];
+                            if (!panel) return null;
+                            
+                            const Icon = panel.icon;
+                            const isDragging = draggedItem?.panelId === panelId;
+                            
+                            return (
+                              <div key={panelId}>
+                                <div
+                                  draggable
+                                  onDragStart={(e) => handleDragStart(e, panelId, column.id)}
+                                  onDragEnd={handleDragEnd}
+                                  onDragOver={handleDragOver}
+                                  onDrop={(e) => handleDrop(e, column.id, index)}
+                                  className={cn(
+                                    'flex items-center gap-3 p-3 rounded-lg bg-calm-100 dark:bg-calm-800 border border-calm-200 dark:border-calm-700 cursor-move transition-all',
+                                    isDragging && 'opacity-40 scale-95',
+                                    !isDragging && 'hover:shadow-md hover:border-calm-300 dark:hover:border-calm-600'
+                                  )}
+                                >
+                                  <div className="text-calm-400 dark:text-calm-500 flex-shrink-0">
+                                    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                                      <circle cx="4" cy="4" r="1.5"/>
+                                      <circle cx="12" cy="4" r="1.5"/>
+                                      <circle cx="4" cy="8" r="1.5"/>
+                                      <circle cx="12" cy="8" r="1.5"/>
+                                      <circle cx="4" cy="12" r="1.5"/>
+                                      <circle cx="12" cy="12" r="1.5"/>
+                                    </svg>
+                                  </div>
+                                  <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-calm-800 dark:text-calm-200 truncate">
+                                      {panel.name}
+                                    </div>
+                                    <div className="text-xs text-calm-500 dark:text-calm-400 truncate">
+                                      {panel.description}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRemovePanel(panelId, column.id)}
+                                    className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400 flex-shrink-0"
+                                    title="Remove panel"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
                                 </div>
                               </div>
-                              <button
-                                onClick={() => handleRemovePanel(panelId, column.id)}
-                                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400 flex-shrink-0"
-                                title="Remove panel"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
