@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Calendar, Inbox, Archive, Trash2, Menu, X } from 'lucide-react';
+import { Home, Calendar, Inbox, Archive, Trash2, Menu, X, Settings } from 'lucide-react';
 import UniversalSearch from './UniversalSearch.jsx';
 import { toggleDarkMode } from '../hooks/useDarkMode.js';
 import { useReactiveStore } from '../hooks/useReactiveStore.js';
@@ -9,7 +9,8 @@ const navigation = [
   { name: 'Inbox', icon: Inbox, countKey: 'inbox' },
   { name: 'All Scheduled', icon: Calendar, countKey: 'scheduled' },
   { name: 'Archive', icon: Archive, countKey: 'archive' },
-  { name: 'Trash', icon: Trash2, countKey: 'trash' }
+  { name: 'Trash', icon: Trash2, countKey: 'trash' },
+  { name: 'Settings', icon: Settings }
 ];
 
 // Header height constant to ensure consistency
@@ -44,6 +45,7 @@ export default function Layout({
         return (
           <button
             key={item.name}
+            data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
             onClick={() => {
               setCurrentView(item.name);
               onSearchClear?.(); // Clear search when clicking any menu item

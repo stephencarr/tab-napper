@@ -34,6 +34,7 @@ const LOCAL_STORAGE_KEYS = new Set([
   'tabNapper_lastCleanup',         // Last auto-cleanup timestamp (performance optimization)
   'tabNapper_hasPinnedTab',        // Auto-pin flag (prevents duplicate pinning)
   'tabNapper_pinnedTabId',         // ID of pinned Tab Napper tab
+  'triageHub_dashboardLayout',     // Dashboard layout
 ]);
 
 /**
@@ -57,35 +58,31 @@ function getStorageType(key) {
  */
 async function loadAppState(key) {
   try {
-    // Check if Chrome storage is available
-    if (typeof chrome === 'undefined' || !chrome.storage) {
-      console.warn(`[Tab Napper] Chrome storage not available for key: ${key}`);
-      return null;
-    }
-    
-    const storageType = getStorageType(key);
-    const storage = storageType === 'sync' ? chrome.storage.sync : chrome.storage.local;
-    
-    const result = await storage.get([key]);
-    const data = result[key];
-    
-    if (!data) {
-      return null; // No data found
-    }
-    
-    // Encryption is only applied to sensitive data in sync storage
-    if (storageType === 'sync' && key !== 'triageHub_encryptionKey') {
-      try {
-        // Decrypt the data
-        const decryptedJson = await decryptString(data);
-        return JSON.parse(decryptedJson);
-      } catch (error) {
-        console.error(`[Tab Napper] Error decrypting ${key}:`, error);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const storageType = getStorageType(key);
+      const storage = storageType === 'sync' ? chrome.storage.sync : chrome.storage.local;
+      const result = await storage.get([key]);
+      const data = result[key];
+
+      if (!data) {
         return null;
       }
+
+      if (storageType === 'sync' && key !== 'triageHub_encryptionKey') {
+        try {
+          const decryptedJson = await decryptString(data);
+          return JSON.parse(decryptedJson);
+        } catch (error) {
+          console.error(`[Tab Napper] Error decrypting ${key}:`, error);
+          return null;
+        }
+      } else {
+        return data;
+      }
     } else {
-      // Local storage data is not encrypted (performance + size reasons)
-      return data;
+      console.warn(`[Tab Napper] Chrome storage not available for key: ${key}. Falling back to localStorage.`);
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
     }
   } catch (error) {
     console.error(`[Tab Napper] Error loading state for ${key}:`, error);
@@ -99,34 +96,29 @@ async function loadAppState(key) {
  */
 async function saveAppState(key, data) {
   try {
-    // Check if Chrome storage is available
-    if (typeof chrome === 'undefined' || !chrome.storage) {
-      console.warn(`[Tab Napper] Chrome storage not available for saving key: ${key}`);
-      return false;
-    }
-    
-    const storageType = getStorageType(key);
-    const storage = storageType === 'sync' ? chrome.storage.sync : chrome.storage.local;
-    
-    let dataToStore = data;
-    
-    // Encryption is only applied to sensitive data in sync storage
-    if (storageType === 'sync' && key !== 'triageHub_encryptionKey') {
-      try {
-        // Encrypt the data
-        const jsonString = JSON.stringify(data);
-        dataToStore = await encryptString(jsonString);
-      } catch (error) {
-        console.error(`[Tab Napper] Error encrypting ${key}:`, error);
-        throw error;
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const storageType = getStorageType(key);
+      const storage = storageType === 'sync' ? chrome.storage.sync : chrome.storage.local;
+      let dataToStore = data;
+
+      if (storageType === 'sync' && key !== 'triageHub_encryptionKey') {
+        try {
+          const jsonString = JSON.stringify(data);
+          dataToStore = await encryptString(jsonString);
+        } catch (error) {
+          console.error(`[Tab Napper] Error encrypting ${key}:`, error);
+          throw error;
+        }
       }
+
+      await storage.set({ [key]: dataToStore });
+      console.log(`[Tab Napper] Saved ${key} to ${storageType} storage`);
+      notifyStorageChange(key, data);
+    } else {
+      console.warn(`[Tab Napper] Chrome storage not available for saving key: ${key}. Falling back to localStorage.`);
+      localStorage.setItem(key, JSON.stringify(data));
+      notifyStorageChange(key, data);
     }
-    
-    await storage.set({ [key]: dataToStore });
-    console.log(`[Tab Napper] Saved ${key} to ${storageType} storage`);
-    
-    // Notify reactive storage listeners of the change
-    notifyStorageChange(key, data);
   } catch (error) {
     console.error(`[Tab Napper] Error saving state for ${key}:`, error);
     throw error;

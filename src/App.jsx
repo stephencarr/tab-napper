@@ -27,6 +27,8 @@ import FullStashManager from './components/FullStashManager.jsx';
 import StashManagerView from './components/StashManagerView.jsx';
 import QuickNoteCapture from './components/QuickNoteCapture.jsx';
 import Layout from './components/Layout.jsx';
+import Dashboard from './components/Dashboard.jsx';
+import SettingsView from './components/SettingsView.jsx';
 
 // Lazy load DevPanel to avoid circular dependency issues
 const DevPanel = lazy(() => import('./components/DevPanel.jsx').then(module => ({ default: module.default })));
@@ -466,31 +468,6 @@ function App() {
     );
   }
 
-  // Routing logic
-  const renderDashboard = () => (
-    <div className="space-y-6">
-      {/* Widgets Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column */}
-        <div className="space-y-6">
-          <div className="calm-card p-6">
-            <QuickNoteCapture onNoteSaved={() => {}} />
-          </div>
-          <div className="calm-card p-6">
-            <RecentlyVisited maxItems={10} />
-          </div>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-6">
-          <div className="calm-card p-6">
-            <QuickAccessCards maxItems={6} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderContent = () => {
     if (isSearchMode) {
       return (
@@ -568,9 +545,11 @@ function App() {
             onTabChange={handleTabChange}
           />
         );
+      case 'Settings':
+        return <SettingsView />;
       case 'Dashboard':
       default:
-        return renderDashboard();
+        return <Dashboard />;
     }
   };
 
