@@ -8,7 +8,9 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-  useDroppable
+  useDroppable,
+  pointerWithin,
+  rectIntersection
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -30,7 +32,7 @@ import {
  * Droppable Column Component
  */
 function DroppableColumn({ column, children, colIndex }) {
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
   
@@ -43,7 +45,8 @@ function DroppableColumn({ column, children, colIndex }) {
       <div 
         ref={setNodeRef}
         className={cn(
-          'min-h-[200px] rounded-lg p-3 transition-colors',
+          'min-h-[200px] rounded-lg p-3 transition-all',
+          isOver && 'ring-2 ring-calm-400 dark:ring-calm-500 bg-calm-50 dark:bg-calm-800',
           column.panels.length === 0 && 'border-2 border-dashed border-calm-300 dark:border-calm-600 flex items-center justify-center'
         )}
       >
@@ -197,27 +200,21 @@ export default function DashboardSettings({
     setActiveId(null);
     setActiveColumnId(null);
     
-    if (!over || active.id === over.id) return;
+    if (!over) return;
     
     // Find source column
     let sourceColumnId = null;
-    let targetColumnId = null;
-    
     for (const column of config.columns) {
       if (column.panels.includes(active.id)) {
         sourceColumnId = column.id;
+        break;
       }
-      if (column.panels.includes(over.id)) {
-        targetColumnId = over.id;
-      }
-    }
-    
-    // If over.id is a column ID (dropped on empty column), use it
-    if (config.columns.some(col => col.id === over.id)) {
-      targetColumnId = over.id;
     }
     
     if (!sourceColumnId) return;
+    
+    // Check if dropped on a column (empty or not)
+    const isColumnId = config.columns.some(col => col.id === over.id);
     
     setConfig(prev => {
       const newColumns = prev.columns.map(col => ({
@@ -229,21 +226,38 @@ export default function DashboardSettings({
       const itemIndex = sourceColumn.panels.indexOf(active.id);
       const [movedItem] = sourceColumn.panels.splice(itemIndex, 1);
       
-      // If moving within same column
-      if (!targetColumnId || sourceColumnId === targetColumnId) {
-        const targetIndex = sourceColumn.panels.indexOf(over.id);
-        sourceColumn.panels.splice(targetIndex, 0, movedItem);
-      } else {
-        // Moving to different column
-        const targetColumn = newColumns.find(c => c.id === targetColumnId);
+      if (isColumnId) {
+        // Dropped directly on a column
+        const targetColumn = newColumns.find(c => c.id === over.id);
         if (targetColumn) {
-          const targetIndex = targetColumn.panels.indexOf(over.id);
-          if (targetIndex !== -1) {
-            targetColumn.panels.splice(targetIndex, 0, movedItem);
-          } else {
-            // Dropped on empty column
-            targetColumn.panels.push(movedItem);
+          targetColumn.panels.push(movedItem);
+        }
+      } else {
+        // Dropped on another panel - find which column it belongs to
+        let targetColumnId = null;
+        for (const column of newColumns) {
+          if (column.panels.includes(over.id)) {
+            targetColumnId = column.id;
+            break;
           }
+        }
+        
+        if (!targetColumnId) {
+          // Couldn't find target, put it back
+          sourceColumn.panels.splice(itemIndex, 0, movedItem);
+          return prev;
+        }
+        
+        const targetColumn = newColumns.find(c => c.id === targetColumnId);
+        
+        if (targetColumnId === sourceColumnId) {
+          // Same column - reorder
+          const targetIndex = targetColumn.panels.indexOf(over.id);
+          targetColumn.panels.splice(targetIndex, 0, movedItem);
+        } else {
+          // Different column - insert before the target panel
+          const targetIndex = targetColumn.panels.indexOf(over.id);
+          targetColumn.panels.splice(targetIndex, 0, movedItem);
         }
       }
       
@@ -314,39 +328,35 @@ export default function DashboardSettings({
               {/* Columns */}
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={pointerWithin}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
                 <div className="grid grid-cols-2 gap-6">
-                  {config.columns.map((column, colIndex) => {
-                    const allPanelIds = config.columns.flatMap(col => col.panels);
-                    
-                    return (
-                      <DroppableColumn key={column.id} column={column} colIndex={colIndex}>
-                        {column.panels.length === 0 ? (
-                          <div className="text-center text-calm-500 dark:text-calm-400 text-sm">
-                            Drag panels here or add from "Add Panels" tab
+                  {config.columns.map((column, colIndex) => (
+                    <DroppableColumn key={column.id} column={column} colIndex={colIndex}>
+                      {column.panels.length === 0 ? (
+                        <div className="text-center text-calm-500 dark:text-calm-400 text-sm">
+                          Drag panels here or add from "Add Panels" tab
+                        </div>
+                      ) : (
+                        <SortableContext
+                          items={column.panels}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2">
+                            {column.panels.map((panelId) => (
+                              <SortablePanel
+                                key={panelId}
+                                panelId={panelId}
+                                onRemove={() => handleRemovePanel(panelId, column.id)}
+                              />
+                            ))}
                           </div>
-                        ) : (
-                          <SortableContext
-                            items={allPanelIds}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            <div className="space-y-2">
-                              {column.panels.map((panelId) => (
-                                <SortablePanel
-                                  key={panelId}
-                                  panelId={panelId}
-                                  onRemove={() => handleRemovePanel(panelId, column.id)}
-                                />
-                              ))}
-                            </div>
-                          </SortableContext>
-                        )}
-                      </DroppableColumn>
-                    );
-                  })}
+                        </SortableContext>
+                      )}
+                    </DroppableColumn>
+                  ))}
                 </div>
               </DndContext>
             </div>
