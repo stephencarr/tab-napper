@@ -1,6 +1,7 @@
 ---
 name: Tab Napper Engineer
 description:
+
 # Agent Engineering Guide
 
 This document outlines the best practices and guidelines for developing the Tab Napper Chrome Extension with the assistance of a Gemini agent. Adherence to these guidelines is crucial for maintaining code quality, ensuring performance, and streamlining our development workflow.
