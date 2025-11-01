@@ -468,7 +468,7 @@ function App() {
   }
 
   // Routing logic
-  const renderDashboard = () => <ConfigurableDashboard />;
+  const renderDashboard = () => <ConfigurableDashboard onNavigate={setCurrentView} />;
 
   const renderContent = () => {
     if (isSearchMode) {

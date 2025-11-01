@@ -13,6 +13,7 @@ export default function DashboardPanel({
   children,
   className,
   onRemove,
+  onNavigate,
   isDragging = false,
   dragHandleProps = {},
   editMode = false
@@ -55,12 +56,24 @@ export default function DashboardPanel({
       
       {/* Panel Header */}
       {(title || Icon) && (
-        <div className="flex items-center gap-2 mb-4">
+        <div 
+          className={cn(
+            'flex items-center gap-2 mb-4',
+            onNavigate && 'cursor-pointer hover:text-calm-700 dark:hover:text-calm-300 transition-colors'
+          )}
+          onClick={onNavigate}
+          title={onNavigate ? 'Click to view full page' : undefined}
+        >
           {Icon && <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400" />}
           {title && (
             <h2 className="text-lg font-semibold text-calm-800 dark:text-calm-200">
               {title}
             </h2>
+          )}
+          {onNavigate && (
+            <svg className="h-4 w-4 text-calm-400 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           )}
         </div>
       )}

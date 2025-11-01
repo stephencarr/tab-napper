@@ -33,7 +33,7 @@ const COMPONENT_MAP = {
 /**
  * ConfigurableDashboard - Main dashboard with draggable, configurable panels
  */
-export default function ConfigurableDashboard() {
+export default function ConfigurableDashboard({ onNavigate }) {
   const [config, setConfig] = useState(DEFAULT_DASHBOARD_CONFIG);
   const [showSettings, setShowSettings] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -106,6 +106,23 @@ export default function ConfigurableDashboard() {
       saveConfig(newConfig);
     };
     
+    // Handle panel navigation (clicking title to go to full view)
+    const handleNavigate = () => {
+      if (!onNavigate) return;
+      
+      // Map panel IDs to view names
+      const navigationMap = {
+        inboxPreview: 'Inbox',
+        scheduledPreview: 'All Scheduled',
+        archivePreview: 'Archive'
+      };
+      
+      const viewName = navigationMap[panelId];
+      if (viewName) {
+        onNavigate(viewName);
+      }
+    };
+    
     return (
       <DashboardPanel
         key={panelId}
@@ -114,6 +131,7 @@ export default function ConfigurableDashboard() {
         icon={panelConfig.icon}
         editMode={editMode}
         onRemove={handleRemove}
+        onNavigate={panelConfig.category === 'triage' ? handleNavigate : null}
       >
         <Component {...panelSettings} />
       </DashboardPanel>
