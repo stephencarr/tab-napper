@@ -138,7 +138,11 @@ export default function DashboardSettings({
   const [activeColumnId, setActiveColumnId] = useState(null);
   
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -194,6 +198,48 @@ export default function DashboardSettings({
     }
   };
   
+  const handleDragOver = (event) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    const activeId = active.id;
+    const overId = over.id;
+    
+    // Find containers
+    const activeColumn = config.columns.find(col => col.panels.includes(activeId));
+    const overColumn = config.columns.find(col => 
+      col.panels.includes(overId) || col.id === overId
+    );
+    
+    if (!activeColumn || !overColumn) return;
+    if (activeColumn.id === overColumn.id) return; // Same container
+    
+    // Move item to new container during drag
+    setConfig(prev => {
+      const newColumns = prev.columns.map(col => ({
+        ...col,
+        panels: [...col.panels]
+      }));
+      
+      const activeCol = newColumns.find(c => c.id === activeColumn.id);
+      const overCol = newColumns.find(c => c.id === overColumn.id);
+      
+      const activeIndex = activeCol.panels.indexOf(activeId);
+      const [movedItem] = activeCol.panels.splice(activeIndex, 1);
+      
+      // Insert into new position
+      const overIndex = overCol.panels.indexOf(overId);
+      if (overIndex === -1) {
+        overCol.panels.push(movedItem);
+      } else {
+        overCol.panels.splice(overIndex, 0, movedItem);
+      }
+      
+      return { ...prev, columns: newColumns };
+    });
+  };
+  
   const handleDragEnd = (event) => {
     const { active, over } = event;
     
@@ -202,67 +248,37 @@ export default function DashboardSettings({
     
     if (!over) return;
     
-    // Find source column
-    let sourceColumnId = null;
-    for (const column of config.columns) {
-      if (column.panels.includes(active.id)) {
-        sourceColumnId = column.id;
-        break;
+    const activeId = active.id;
+    const overId = over.id;
+    
+    const activeColumn = config.columns.find(col => col.panels.includes(activeId));
+    const overColumn = config.columns.find(col => 
+      col.panels.includes(overId) || col.id === overId
+    );
+    
+    if (!activeColumn || !overColumn) return;
+    
+    const activeIndex = activeColumn.panels.indexOf(activeId);
+    const overIndex = overColumn.panels.indexOf(overId);
+    
+    if (activeColumn.id === overColumn.id) {
+      // Same column - reorder
+      if (activeIndex !== overIndex) {
+        setConfig(prev => {
+          const newColumns = prev.columns.map(col => {
+            if (col.id === activeColumn.id) {
+              return {
+                ...col,
+                panels: arrayMove(col.panels, activeIndex, overIndex)
+              };
+            }
+            return col;
+          });
+          return { ...prev, columns: newColumns };
+        });
       }
     }
-    
-    if (!sourceColumnId) return;
-    
-    // Check if dropped on a column (empty or not)
-    const isColumnId = config.columns.some(col => col.id === over.id);
-    
-    setConfig(prev => {
-      const newColumns = prev.columns.map(col => ({
-        ...col,
-        panels: [...col.panels]
-      }));
-      
-      const sourceColumn = newColumns.find(c => c.id === sourceColumnId);
-      const itemIndex = sourceColumn.panels.indexOf(active.id);
-      const [movedItem] = sourceColumn.panels.splice(itemIndex, 1);
-      
-      if (isColumnId) {
-        // Dropped directly on a column
-        const targetColumn = newColumns.find(c => c.id === over.id);
-        if (targetColumn) {
-          targetColumn.panels.push(movedItem);
-        }
-      } else {
-        // Dropped on another panel - find which column it belongs to
-        let targetColumnId = null;
-        for (const column of newColumns) {
-          if (column.panels.includes(over.id)) {
-            targetColumnId = column.id;
-            break;
-          }
-        }
-        
-        if (!targetColumnId) {
-          // Couldn't find target, put it back
-          sourceColumn.panels.splice(itemIndex, 0, movedItem);
-          return prev;
-        }
-        
-        const targetColumn = newColumns.find(c => c.id === targetColumnId);
-        
-        if (targetColumnId === sourceColumnId) {
-          // Same column - reorder
-          const targetIndex = targetColumn.panels.indexOf(over.id);
-          targetColumn.panels.splice(targetIndex, 0, movedItem);
-        } else {
-          // Different column - insert before the target panel
-          const targetIndex = targetColumn.panels.indexOf(over.id);
-          targetColumn.panels.splice(targetIndex, 0, movedItem);
-        }
-      }
-      
-      return { ...prev, columns: newColumns };
-    });
+    // Cross-column move was already handled in handleDragOver
   };
   
   const handleSave = () => {
@@ -328,8 +344,9 @@ export default function DashboardSettings({
               {/* Columns */}
               <DndContext
                 sensors={sensors}
-                collisionDetection={pointerWithin}
+                collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
                 <div className="grid grid-cols-2 gap-6">
@@ -358,6 +375,37 @@ export default function DashboardSettings({
                     </DroppableColumn>
                   ))}
                 </div>
+                <DragOverlay>
+                  {activeId ? (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-calm-100 dark:bg-calm-800 border border-calm-200 dark:border-calm-700 shadow-lg opacity-90">
+                      {(() => {
+                        const panel = PANEL_REGISTRY[activeId];
+                        if (!panel) return null;
+                        const Icon = panel.icon;
+                        return (
+                          <>
+                            <div className="text-calm-400 dark:text-calm-500 flex-shrink-0">
+                              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="4" cy="4" r="1.5"/>
+                                <circle cx="12" cy="4" r="1.5"/>
+                                <circle cx="4" cy="8" r="1.5"/>
+                                <circle cx="12" cy="8" r="1.5"/>
+                                <circle cx="4" cy="12" r="1.5"/>
+                                <circle cx="12" cy="12" r="1.5"/>
+                              </svg>
+                            </div>
+                            <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-calm-800 dark:text-calm-200 truncate">
+                                {panel.name}
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : null}
+                </DragOverlay>
               </DndContext>
             </div>
           )}
