@@ -1,5 +1,5 @@
 import React from 'react';
-import { GripVertical, X, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 /**
@@ -12,10 +12,8 @@ export default function DashboardPanel({
   icon: Icon,
   children,
   className,
-  onRemove,
   onNavigate,
-  isDragging = false,
-  dragHandleProps = {}
+  isDragging = false
 }) {
   return (
     <div 
@@ -25,17 +23,6 @@ export default function DashboardPanel({
         className
       )}
     >
-      {/* Remove Button */}
-      {onRemove && (
-        <button
-          onClick={onRemove}
-          className="absolute top-2 right-2 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400"
-          title="Remove panel"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      )}
-      
       {/* Panel Header */}
       {(title || Icon) && (
         <div 

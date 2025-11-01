@@ -92,18 +92,6 @@ export default function ConfigurableDashboard({ onNavigate }) {
       ...(config.panelSettings?.[panelId] || {})
     };
     
-    const handleRemove = () => {
-      const newConfig = {
-        ...config,
-        columns: config.columns.map(col => 
-          col.id === columnId 
-            ? { ...col, panels: col.panels.filter(id => id !== panelId) }
-            : col
-        )
-      };
-      saveConfig(newConfig);
-    };
-    
     // Handle panel navigation (clicking title to go to full view)
     const handleNavigate = () => {
       if (!onNavigate || !panelConfig.navigationTarget) return;
@@ -116,7 +104,6 @@ export default function ConfigurableDashboard({ onNavigate }) {
         panelId={panelId}
         title={panelConfig.hasOwnHeader ? null : panelConfig.name}
         icon={panelConfig.hasOwnHeader ? null : panelConfig.icon}
-        onRemove={handleRemove}
         onNavigate={panelConfig.navigationTarget ? handleNavigate : null}
       >
         <Component {...panelSettings} />
