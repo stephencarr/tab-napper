@@ -20,7 +20,8 @@ export const PANEL_REGISTRY = {
       maxItems: 6,
       showAccessCount: true
     },
-    category: 'productivity'
+    category: 'productivity',
+    hasOwnHeader: true
   },
   recentlyVisited: {
     id: 'recentlyVisited',
@@ -32,7 +33,8 @@ export const PANEL_REGISTRY = {
       maxItems: 10,
       showTimestamp: true
     },
-    category: 'history'
+    category: 'history',
+    hasOwnHeader: true
   },
   quickNote: {
     id: 'quickNote',
@@ -41,7 +43,8 @@ export const PANEL_REGISTRY = {
     icon: FileText,
     component: 'QuickNoteCapture',
     defaultSettings: {},
-    category: 'productivity'
+    category: 'productivity',
+    hasOwnHeader: true
   },
   inboxPreview: {
     id: 'inboxPreview',

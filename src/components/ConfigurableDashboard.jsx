@@ -127,8 +127,8 @@ export default function ConfigurableDashboard({ onNavigate }) {
       <DashboardPanel
         key={panelId}
         panelId={panelId}
-        title={panelConfig.name}
-        icon={panelConfig.icon}
+        title={panelConfig.hasOwnHeader ? null : panelConfig.name}
+        icon={panelConfig.hasOwnHeader ? null : panelConfig.icon}
         editMode={editMode}
         onRemove={handleRemove}
         onNavigate={panelConfig.category === 'triage' ? handleNavigate : null}

@@ -152,23 +152,35 @@ export default function DashboardSettings({
     }));
   };
   
-  const handleDragStart = (e, panelId, columnId) => {
-    setDraggedItem({ panelId, columnId });
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', panelId);
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id);
+    // Find which column this panel is in
+    for (const column of config.columns) {
+      if (column.panels.includes(event.active.id)) {
+        setActiveColumnId(column.id);
+        break;
+      }
+    }
   };
   
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-  
-  const handleDrop = (e, targetColumnId, targetIndex) => {
-    e.preventDefault();
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
     
-    if (!draggedItem) return;
+    setActiveId(null);
+    setActiveColumnId(null);
     
-    const { panelId, columnId: sourceColumnId } = draggedItem;
+    if (!over || active.id === over.id) return;
+    
+    // Find source column
+    let sourceColumnId = null;
+    for (const column of config.columns) {
+      if (column.panels.includes(active.id)) {
+        sourceColumnId = column.id;
+        break;
+      }
+    }
+    
+    if (!sourceColumnId) return;
     
     setConfig(prev => {
       const newColumns = prev.columns.map(col => ({
@@ -176,30 +188,16 @@ export default function DashboardSettings({
         panels: [...col.panels]
       }));
       
-      // Remove from source column
-      const sourceCol = newColumns.find(col => col.id === sourceColumnId);
-      const sourceIndex = sourceCol.panels.indexOf(panelId);
-      sourceCol.panels.splice(sourceIndex, 1);
+      const sourceColumn = newColumns.find(c => c.id === sourceColumnId);
+      const oldIndex = sourceColumn.panels.indexOf(active.id);
+      const newIndex = sourceColumn.panels.indexOf(over.id);
       
-      // Add to target column at target index
-      const targetCol = newColumns.find(col => col.id === targetColumnId);
-      
-      // Adjust target index if dropping in same column
-      let adjustedIndex = targetIndex;
-      if (sourceColumnId === targetColumnId && sourceIndex < targetIndex) {
-        adjustedIndex--;
+      if (oldIndex !== -1 && newIndex !== -1) {
+        sourceColumn.panels = arrayMove(sourceColumn.panels, oldIndex, newIndex);
       }
-      
-      targetCol.panels.splice(adjustedIndex, 0, panelId);
       
       return { ...prev, columns: newColumns };
     });
-    
-    setDraggedItem(null);
-  };
-  
-  const handleDragEnd = () => {
-    setDraggedItem(null);
   };
   
   const handleSave = () => {
