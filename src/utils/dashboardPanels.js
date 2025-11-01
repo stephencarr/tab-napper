@@ -3,7 +3,7 @@
  * Extensible system for registering and managing dashboard panels
  */
 
-import { Star, Clock, FileText, List, Archive, Inbox } from 'lucide-react';
+import { Star, Clock, FileText, Archive, Inbox } from 'lucide-react';
 
 /**
  * Panel Registry - Add new panels here
@@ -55,7 +55,8 @@ export const PANEL_REGISTRY = {
     defaultSettings: {
       maxItems: 5
     },
-    category: 'triage'
+    category: 'triage',
+    navigationTarget: 'Inbox'
   },
   scheduledPreview: {
     id: 'scheduledPreview',
@@ -67,7 +68,8 @@ export const PANEL_REGISTRY = {
       maxItems: 5,
       showTimeUntil: true
     },
-    category: 'triage'
+    category: 'triage',
+    navigationTarget: 'All Scheduled'
   },
   archivePreview: {
     id: 'archivePreview',
@@ -78,7 +80,8 @@ export const PANEL_REGISTRY = {
     defaultSettings: {
       maxItems: 5
     },
-    category: 'triage'
+    category: 'triage',
+    navigationTarget: 'Archive'
   }
 };
 

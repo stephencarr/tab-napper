@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, Plus } from 'lucide-react';
 import DashboardPanel from './DashboardPanel.jsx';
 import DashboardSettings from './DashboardSettings.jsx';
@@ -36,7 +36,6 @@ const COMPONENT_MAP = {
 export default function ConfigurableDashboard({ onNavigate }) {
   const [config, setConfig] = useState(DEFAULT_DASHBOARD_CONFIG);
   const [showSettings, setShowSettings] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   // Load dashboard config from storage
@@ -108,19 +107,8 @@ export default function ConfigurableDashboard({ onNavigate }) {
     
     // Handle panel navigation (clicking title to go to full view)
     const handleNavigate = () => {
-      if (!onNavigate) return;
-      
-      // Map panel IDs to view names
-      const navigationMap = {
-        inboxPreview: 'Inbox',
-        scheduledPreview: 'All Scheduled',
-        archivePreview: 'Archive'
-      };
-      
-      const viewName = navigationMap[panelId];
-      if (viewName) {
-        onNavigate(viewName);
-      }
+      if (!onNavigate || !panelConfig.navigationTarget) return;
+      onNavigate(panelConfig.navigationTarget);
     };
     
     return (
@@ -129,9 +117,8 @@ export default function ConfigurableDashboard({ onNavigate }) {
         panelId={panelId}
         title={panelConfig.hasOwnHeader ? null : panelConfig.name}
         icon={panelConfig.hasOwnHeader ? null : panelConfig.icon}
-        editMode={editMode}
         onRemove={handleRemove}
-        onNavigate={panelConfig.category === 'triage' ? handleNavigate : null}
+        onNavigate={panelConfig.navigationTarget ? handleNavigate : null}
       >
         <Component {...panelSettings} />
       </DashboardPanel>

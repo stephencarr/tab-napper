@@ -27,6 +27,7 @@ import {
   getPanelCategories,
   getPanelsByCategory 
 } from '../utils/dashboardPanels.js';
+import GripIcon from './GripIcon.jsx';
 
 /**
  * Droppable Column Component
@@ -93,14 +94,7 @@ function SortablePanel({ panelId, onRemove }) {
         {...listeners}
         className="text-calm-400 dark:text-calm-500 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
       >
-        <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-          <circle cx="4" cy="4" r="1.5"/>
-          <circle cx="12" cy="4" r="1.5"/>
-          <circle cx="4" cy="8" r="1.5"/>
-          <circle cx="12" cy="8" r="1.5"/>
-          <circle cx="4" cy="12" r="1.5"/>
-          <circle cx="12" cy="12" r="1.5"/>
-        </svg>
+        <GripIcon />
       </div>
       <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
       <div className="flex-1 min-w-0">
@@ -385,14 +379,7 @@ export default function DashboardSettings({
                         return (
                           <>
                             <div className="text-calm-400 dark:text-calm-500 flex-shrink-0">
-                              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-                                <circle cx="4" cy="4" r="1.5"/>
-                                <circle cx="12" cy="4" r="1.5"/>
-                                <circle cx="4" cy="8" r="1.5"/>
-                                <circle cx="12" cy="8" r="1.5"/>
-                                <circle cx="4" cy="12" r="1.5"/>
-                                <circle cx="12" cy="12" r="1.5"/>
-                              </svg>
+                              <GripIcon />
                             </div>
                             <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
