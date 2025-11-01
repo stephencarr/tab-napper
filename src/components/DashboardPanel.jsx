@@ -7,7 +7,6 @@ import { cn } from '../utils/cn.js';
  * Provides consistent styling, drag-and-drop, and settings integration
  */
 export default function DashboardPanel({
-  panelId,
   title,
   icon: Icon,
   children,

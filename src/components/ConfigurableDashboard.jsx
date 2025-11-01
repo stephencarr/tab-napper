@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Settings, Plus } from 'lucide-react';
 import DashboardPanel from './DashboardPanel.jsx';
 import DashboardSettings from './DashboardSettings.jsx';
@@ -28,6 +28,37 @@ const COMPONENT_MAP = {
   ScheduledPreview,
   ArchivePreview
 };
+
+/**
+ * Panel - Memoized component for rendering individual dashboard panels
+ */
+const Panel = React.memo(({ panelId, panelConfig, onNavigate }) => {
+  const Component = COMPONENT_MAP[panelConfig.component];
+  if (!Component) {
+    console.warn(`[Dashboard] Component not found: ${panelConfig.component}`);
+    return null;
+  }
+  
+  // Get panel-specific settings or use defaults
+  const panelSettings = {
+    ...panelConfig.defaultSettings
+  };
+  
+  const handleNavigate = () => {
+    if (!onNavigate || !panelConfig.navigationTarget) return;
+    onNavigate(panelConfig.navigationTarget);
+  };
+  
+  return (
+    <DashboardPanel
+      title={panelConfig.hasOwnHeader ? null : panelConfig.name}
+      icon={panelConfig.hasOwnHeader ? null : panelConfig.icon}
+      onNavigate={panelConfig.navigationTarget ? handleNavigate : null}
+    >
+      <Component {...panelSettings} />
+    </DashboardPanel>
+  );
+});
 
 /**
  * ConfigurableDashboard - Main dashboard with draggable, configurable panels
@@ -62,7 +93,7 @@ export default function ConfigurableDashboard({ onNavigate }) {
   }, []);
   
   // Save config to storage whenever it changes
-  const saveConfig = async (newConfig) => {
+  const saveConfig = useCallback(async (newConfig) => {
     try {
       await chrome.storage.local.set({ [STORAGE_KEY]: newConfig });
       setConfig(newConfig);
@@ -70,44 +101,29 @@ export default function ConfigurableDashboard({ onNavigate }) {
     } catch (error) {
       console.error('[Dashboard] Error saving config:', error);
     }
-  };
+  }, []);
+  
+  // Handle panel navigation (clicking title to go to full view)
+  const handlePanelNavigate = useCallback((navigationTarget) => {
+    if (!onNavigate || !navigationTarget) return;
+    onNavigate(navigationTarget);
+  }, [onNavigate]);
   
   // Render a single panel
-  const renderPanel = (panelId, columnId) => {
+  const renderPanel = (panelId) => {
     const panelConfig = PANEL_REGISTRY[panelId];
     if (!panelConfig) {
       console.warn(`[Dashboard] Unknown panel: ${panelId}`);
       return null;
     }
     
-    const Component = COMPONENT_MAP[panelConfig.component];
-    if (!Component) {
-      console.warn(`[Dashboard] Component not found: ${panelConfig.component}`);
-      return null;
-    }
-    
-    // Get panel-specific settings or use defaults
-    const panelSettings = {
-      ...panelConfig.defaultSettings,
-      ...(config.panelSettings?.[panelId] || {})
-    };
-    
-    // Handle panel navigation (clicking title to go to full view)
-    const handleNavigate = () => {
-      if (!onNavigate || !panelConfig.navigationTarget) return;
-      onNavigate(panelConfig.navigationTarget);
-    };
-    
     return (
-      <DashboardPanel
+      <Panel
         key={panelId}
         panelId={panelId}
-        title={panelConfig.hasOwnHeader ? null : panelConfig.name}
-        icon={panelConfig.hasOwnHeader ? null : panelConfig.icon}
-        onNavigate={panelConfig.navigationTarget ? handleNavigate : null}
-      >
-        <Component {...panelSettings} />
-      </DashboardPanel>
+        panelConfig={panelConfig}
+        onNavigate={handlePanelNavigate}
+      />
     );
   };
   
@@ -158,7 +174,7 @@ export default function ConfigurableDashboard({ onNavigate }) {
                 </p>
               </div>
             ) : (
-              column.panels.map(panelId => renderPanel(panelId, column.id))
+              column.panels.map(panelId => renderPanel(panelId))
             )}
           </div>
         ))}

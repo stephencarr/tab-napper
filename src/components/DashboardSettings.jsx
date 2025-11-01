@@ -28,6 +28,29 @@ import {
 import GripIcon from './GripIcon.jsx';
 
 /**
+ * DraggedPanelOverlay - Component for rendering the dragged panel in overlay
+ */
+function DraggedPanelOverlay({ panelId }) {
+  const panel = PANEL_REGISTRY[panelId];
+  if (!panel) return null;
+  const Icon = panel.icon;
+  
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-calm-100 dark:bg-calm-800 border border-calm-200 dark:border-calm-700 shadow-lg opacity-90">
+      <div className="text-calm-400 dark:text-calm-500 flex-shrink-0">
+        <GripIcon />
+      </div>
+      <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-calm-800 dark:text-calm-200 truncate">
+          {panel.name}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Droppable Column Component
  */
 function DroppableColumn({ column, children, colIndex }) {
@@ -359,28 +382,7 @@ export default function DashboardSettings({
                   ))}
                 </div>
                 <DragOverlay>
-                  {activeId ? (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-calm-100 dark:bg-calm-800 border border-calm-200 dark:border-calm-700 shadow-lg opacity-90">
-                      {(() => {
-                        const panel = PANEL_REGISTRY[activeId];
-                        if (!panel) return null;
-                        const Icon = panel.icon;
-                        return (
-                          <>
-                            <div className="text-calm-400 dark:text-calm-500 flex-shrink-0">
-                              <GripIcon />
-                            </div>
-                            <Icon className="h-5 w-5 text-calm-600 dark:text-calm-400 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-calm-800 dark:text-calm-200 truncate">
-                                {panel.name}
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ) : null}
+                  {activeId ? <DraggedPanelOverlay panelId={activeId} /> : null}
                 </DragOverlay>
               </DndContext>
             </div>
